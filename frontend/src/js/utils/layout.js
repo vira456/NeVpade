@@ -1,6 +1,6 @@
 import '../../scss/main.scss';
 import { isMockMode } from '../api/client.js';
-import { isLoggedIn, getCurrentUser, logout } from '../api/auth.js';
+import { isLoggedIn, getCurrentUser, logout, nextPageFor } from '../api/auth.js';
 import { escapeHtml } from './format.js';
 
 const LINKS = [
@@ -16,6 +16,12 @@ const LINKS = [
 export function renderLayout() {
   if (!isLoggedIn()) {
     location.replace('/pages/login.html');
+    return;
+  }
+  // Увійшов через Google/Facebook, але ще не підтвердив телефон
+  const next = nextPageFor(getCurrentUser());
+  if (next !== '/index.html') {
+    location.replace(next);
     return;
   }
 

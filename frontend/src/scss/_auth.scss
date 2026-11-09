@@ -157,3 +157,39 @@ $color-success: #17a34a;
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
 }
+
+// Поле телефону з префіксом +380
+.phone {
+  display: flex;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+
+  &:focus-within { outline: 2px solid rgba($color-primary, .25); border-color: $color-primary; }
+
+  &__prefix {
+    display: flex; align-items: center;
+    padding: 0 10px 0 12px;
+    background: $color-bg;
+    border-right: 1px solid $color-border;
+    color: $color-muted;
+    font-weight: 500;
+  }
+
+  &__input.input { border: 0; border-radius: 0; flex: 1; min-width: 0; letter-spacing: .03em; &:focus { outline: none; } }
+}
+
+.field--error .phone { border-color: $color-error; }
+
+// Кроки реєстрації
+.steps {
+  display: flex; gap: 8px; margin-bottom: 18px; font-size: 13px;
+
+  &__item {
+    padding: 4px 10px; border-radius: 999px;
+    background: $color-bg; color: $color-muted;
+    &.is-active { background: rgba($color-primary, .1); color: $color-primary; font-weight: 600; }
+    &.is-done { color: $color-success; &::before { content: '✓ '; } }
+  }
+}

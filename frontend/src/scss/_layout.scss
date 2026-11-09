@@ -2,6 +2,9 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+// Атрибут hidden має перемагати display: grid/flex з класів
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: $font;

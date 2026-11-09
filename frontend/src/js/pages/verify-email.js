@@ -27,9 +27,10 @@ form.addEventListener('submit', async (e) => {
   }
 
   try {
-    await withLoading(submitBtn, () => verifyEmail(email, code.value()));
-    sessionStorage.removeItem('pendingEmail');
-    location.replace('/index.html');
+    const res = await withLoading(submitBtn, () => verifyEmail(email, code.value()));
+    // Далі — підтвердження телефону кодом з SMS
+    sessionStorage.setItem('pendingPhone', res.phone);
+    location.replace(`/pages/verify-phone.html?email=${encodeURIComponent(email)}`);
   } catch (err) {
     code.setError(true);
     code.clear();

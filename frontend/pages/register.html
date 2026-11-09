@@ -24,17 +24,25 @@
       <div class="auth__box">
         <div class="auth__mobile-logo">NeVpade</div>
         <h1 class="auth__title">Реєстрація</h1>
-        <p class="auth__subtitle">Створіть акаунт. На пошту прийде код для підтвердження.</p>
+        <p class="auth__subtitle">Створіть акаунт. Ми надішлемо коди підтвердження на пошту та в SMS.</p>
         <form class="auth__form" id="registerForm" novalidate>
           <div class="auth__alert" hidden></div>
           <div class="field">
             <label class="field__label" for="name">Ім'я та прізвище</label>
-            <input class="input" id="name" name="name" type="text" autocomplete="name" placeholder="Олена Коваль" />
+            <input class="input" id="name" name="name" type="text" autocomplete="name" placeholder="Олена Коваль" maxlength="60" />
             <div class="field__error"></div>
           </div>
           <div class="field">
             <label class="field__label" for="email">Email</label>
             <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="name@company.com" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="phone">Номер телефону</label>
+            <div class="phone">
+              <span class="phone__prefix">+380</span>
+              <input class="input phone__input" id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="67 123 45 67" />
+            </div>
             <div class="field__error"></div>
           </div>
           <div class="field">

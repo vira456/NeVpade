@@ -1,5 +1,5 @@
 import { initAuthPage, rememberEmail } from '../utils/auth-page.js';
-import { login } from '../api/auth.js';
+import { login, nextPageFor } from '../api/auth.js';
 import { initSocialButtons } from '../utils/social.js';
 import { isEmail, setFieldError, clearErrors, showAlert, withLoading } from '../utils/validation.js';
 
@@ -16,7 +16,7 @@ if (notice) {
   sessionStorage.removeItem('authNotice');
 }
 
-const goHome = () => location.replace('/index.html');
+const goHome = (user) => location.replace(nextPageFor(user));
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -28,8 +28,8 @@ form.addEventListener('submit', async (e) => {
   if (!ok) return;
 
   try {
-    await withLoading(form.querySelector('[type=submit]'), () => login(email.value.trim(), password.value));
-    goHome();
+    const user = await withLoading(form.querySelector('[type=submit]'), () => login(email.value.trim(), password.value));
+    goHome(user);
   } catch (err) {
     // Бекенд повертає code: "email_not_verified", якщо пошту ще не підтверджено
     if (err.code === 'email_not_verified') {

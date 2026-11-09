@@ -3,7 +3,14 @@ import { request, ApiError } from './client.js';
 // У режимі моків правильний код підтвердження завжди такий:
 export const MOCK_CODE = '123456';
 
-const mockUser = (email, name = 'Менеджер') => ({ id: 'usr_01', name, email, role: 'manager' });
+const mockUser = (email, name = 'Менеджер', phone = '+380671234567', phoneVerified = true) => ({
+  id: 'usr_01',
+  name,
+  email,
+  phone,
+  phoneVerified,
+  role: 'manager',
+});
 
 function checkMockCode(code) {
   if (code !== MOCK_CODE) throw new ApiError('Невірний код підтвердження', 400, 'invalid_code');
@@ -43,32 +50,70 @@ export async function login(email, password) {
   return data.user;
 }
 
-// Реєстрація НЕ видає токен: спершу треба підтвердити пошту кодом
-export const register = ({ name, email, password }) =>
+// Реєстрація НЕ видає токен: спершу треба підтвердити пошту, потім телефон
+export const register = ({ name, email, phone, password }) =>
   request('/auth/register', {
     method: 'POST',
     auth: false,
-    body: { name, email, password },
+    body: { name, email, phone, password },
     mock: () => {
-      sessionStorage.setItem('mockName', name); // щоб у моках показати введене ім'я
+      // щоб у моках показати введені дані
+      sessionStorage.setItem('mockName', name);
+      sessionStorage.setItem('mockPhone', phone);
       return { email, message: 'Код підтвердження надіслано на пошту' };
     },
   });
 
-export async function verifyEmail(email, code) {
-  const data = await request('/auth/verify-email', {
+// Крок 1: код з пошти. Токен ще не видається — далі SMS на телефон
+// Відповідь: { next: "verify_phone", phone: "+380671234567" }
+export const verifyEmail = (email, code) =>
+  request('/auth/verify-email', {
     method: 'POST',
     auth: false,
     body: { email, code },
     mock: () => {
       checkMockCode(code);
-      return { token: 'mock-token', user: mockUser(email, sessionStorage.getItem('mockName') || undefined) };
+      return { next: 'verify_phone', phone: sessionStorage.getItem('mockPhone') || '+380671234567' };
+    },
+  });
+
+// Крок 2: код з SMS → вхід у систему
+export async function verifyPhone(email, code) {
+  const data = await request('/auth/verify-phone', {
+    method: 'POST',
+    auth: false,
+    body: { email, code },
+    mock: () => {
+      checkMockCode(code);
+      const phone = sessionStorage.getItem('mockPhone') || undefined;
+      const name = sessionStorage.getItem('mockName') || getCurrentUser()?.name || undefined;
+      return { token: 'mock-token', user: mockUser(email, name, phone) };
     },
   });
   saveSession(data);
   return data.user;
 }
 
+// Для входу через Google/Facebook: соцмережа не дає телефон, тому користувач додає його окремо.
+// Новий номер (або зміна номера) → SMS з кодом
+export const addPhone = (email, phone) =>
+  request('/auth/phone', {
+    method: 'POST',
+    auth: false,
+    body: { email, phone },
+    mock: () => {
+      sessionStorage.setItem('mockPhone', phone);
+      return { phone, message: 'Код надіслано в SMS' };
+    },
+  });
+
+// Куди вести користувача після успішної авторизації
+export const nextPageFor = (user) =>
+  user && user.phoneVerified === false
+    ? `/pages/verify-phone.html?mode=add&email=${encodeURIComponent(user.email)}`
+    : '/index.html';
+
+// purpose: verify (пошта) | verify_phone (SMS) | reset (відновлення пароля)
 export const resendCode = (email, purpose = 'verify') =>
   request('/auth/resend-code', {
     method: 'POST',
@@ -104,7 +149,7 @@ export async function loginWithGoogle(credential) {
     method: 'POST',
     auth: false,
     body: { credential },
-    mock: () => ({ token: 'mock-token', user: mockUser('google.user@gmail.com', 'Користувач Google') }),
+    mock: () => ({ token: 'mock-token', user: mockUser('google.user@gmail.com', 'Користувач Google', null, false) }),
   });
   saveSession(data);
   return data.user;
@@ -116,7 +161,7 @@ export async function loginWithFacebook(accessToken) {
     method: 'POST',
     auth: false,
     body: { accessToken },
-    mock: () => ({ token: 'mock-token', user: mockUser('fb.user@example.com', 'Користувач Facebook') }),
+    mock: () => ({ token: 'mock-token', user: mockUser('fb.user@example.com', 'Користувач Facebook', null, false) }),
   });
   saveSession(data);
   return data.user;
