@@ -1,0 +1,5 @@
+[
+  { "id": "drv_01", "name": "Петро Іваненко", "phone": "+380501112233", "viber": "+380501112233", "licenseCategories": ["C", "CE"], "vehicleId": "veh_01", "ratePerKm": 10, "status": "available" },
+  { "id": "drv_02", "name": "Андрій Ткачук", "phone": "+380662223344", "viber": "+380662223344", "licenseCategories": ["C", "CE"], "vehicleId": "veh_02", "ratePerKm": 11, "status": "on_trip" },
+  { "id": "drv_03", "name": "Олег Бондар", "phone": "+380973334455", "viber": "+380973334455", "licenseCategories": ["C", "CE"], "vehicleId": "veh_03", "ratePerKm": 10, "status": "day_off" }
+]

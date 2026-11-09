@@ -1,0 +1,6 @@
+[
+  { "id": "tsk_01", "title": "Підтвердити завантаження TR-0042", "description": "Зателефонувати клієнту", "status": "todo", "priority": "high", "dueDate": "2026-11-14", "tripId": "trp_001", "order": 0 },
+  { "id": "tsk_02", "title": "Продовжити страховку АА 5678 ВВ", "description": "", "status": "todo", "priority": "medium", "dueDate": "2026-12-15", "tripId": null, "order": 1 },
+  { "id": "tsk_03", "title": "Відправити документи по TR-0041", "description": "ТТН і рахунок", "status": "in_progress", "priority": "high", "dueDate": "2026-11-11", "tripId": "trp_002", "order": 0 },
+  { "id": "tsk_04", "title": "Закрити рейс TR-0040", "description": "", "status": "done", "priority": "low", "dueDate": "2026-11-06", "tripId": "trp_003", "order": 0 }
+]

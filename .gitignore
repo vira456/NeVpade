@@ -1,0 +1,18 @@
+# Frontend
+node_modules/
+dist/
+.env
+.env.local
+
+# Backend
+__pycache__/
+venv/
+.venv/
+*.pyc
+backend/.env
+
+# Система / редактор
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

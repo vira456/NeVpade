@@ -1,0 +1,78 @@
+@use 'variables' as *;
+
+.card {
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  padding: 20px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: $gap;
+  margin-bottom: 24px;
+
+  &__label { color: $color-muted; font-size: 14px; }
+  &__value { font-size: 26px; font-weight: 700; margin-top: 6px; }
+}
+
+.btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font: inherit;
+  cursor: pointer;
+  background: $color-primary;
+  color: #fff;
+
+  &:hover { filter: brightness(1.08); }
+  &--ghost { background: transparent; color: $color-primary; border: 1px solid $color-primary; }
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td { text-align: left; padding: 12px; border-bottom: 1px solid $color-border; }
+  th { color: $color-muted; font-weight: 500; font-size: 14px; }
+}
+
+.table-wrap { overflow-x: auto; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: #fff;
+
+  &--planned { background: $status-planned; }
+  &--in_progress { background: $status-progress; }
+  &--done { background: $status-done; }
+  &--cancelled { background: $status-cancelled; }
+}
+
+.input {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.placeholder { color: $color-muted; }
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $gap;
+  @media (max-width: $bp-tablet) { grid-template-columns: 1fr; }
+
+  &__col { background: #eaeef3; border-radius: $radius; padding: 12px; }
+  &__title { margin: 4px 4px 12px; font-size: 16px; }
+  &__list { min-height: 80px; display: flex; flex-direction: column; gap: 8px; }
+  &__item { background: #fff; border-radius: 8px; padding: 12px; cursor: grab; border: 1px solid $color-border; }
+}
+
+#map { height: 70vh; border-radius: $radius; }

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Рейси · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <header class="main__header">
+        <h1 class="main__title">Рейси</h1>
+        <input class="input" id="search" placeholder="Пошук: номер, місто, вантаж" />
+      </header>
+      <div class="card table-wrap">
+        <table class="table">
+          <thead><tr><th>№</th><th>Маршрут</th><th>Дата</th><th>Вантаж</th><th>Відстань</th><th>Ціна</th><th>Статус</th><th></th></tr></thead>
+          <tbody id="tripsBody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/trips.js"></script>
+</body>
+</html>

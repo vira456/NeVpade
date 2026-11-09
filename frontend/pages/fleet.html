@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Автопарк · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <header class="main__header"><h1 class="main__title">Автопарк</h1></header>
+      <div class="card table-wrap">
+        <table class="table">
+          <thead><tr><th>Номер</th><th>Модель</th><th>Тип</th><th>Вантажність</th><th>Витрата</th><th>Пробіг</th><th>Наступне ТО</th><th>Статус</th></tr></thead>
+          <tbody id="fleetBody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/fleet.js"></script>
+</body>
+</html>

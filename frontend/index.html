@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Аналітика · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <header class="main__header"><h1 class="main__title">Аналітика</h1></header>
+      <section class="stats" id="stats"></section>
+      <section class="stats">
+        <div class="card"><h3>Доходи і витрати</h3><canvas id="incomeChart"></canvas></div>
+        <div class="card"><h3>Структура витрат</h3><canvas id="expensesChart"></canvas></div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/dashboard.js"></script>
+</body>
+</html>

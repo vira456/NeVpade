@@ -1,0 +1,35 @@
+[
+  {
+    "id": "trp_001", "number": "TR-0042",
+    "from": { "city": "Хмельницький", "address": "вул. Проскурівська, 1", "lat": 49.4229, "lng": 26.9871 },
+    "to": { "city": "Львів", "address": "вул. Городоцька, 120", "lat": 49.8397, "lng": 24.0297 },
+    "loadDate": "2026-11-15", "unloadDate": "2026-11-16",
+    "cargo": { "type": "Будматеріали", "weightT": 18, "volumeM3": 60 },
+    "vehicleId": "veh_01", "driverId": "drv_01",
+    "client": { "name": "ТОВ «БудСервіс»", "phone": "+380671234567" },
+    "price": 24000, "distanceKm": 240, "status": "planned", "source": "manual",
+    "createdAt": "2026-11-09T10:00:00Z"
+  },
+  {
+    "id": "trp_002", "number": "TR-0041",
+    "from": { "city": "Київ", "address": "вул. Набережно-Хрещатицька, 10", "lat": 50.4501, "lng": 30.5234 },
+    "to": { "city": "Одеса", "address": "Митна площа, 1", "lat": 46.4825, "lng": 30.7233 },
+    "loadDate": "2026-11-10", "unloadDate": "2026-11-11",
+    "cargo": { "type": "Продукти (реф)", "weightT": 12, "volumeM3": 45 },
+    "vehicleId": "veh_02", "driverId": "drv_02",
+    "client": { "name": "ФОП Мельник", "phone": "+380931112233" },
+    "price": 31000, "distanceKm": 475, "status": "in_progress", "source": "import",
+    "createdAt": "2026-11-07T08:30:00Z"
+  },
+  {
+    "id": "trp_003", "number": "TR-0040",
+    "from": { "city": "Вінниця", "address": "вул. Келецька, 50", "lat": 49.2331, "lng": 28.4682 },
+    "to": { "city": "Рівне", "address": "вул. Соборна, 300", "lat": 50.6199, "lng": 26.2516 },
+    "loadDate": "2026-11-05", "unloadDate": "2026-11-05",
+    "cargo": { "type": "Меблі", "weightT": 7, "volumeM3": 80 },
+    "vehicleId": "veh_03", "driverId": "drv_03",
+    "client": { "name": "ТОВ «Меблі-Захід»", "phone": "+380672223344" },
+    "price": 17500, "distanceKm": 280, "status": "done", "source": "manual",
+    "createdAt": "2026-11-02T12:00:00Z"
+  }
+]
