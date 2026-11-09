@@ -23,6 +23,8 @@ body {
   background: $color-sidebar;
   color: #fff;
   padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
 
   &__logo {
     font-size: 22px;
@@ -42,8 +44,33 @@ body {
     &.is-active { background: $color-primary; color: #fff; }
   }
 
+  &__user {
+    margin-top: auto;
+    padding: 16px 8px 0;
+    border-top: 1px solid rgba(#fff, .12);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  &__user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  &__logout {
+    background: none;
+    border: 1px solid rgba(#fff, .3);
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font: inherit;
+    cursor: pointer;
+    &:hover { background: rgba(#fff, .08); }
+  }
+
   @media (max-width: $bp-tablet) {
     padding: 12px 16px;
+    &__user { margin-top: 12px; }
     &__logo { margin-bottom: 8px; }
     &__nav { flex-direction: row; overflow-x: auto; }
   }

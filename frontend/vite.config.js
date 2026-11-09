@@ -13,6 +13,9 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         login: resolve(__dirname, 'pages/login.html'),
+        register: resolve(__dirname, 'pages/register.html'),
+        verifyEmail: resolve(__dirname, 'pages/verify-email.html'),
+        forgotPassword: resolve(__dirname, 'pages/forgot-password.html'),
         trips: resolve(__dirname, 'pages/trips.html'),
         map: resolve(__dirname, 'pages/map.html'),
         fleet: resolve(__dirname, 'pages/fleet.html'),

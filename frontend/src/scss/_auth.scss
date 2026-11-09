@@ -1,0 +1,159 @@
+@use 'variables' as *;
+
+$color-error: #d93636;
+$color-success: #17a34a;
+
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100vh;
+  background: $color-surface;
+
+  @media (max-width: $bp-tablet) { grid-template-columns: 1fr; }
+
+  // Ліва панель з назвою та описом
+  &__brand {
+    background: $color-sidebar;
+    color: #fff;
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    @media (max-width: $bp-tablet) { display: none; }
+  }
+
+  &__logo { font-size: 26px; font-weight: 700; }
+  &__tagline { font-size: 34px; line-height: 1.2; font-weight: 600; max-width: 440px; margin: 0 0 16px; }
+  &__lead { color: rgba(#fff, .7); max-width: 420px; line-height: 1.5; margin: 0; }
+  &__features {
+    list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 10px;
+    color: rgba(#fff, .85);
+    li::before { content: '—'; margin-right: 10px; color: $color-primary; }
+  }
+  &__copy { color: rgba(#fff, .45); font-size: 13px; }
+
+  &__panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+
+  &__box { width: 100%; max-width: 400px; }
+  &__mobile-logo {
+    display: none; font-size: 22px; font-weight: 700; margin-bottom: 24px;
+    @media (max-width: $bp-tablet) { display: block; }
+  }
+  &__title { margin: 0 0 6px; font-size: 28px; }
+  &__subtitle { margin: 0 0 24px; color: $color-muted; line-height: 1.5; }
+
+  &__form { display: grid; gap: 14px; }
+
+  &__alert {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    &--error { background: rgba($color-error, .08); color: $color-error; }
+    &--success { background: rgba($color-success, .1); color: #12843c; }
+  }
+
+  &__row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
+
+  &__divider {
+    display: flex; align-items: center; gap: 12px;
+    color: $color-muted; font-size: 13px; margin: 6px 0;
+    &::before, &::after { content: ''; flex: 1; height: 1px; background: $color-border; }
+  }
+
+  &__social { display: grid; gap: 10px; }
+
+  &__footer { text-align: center; margin-top: 22px; color: $color-muted; font-size: 14px; }
+
+  &__mock-hint {
+    font-size: 13px; color: $color-muted; background: $color-bg;
+    border: 1px dashed $color-border; border-radius: 8px; padding: 8px 10px;
+  }
+
+  a { color: $color-primary; text-decoration: none; &:hover { text-decoration: underline; } }
+}
+
+// Поле форми з підписом і помилкою
+.field {
+  display: grid;
+  gap: 6px;
+
+  &__label { font-size: 14px; font-weight: 500; }
+  &__wrap { position: relative; }
+  .input { width: 100%; }
+
+  &__toggle {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    border: 0; background: none; color: $color-primary; font: inherit; font-size: 13px;
+    cursor: pointer; padding: 6px;
+  }
+  &__wrap .input { padding-right: 84px; }
+
+  &__error { color: $color-error; font-size: 13px; min-height: 0; &:empty { display: none; } }
+
+  &--error .input { border-color: $color-error; }
+  &--check { grid-template-columns: auto 1fr; align-items: start; font-size: 14px; color: $color-muted;
+    .field__error { grid-column: 1 / -1; }
+    input { margin-top: 3px; }
+  }
+}
+
+.input:focus { outline: 2px solid rgba($color-primary, .25); border-color: $color-primary; }
+
+.btn--block { width: 100%; padding: 12px 16px; font-weight: 600; }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn--social {
+  width: 100%;
+  padding: 11px 16px;
+  background: #fff;
+  color: $color-text;
+  border: 1px solid $color-border;
+  font-weight: 500;
+  &:hover { background: $color-bg; filter: none; }
+}
+
+.btn--facebook { background: #1877f2; color: #fff; border-color: #1877f2; &:hover { background: #166fe5; } }
+
+.btn--link {
+  background: none; border: 0; padding: 0; color: $color-primary; font: inherit; font-size: 14px; cursor: pointer;
+  &:disabled { color: $color-muted; }
+}
+
+// Вимоги до пароля
+.rules {
+  list-style: none; padding: 0; margin: 0; font-size: 13px; color: $color-muted; display: grid; gap: 2px;
+  li::before { content: '○ '; }
+  li.is-ok { color: $color-success; &::before { content: '✓ '; } }
+}
+
+// 6 полів коду
+.code {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+
+  input {
+    width: 100%;
+    aspect-ratio: 1 / 1.15;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    border: 1px solid $color-border;
+    border-radius: 10px;
+    &:focus { outline: 2px solid rgba($color-primary, .25); border-color: $color-primary; }
+  }
+
+  &--error input { border-color: $color-error; animation: shake .3s; }
+}
+
+@keyframes shake {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

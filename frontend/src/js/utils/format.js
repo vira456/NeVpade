@@ -14,3 +14,7 @@ export const VEHICLE_STATUS = {
   on_trip: 'В рейсі',
   repair: 'Ремонт',
 };
+
+// Захист від XSS при вставці тексту користувача в innerHTML
+export const escapeHtml = (s = '') =>
+  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

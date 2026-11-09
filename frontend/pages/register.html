@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Реєстрація · NeVpade</title>
+</head>
+<body>
+  <div class="auth">
+    <aside class="auth__brand">
+      <div class="auth__logo">NeVpade</div>
+      <div>
+        <h2 class="auth__tagline">Рейси, автопарк і завдання в одному місці</h2>
+        <p class="auth__lead">Робоче місце менеджера вантажоперевезень: плануйте маршрути, ведіть облік машин і водіїв, відправляйте завдання у Viber.</p>
+        <ul class="auth__features">
+          <li>Картки рейсів і маршрути на карті</li>
+          <li>Kanban-дошка завдань</li>
+          <li>Аналітика доходів і витрат</li>
+        </ul>
+      </div>
+      <div class="auth__copy">© 2026 NeVpade</div>
+    </aside>
+    <main class="auth__panel">
+      <div class="auth__box">
+        <div class="auth__mobile-logo">NeVpade</div>
+        <h1 class="auth__title">Реєстрація</h1>
+        <p class="auth__subtitle">Створіть акаунт. На пошту прийде код для підтвердження.</p>
+        <form class="auth__form" id="registerForm" novalidate>
+          <div class="auth__alert" hidden></div>
+          <div class="field">
+            <label class="field__label" for="name">Ім'я та прізвище</label>
+            <input class="input" id="name" name="name" type="text" autocomplete="name" placeholder="Олена Коваль" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="email">Email</label>
+            <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="name@company.com" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="password">Пароль</label>
+            <div class="field__wrap">
+              <input class="input" id="password" name="password" type="password" autocomplete="new-password" />
+              <button class="field__toggle" type="button" data-toggle-password="password">Показати</button>
+            </div>
+            <div class="field__error"></div>
+          </div>
+          <ul class="rules" id="passwordRules">
+            <li data-rule="щонайменше 8 символів">щонайменше 8 символів</li>
+            <li data-rule="хоча б одна літера">хоча б одна літера</li>
+            <li data-rule="хоча б одна цифра">хоча б одна цифра</li>
+          </ul>
+          <div class="field">
+            <label class="field__label" for="confirm">Повторіть пароль</label>
+            <div class="field__wrap">
+              <input class="input" id="confirm" name="confirm" type="password" autocomplete="new-password" />
+              <button class="field__toggle" type="button" data-toggle-password="confirm">Показати</button>
+            </div>
+            <div class="field__error"></div>
+          </div>
+          <label class="field field--check">
+            <input type="checkbox" name="terms" />
+            <span>Погоджуюсь на обробку персональних даних</span>
+            <span class="field__error"></span>
+          </label>
+          <button class="btn btn--block" type="submit">Зареєструватися</button>
+          <div class="auth__divider">або</div>
+          <div class="auth__social">
+            <div id="googleSlot"></div>
+            <button class="btn btn--social" id="googleBtn" type="button">Продовжити з Google</button>
+            <button class="btn btn--social btn--facebook" id="facebookBtn" type="button">Продовжити з Facebook</button>
+          </div>
+        </form>
+        <p class="auth__footer">Вже є акаунт? <a href="/pages/login.html">Увійти</a></p>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/register.js"></script>
+</body>
+</html>

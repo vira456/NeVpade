@@ -6,15 +6,56 @@
   <title>Вхід · NeVpade</title>
 </head>
 <body>
-  <main style="min-height:100vh;display:grid;place-items:center;padding:16px">
-    <form class="card" id="loginForm" style="width:100%;max-width:360px;display:grid;gap:12px">
-      <h1 style="margin:0">NeVpade</h1>
-      <input class="input" name="email" type="email" placeholder="Email" required />
-      <input class="input" name="password" type="password" placeholder="Пароль" required />
-      <button class="btn" type="submit">Увійти</button>
-      <p id="loginError" style="color:#d33;margin:0"></p>
-    </form>
-  </main>
+  <div class="auth">
+    <aside class="auth__brand">
+      <div class="auth__logo">NeVpade</div>
+      <div>
+        <h2 class="auth__tagline">Рейси, автопарк і завдання в одному місці</h2>
+        <p class="auth__lead">Робоче місце менеджера вантажоперевезень: плануйте маршрути, ведіть облік машин і водіїв, відправляйте завдання у Viber.</p>
+        <ul class="auth__features">
+          <li>Картки рейсів і маршрути на карті</li>
+          <li>Kanban-дошка завдань</li>
+          <li>Аналітика доходів і витрат</li>
+        </ul>
+      </div>
+      <div class="auth__copy">© 2026 NeVpade</div>
+    </aside>
+    <main class="auth__panel">
+      <div class="auth__box">
+        <div class="auth__mobile-logo">NeVpade</div>
+        <h1 class="auth__title">Вхід</h1>
+        <p class="auth__subtitle">Раді бачити знову! Увійдіть до свого акаунта.</p>
+        <form class="auth__form" id="loginForm" novalidate>
+          <div class="auth__alert" hidden></div>
+          <div class="field">
+            <label class="field__label" for="email">Email</label>
+            <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="name@company.com" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="password">Пароль</label>
+            <div class="field__wrap">
+              <input class="input" id="password" name="password" type="password" autocomplete="current-password" />
+              <button class="field__toggle" type="button" data-toggle-password="password">Показати</button>
+            </div>
+            <div class="field__error"></div>
+          </div>
+          <div class="auth__row">
+            <span></span>
+            <a href="/pages/forgot-password.html">Забули пароль?</a>
+          </div>
+          <button class="btn btn--block" type="submit">Увійти</button>
+          <div class="auth__divider">або</div>
+          <div class="auth__social">
+            <div id="googleSlot"></div>
+            <button class="btn btn--social" id="googleBtn" type="button">Продовжити з Google</button>
+            <button class="btn btn--social btn--facebook" id="facebookBtn" type="button">Продовжити з Facebook</button>
+          </div>
+        </form>
+        <p class="auth__footer">Немає акаунта? <a href="/pages/register.html">Зареєструватися</a></p>
+      </div>
+    </main>
+  </div>
   <script type="module" src="/src/js/pages/login.js"></script>
 </body>
 </html>
