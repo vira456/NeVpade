@@ -3,6 +3,11 @@ import { resolve } from 'path';
 
 // Кілька HTML-сторінок (multi-page app)
 export default defineConfig({
+  css: {
+    preprocessorOptions: {
+      scss: { api: 'modern-compiler' }, // прибирає попередження legacy-js-api
+    },
+  },
   build: {
     rollupOptions: {
       input: {
