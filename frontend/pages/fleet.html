@@ -3,19 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@500;600;700&family=Fira+Sans:wght@400;500;600&display=swap" />
+  <meta name="theme-color" content="#23282d" />
   <title>Автопарк · NeVpade</title>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar"></aside>
     <main class="main">
-      <header class="main__header"><h1 class="main__title">Автопарк</h1></header>
-      <div class="card table-wrap">
-        <table class="table">
-          <thead><tr><th>Номер</th><th>Модель</th><th>Тип</th><th>Вантажність</th><th>Витрата</th><th>Пробіг</th><th>Наступне ТО</th><th>Статус</th></tr></thead>
-          <tbody id="fleetBody"></tbody>
-        </table>
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Автопарк</h1>
+          <p class="main__subtitle" id="fleetSummary">&nbsp;</p>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="seg" role="tablist" aria-label="Розділи автопарку">
+          <button class="seg__btn" id="tab-vehicles" role="tab" aria-selected="true" aria-controls="panel-vehicles" data-tab="vehicles">Автомобілі<span class="seg__count" id="vehiclesCount"></span></button>
+          <button class="seg__btn" id="tab-drivers" role="tab" aria-selected="false" aria-controls="panel-drivers" data-tab="drivers" tabindex="-1">Водії<span class="seg__count" id="driversCount"></span></button>
+        </div>
+        <p class="toolbar__note" id="fleetAlerts"></p>
       </div>
+
+      <section id="panel-vehicles" role="tabpanel" aria-labelledby="tab-vehicles">
+        <div class="vehicles" id="vehicles"></div>
+      </section>
+
+      <section id="panel-drivers" role="tabpanel" aria-labelledby="tab-drivers" hidden>
+        <div class="card trips-card">
+          <div class="table-wrap">
+            <table class="table drivers-table">
+              <thead>
+                <tr>
+                  <th>Водій</th>
+                  <th>Телефон</th>
+                  <th>Авто</th>
+                  <th class="num">Ставка</th>
+                  <th>Поточний рейс</th>
+                  <th>Статус</th>
+                  <th><span class="visually-hidden">Дії</span></th>
+                </tr>
+              </thead>
+              <tbody id="driversBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
   <script type="module" src="/src/js/pages/fleet.js"></script>

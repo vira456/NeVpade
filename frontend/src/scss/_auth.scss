@@ -1,38 +1,72 @@
 @use 'variables' as *;
 
-$color-error: #d93636;
-$color-success: #17a34a;
-
 .auth {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   min-height: 100vh;
   background: $color-surface;
 
   @media (max-width: $bp-tablet) { grid-template-columns: 1fr; }
 
-  // Ліва панель з назвою та описом
+  // ---------- Ліва панель ----------
   &__brand {
     background: $color-sidebar;
     color: #fff;
-    padding: 48px;
+    padding: 40px 48px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 40px;
 
     @media (max-width: $bp-tablet) { display: none; }
   }
 
-  &__logo { font-size: 26px; font-weight: 700; }
-  &__tagline { font-size: 34px; line-height: 1.2; font-weight: 600; max-width: 440px; margin: 0 0 16px; }
-  &__lead { color: rgba(#fff, .7); max-width: 420px; line-height: 1.5; margin: 0; }
-  &__features {
-    list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 10px;
-    color: rgba(#fff, .85);
-    li::before { content: '—'; margin-right: 10px; color: $color-primary; }
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: $font-display;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
   }
+
+  &__pitch { margin-top: auto; }
+
+  &__tagline { margin: 0 0 14px; font-size: 38px; line-height: 1.1; max-width: 13em; }
+  &__lead { color: rgba(#fff, .72); max-width: 30em; margin: 0; }
+
+  // Табло рейсів — як дошка відправлень
+  &__board {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid rgba(#fff, .12);
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(#fff, .12);
+    }
+
+    .route { flex: 1; --route-bg: #{$color-sidebar}; }
+    .route__city { color: #fff; }
+    .route__km { color: rgba(#fff, .6); }
+    .route__line::before { border-top-color: rgba($color-accent, .55); }
+    .route__line::after {
+      background:
+        radial-gradient(circle, $color-accent 3.5px, transparent 4px) left center / 9px 9px no-repeat,
+        radial-gradient(circle, $color-sidebar 2px, $color-accent 2.5px, $color-accent 3.5px, transparent 4px) right center / 9px 9px no-repeat;
+    }
+    .badge { --tone: #{$color-accent}; }
+    .badge--done { --tone: #7fc683; }
+  }
+
   &__copy { color: rgba(#fff, .45); font-size: 13px; }
 
+  // ---------- Права частина з формою ----------
   &__panel {
     display: flex;
     align-items: center;
@@ -41,99 +75,130 @@ $color-success: #17a34a;
   }
 
   &__box { width: 100%; max-width: 400px; }
+
   &__mobile-logo {
-    display: none; font-size: 22px; font-weight: 700; margin-bottom: 24px;
-    @media (max-width: $bp-tablet) { display: block; }
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-family: $font-display;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    @media (max-width: $bp-tablet) { display: flex; }
   }
-  &__title { margin: 0 0 6px; font-size: 28px; }
-  &__subtitle { margin: 0 0 24px; color: $color-muted; line-height: 1.5; }
+
+  &__title { margin: 0 0 6px; font-size: 32px; }
+  &__subtitle { margin: 0 0 24px; color: $color-muted; }
 
   &__form { display: grid; gap: 14px; }
 
   &__alert {
     padding: 10px 12px;
-    border-radius: 8px;
+    border-radius: $radius-sm;
     font-size: 14px;
     line-height: 1.4;
-    &--error { background: rgba($color-error, .08); color: $color-error; }
-    &--success { background: rgba($color-success, .1); color: #12843c; }
+    border-left: 3px solid currentColor;
+    &--error { background: rgba($color-error, .07); color: $color-error; }
+    &--success { background: rgba($color-success, .08); color: $color-success; }
   }
 
   &__row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
 
   &__divider {
-    display: flex; align-items: center; gap: 12px;
-    color: $color-muted; font-size: 13px; margin: 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: $color-muted;
+    font-size: 13px;
+    margin: 6px 0;
     &::before, &::after { content: ''; flex: 1; height: 1px; background: $color-border; }
   }
 
   &__social { display: grid; gap: 10px; }
 
-  &__footer { text-align: center; margin-top: 22px; color: $color-muted; font-size: 14px; }
+  &__footer { text-align: center; margin-top: 24px; color: $color-muted; font-size: 14px; }
 
   &__mock-hint {
-    font-size: 13px; color: $color-muted; background: $color-bg;
-    border: 1px dashed $color-border; border-radius: 8px; padding: 8px 10px;
+    margin: 0;
+    font-size: 13px;
+    color: $color-muted;
+    background: $color-surface-2;
+    border: 1px dashed $color-border-strong;
+    border-radius: $radius-sm;
+    padding: 8px 10px;
   }
 
   a { color: $color-primary; text-decoration: none; &:hover { text-decoration: underline; } }
+  a.auth__logo { color: #fff; &:hover { text-decoration: none; } }
 }
 
-// Поле форми з підписом і помилкою
+// ---------- Поле форми з підписом і помилкою ----------
 .field {
   display: grid;
   gap: 6px;
+  align-content: start; // помилка в сусідньому полі не розтягує це
 
   &__label { font-size: 14px; font-weight: 500; }
   &__wrap { position: relative; }
   .input { width: 100%; }
 
   &__toggle {
-    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-    border: 0; background: none; color: $color-primary; font: inherit; font-size: 13px;
-    cursor: pointer; padding: 6px;
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: none;
+    color: $color-primary;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px;
   }
   &__wrap .input { padding-right: 84px; }
 
-  &__error { color: $color-error; font-size: 13px; min-height: 0; &:empty { display: none; } }
+  &__error { color: $color-error; font-size: 13px; &:empty { display: none; } }
 
   &--error .input { border-color: $color-error; }
-  &--check { grid-template-columns: auto 1fr; align-items: start; font-size: 14px; color: $color-muted;
+
+  &--check {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    font-size: 14px;
+    color: $color-muted;
     .field__error { grid-column: 1 / -1; }
-    input { margin-top: 3px; }
+    input { margin-top: 3px; accent-color: $color-primary; }
   }
 }
 
-.input:focus { outline: 2px solid rgba($color-primary, .25); border-color: $color-primary; }
-
-.btn--block { width: 100%; padding: 12px 16px; font-weight: 600; }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-
 .btn--social {
   width: 100%;
-  padding: 11px 16px;
-  background: #fff;
+  padding: 10px 16px;
+  background: $color-surface;
   color: $color-text;
-  border: 1px solid $color-border;
+  border: 1px solid $color-border-strong;
+  font-family: $font;
+  font-size: 15px;
   font-weight: 500;
-  &:hover { background: $color-bg; filter: none; }
+  &:hover { background: $color-surface-2; }
 }
 
 .btn--facebook { background: #1877f2; color: #fff; border-color: #1877f2; &:hover { background: #166fe5; } }
 
-.btn--link {
-  background: none; border: 0; padding: 0; color: $color-primary; font: inherit; font-size: 14px; cursor: pointer;
-  &:disabled { color: $color-muted; }
-}
-
-// Вимоги до пароля
+// ---------- Вимоги до пароля ----------
 .rules {
-  list-style: none; padding: 0; margin: 0; font-size: 13px; color: $color-muted; display: grid; gap: 2px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  color: $color-muted;
+  display: grid;
+  gap: 2px;
   li::before { content: '○ '; }
   li.is-ok { color: $color-success; &::before { content: '✓ '; } }
 }
 
-// 6 полів коду
+// ---------- 6 полів коду ----------
 .code {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -143,10 +208,11 @@ $color-success: #17a34a;
     width: 100%;
     aspect-ratio: 1 / 1.15;
     text-align: center;
-    font-size: 24px;
+    font-family: $font-display;
+    font-size: 26px;
     font-weight: 600;
-    border: 1px solid $color-border;
-    border-radius: 10px;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-sm;
     &:focus { outline: 2px solid rgba($color-primary, .25); border-color: $color-primary; }
   }
 
@@ -158,38 +224,44 @@ $color-success: #17a34a;
   75% { transform: translateX(4px); }
 }
 
-// Поле телефону з префіксом +380
+// ---------- Поле телефону з префіксом +380 ----------
 .phone {
   display: flex;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid $color-border-strong;
+  border-radius: $radius-sm;
+  background: $color-surface;
   overflow: hidden;
 
   &:focus-within { outline: 2px solid rgba($color-primary, .25); border-color: $color-primary; }
 
   &__prefix {
-    display: flex; align-items: center;
+    display: flex;
+    align-items: center;
     padding: 0 10px 0 12px;
-    background: $color-bg;
+    background: $color-surface-2;
     border-right: 1px solid $color-border;
     color: $color-muted;
     font-weight: 500;
   }
 
-  &__input.input { border: 0; border-radius: 0; flex: 1; min-width: 0; letter-spacing: .03em; &:focus { outline: none; } }
+  &__input.input { border: 0; border-radius: 0; flex: 1; min-width: 0; &:focus { outline: none; } }
 }
 
 .field--error .phone { border-color: $color-error; }
 
-// Кроки реєстрації
+// ---------- Кроки реєстрації ----------
 .steps {
-  display: flex; gap: 8px; margin-bottom: 18px; font-size: 13px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-size: 13px;
 
   &__item {
-    padding: 4px 10px; border-radius: 999px;
-    background: $color-bg; color: $color-muted;
-    &.is-active { background: rgba($color-primary, .1); color: $color-primary; font-weight: 600; }
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: $color-surface-2;
+    color: $color-muted;
+    &.is-active { background: $color-sidebar; color: #fff; font-weight: 500; }
     &.is-done { color: $color-success; &::before { content: '✓ '; } }
   }
 }

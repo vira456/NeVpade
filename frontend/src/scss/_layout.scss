@@ -5,52 +5,109 @@
 // Атрибут hidden має перемагати display: grid/flex з класів
 [hidden] { display: none !important; }
 
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   margin: 0;
   font-family: $font;
+  font-size: 15px;
+  line-height: 1.5;
   background: $color-bg;
   color: $color-text;
+  -webkit-font-smoothing: antialiased;
 }
+
+h1, h2, h3 {
+  font-family: $font-display;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -.005em;
+}
+
+a { color: $color-primary; }
+
+:focus-visible { outline: 2px solid $color-primary; outline-offset: 2px; }
 
 .app {
   display: grid;
-  grid-template-columns: $sidebar-width 1fr;
+  grid-template-columns: $sidebar-width minmax(0, 1fr);
   min-height: 100vh;
 
   @media (max-width: $bp-tablet) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr); // не даємо меню розширити сторінку
   }
 }
 
+// ---------- Бокове меню ----------
 .sidebar {
   background: $color-sidebar;
   color: #fff;
-  padding: 24px 16px;
+  padding: 20px 12px 16px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
 
   &__logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 8px 28px;
+    color: #fff;
+    text-decoration: none;
+    font-family: $font-display;
     font-size: 22px;
     font-weight: 700;
-    margin: 0 8px 28px;
+    letter-spacing: .01em;
   }
 
-  &__nav { display: flex; flex-direction: column; gap: 4px; }
+  &__mark { flex-shrink: 0; display: block; }
+
+  &__nav { display: flex; flex-direction: column; gap: 2px; }
 
   &__link {
-    color: rgba(#fff, .75);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(#fff, .72);
     text-decoration: none;
-    padding: 10px 12px;
-    border-radius: 8px;
+    font-family: $font-display;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 9px 12px;
+    border-radius: $radius-sm;
 
-    &:hover { background: rgba(#fff, .08); color: #fff; }
-    &.is-active { background: $color-primary; color: #fff; }
+    svg { width: 20px; height: 20px; flex-shrink: 0; opacity: .85; }
+
+    &:hover { background: $color-sidebar-hover; color: #fff; }
+
+    // Активний пункт: бурштинова смуга, як світловідбивна стрічка
+    &.is-active {
+      background: $color-sidebar-hover;
+      color: #fff;
+      svg { color: $color-accent; opacity: 1; }
+      &::before {
+        content: '';
+        position: absolute;
+        left: -12px;
+        top: 6px;
+        bottom: 6px;
+        width: 4px;
+        border-radius: 0 3px 3px 0;
+        background: $color-accent;
+      }
+    }
+
+    &:focus-visible { outline-color: $color-accent; }
   }
 
   &__user {
     margin-top: auto;
-    padding: 16px 8px 0;
-    border-top: 1px solid rgba(#fff, .12);
+    padding: 14px 4px 0;
+    border-top: 1px solid rgba(#fff, .1);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -58,41 +115,107 @@ body {
     font-size: 14px;
   }
 
+  &__profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: #fff;
+    text-decoration: none;
+    border-radius: $radius-sm;
+    padding: 4px;
+    margin: -4px;
+    &:hover { background: $color-sidebar-hover; }
+  }
+
+  &__avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: $color-accent;
+    color: $color-text;
+    display: grid;
+    place-items: center;
+    font-family: $font-display;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
   &__user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   &__logout {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
     background: none;
-    border: 1px solid rgba(#fff, .3);
-    color: #fff;
-    border-radius: 6px;
-    padding: 6px 10px;
-    font: inherit;
+    border: 0;
+    color: rgba(#fff, .65);
+    border-radius: $radius-sm;
     cursor: pointer;
-    &:hover { background: rgba(#fff, .08); }
+    svg { width: 18px; height: 18px; }
+    &:hover { background: $color-sidebar-hover; color: #fff; }
   }
 
+  // Телефон/планшет: меню стає верхньою смугою з горизонтальною прокруткою
   @media (max-width: $bp-tablet) {
-    padding: 12px 16px;
-    &__user { margin-top: 12px; }
-    &__logo { margin-bottom: 8px; }
-    &__nav { flex-direction: row; overflow-x: auto; }
+    position: static;
+    height: auto;
+    padding: 12px 16px 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'logo user' 'nav nav';
+    align-items: center;
+
+    &__logo { grid-area: logo; margin: 0; font-size: 20px; }
+    &__user { grid-area: user; margin: 0; padding: 0; border: 0; }
+    &__user-name { display: none; }
+
+    &__nav {
+      grid-area: nav;
+      flex-direction: row;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin: 10px -16px 0;
+      padding: 0 12px;
+    }
+
+    &__link {
+      flex-shrink: 0;
+      padding: 10px 12px 12px;
+      border-radius: 0;
+      font-size: 15px;
+      svg { width: 18px; height: 18px; }
+      &.is-active {
+        background: none;
+        &::before { left: 12px; right: 12px; top: auto; bottom: 0; width: auto; height: 3px; border-radius: 3px 3px 0 0; }
+      }
+    }
   }
 }
 
+// ---------- Основна частина ----------
 .main {
-  padding: 28px 32px;
+  padding: 28px 32px 40px;
   min-width: 0;
 
   &__header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     gap: $gap;
     margin-bottom: 24px;
     flex-wrap: wrap;
   }
 
-  &__title { margin: 0; font-size: 26px; }
+  &__title { margin: 0; font-size: 30px; }
 
-  @media (max-width: $bp-tablet) { padding: 20px 16px; }
+  &__subtitle { margin: 4px 0 0; color: $color-muted; }
+
+  &__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  @media (max-width: $bp-tablet) { padding: 20px 16px 32px; }
+  @media (max-width: $bp-phone) { &__title { font-size: 26px; } }
 }

@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@500;600;700&family=Fira+Sans:wght@400;500;600&display=swap" />
+  <meta name="theme-color" content="#23282d" />
   <title>Рейси · NeVpade</title>
 </head>
 <body>
@@ -10,17 +14,43 @@
     <aside class="sidebar"></aside>
     <main class="main">
       <header class="main__header">
-        <h1 class="main__title">Рейси</h1>
-        <input class="input" id="search" placeholder="Пошук: номер, місто, вантаж" />
+        <div>
+          <h1 class="main__title">Рейси</h1>
+          <p class="main__subtitle" id="tripsSummary">&nbsp;</p>
+        </div>
       </header>
-      <div class="card table-wrap">
-        <table class="table">
-          <thead><tr><th>№</th><th>Маршрут</th><th>Дата</th><th>Вантаж</th><th>Відстань</th><th>Ціна</th><th>Статус</th><th></th></tr></thead>
-          <tbody id="tripsBody"></tbody>
-        </table>
+
+      <div class="toolbar">
+        <div class="seg" id="statusTabs" role="group" aria-label="Статус рейсу"></div>
+        <input class="input toolbar__search" id="search" type="search" placeholder="Номер, місто, вантаж, водій" aria-label="Пошук рейсів" />
+      </div>
+
+      <div class="card trips-card">
+        <div class="table-wrap">
+          <table class="table trips-table">
+            <thead>
+              <tr>
+                <th>Рейс</th>
+                <th>Маршрут</th>
+                <th>Вантаж</th>
+                <th>Водій і авто</th>
+                <th class="num">Вартість</th>
+                <th>Статус</th>
+                <th><span class="visually-hidden">Дії</span></th>
+              </tr>
+            </thead>
+            <tbody id="tripsBody"></tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>
+
+  <!-- Картка рейсу -->
+  <dialog class="drawer" id="tripDrawer" aria-labelledby="drawerTitle">
+    <div class="trip-card" id="tripCard"></div>
+  </dialog>
+
   <script type="module" src="/src/js/pages/trips.js"></script>
 </body>
 </html>

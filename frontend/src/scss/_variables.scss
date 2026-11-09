@@ -1,19 +1,53 @@
-$color-bg: #f4f6f9;
-$color-surface: #ffffff;
-$color-text: #1f2933;
-$color-muted: #6b7785;
-$color-border: #e1e5eb;
-$color-primary: #1f5eff;
-$color-sidebar: #14213d;
+// ============================================================
+// NeVpade — система дизайну «диспетчерська логістики»
+// Графітове меню, світлий «асфальт», сигнальний бурштин для
+// головних дій і дорожній синій для маршрутів та посилань.
+// ============================================================
 
-$status-planned: #1f5eff;
-$status-progress: #f5a524;
-$status-done: #17a34a;
-$status-cancelled: #9aa4b2;
+// ---------- Поверхні ----------
+$color-bg: #eceeeb;          // світлий асфальт — фон сторінки
+$color-surface: #ffffff;     // картки, таблиці, форми
+$color-surface-2: #f5f6f4;   // шапки таблиць, вкладені блоки
+$color-border: #d7dbd8;
+$color-border-strong: #b7bdb9;
 
-$radius: 10px;
+// ---------- Текст ----------
+$color-text: #1e2328;
+$color-muted: #5b646d;       // ≥ 4.5:1 на білому
+$color-faint: #8a9199;       // лише для неважливого
+
+// ---------- Бренд ----------
+$color-sidebar: #23282d;     // графіт
+$color-sidebar-hover: #2f353b;
+$color-accent: #f2a900;      // сигнальний бурштин — головні кнопки, активне меню
+$color-accent-hover: #e09c00;
+$color-primary: #1f5aa6;     // дорожній синій — посилання, маршрути, фокус
+
+// ---------- Стани ----------
+$color-success: #2e7d32;
+$color-warning: #a86400;     // темний бурштин — читається як текст
+$color-error: #c62828;
+
+$status-planned: #5b6b7f;
+$status-progress: #1f5aa6;
+$status-done: #2e7d32;
+$status-cancelled: #8a9199;
+
+// ---------- Графіки (перевірено на дальтонізм) ----------
+$series-income: #1f5aa6;
+$series-expense: #c27400;
+
+// ---------- Типографіка ----------
+$font: 'Fira Sans', 'Segoe UI', system-ui, sans-serif;
+$font-display: 'Fira Sans Condensed', 'Fira Sans', 'Arial Narrow', sans-serif;
+
+// ---------- Геометрія ----------
+$radius: 6px;       // картки
+$radius-sm: 4px;    // кнопки, поля
 $gap: 16px;
-$sidebar-width: 230px;
-$font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+$sidebar-width: 236px;
+
+$shadow-raised: 0 12px 32px rgba(30, 35, 40, .18);
 
 $bp-tablet: 900px;
+$bp-phone: 600px;

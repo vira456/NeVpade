@@ -3,26 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@500;600;700&family=Fira+Sans:wght@400;500;600&display=swap" />
+  <meta name="theme-color" content="#23282d" />
   <title>Підтвердження пошти · NeVpade</title>
 </head>
 <body>
   <div class="auth">
     <aside class="auth__brand">
-      <div class="auth__logo">NeVpade</div>
-      <div>
-        <h2 class="auth__tagline">Рейси, автопарк і завдання в одному місці</h2>
-        <p class="auth__lead">Робоче місце менеджера вантажоперевезень: плануйте маршрути, ведіть облік машин і водіїв, відправляйте завдання у Viber.</p>
-        <ul class="auth__features">
-          <li>Картки рейсів і маршрути на карті</li>
-          <li>Kanban-дошка завдань</li>
-          <li>Аналітика доходів і витрат</li>
-        </ul>
+      <a class="auth__logo" href="/pages/login.html"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="5" fill="#f2a900"/><circle cx="8.5" cy="19.5" r="3" fill="#23282d"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" stroke="#23282d" stroke-width="2"/><path d="M11 17l5.6-5.6" stroke="#23282d" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+      <div class="auth__pitch">
+        <h2 class="auth__tagline">Рейси, машини й водії на одному екрані</h2>
+        <p class="auth__lead">Плануйте маршрути, ведіть облік автопарку й відправляйте завдання водіям у Viber.</p>
       </div>
+      <ul class="auth__board" aria-label="Приклад рейсів">
+        <li>
+          <div class="route"><span class="route__city">Київ</span><span class="route__line"><span class="route__km">475 км</span></span><span class="route__city">Одеса</span></div>
+          <span class="badge badge--in_progress">В дорозі</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Хмельницький</span><span class="route__line"><span class="route__km">240 км</span></span><span class="route__city">Львів</span></div>
+          <span class="badge badge--planned">Заплановано</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Вінниця</span><span class="route__line"><span class="route__km">280 км</span></span><span class="route__city">Рівне</span></div>
+          <span class="badge badge--done">Виконано</span>
+        </li>
+      </ul>
       <div class="auth__copy">© 2026 NeVpade</div>
     </aside>
     <main class="auth__panel">
       <div class="auth__box">
-        <div class="auth__mobile-logo">NeVpade</div>
+        <div class="auth__mobile-logo"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="5" fill="#f2a900"/><circle cx="8.5" cy="19.5" r="3" fill="#23282d"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" stroke="#23282d" stroke-width="2"/><path d="M11 17l5.6-5.6" stroke="#23282d" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></div>
         <div class="steps"><span class="steps__item is-active">1. Пошта</span><span class="steps__item">2. Телефон</span></div>
         <h1 class="auth__title">Підтвердіть пошту</h1>
         <p class="auth__subtitle">Ми надіслали 6-значний код на <b id="emailLabel"></b>. Введіть його нижче. Код дійсний 10 хвилин.</p>

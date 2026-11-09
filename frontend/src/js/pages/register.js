@@ -1,7 +1,7 @@
 import { initAuthPage, rememberEmail } from '../utils/auth-page.js';
 import { register, nextPageFor } from '../api/auth.js';
 import { initSocialButtons } from '../utils/social.js';
-import { isEmail, fullNameError, capitalizeName, phoneDigits, formatPhoneInput, phoneError, toE164, passwordProblems, setFieldError, clearErrors, showAlert, withLoading } from '../utils/validation.js';
+import { isEmail, fullNameError, capitalizeName, phoneDigits, formatPhoneInput, phoneError, toE164, passwordProblems, setFieldError, validateOnBlur, clearErrors, showAlert, withLoading } from '../utils/validation.js';
 
 initAuthPage();
 
@@ -20,21 +20,14 @@ name.addEventListener('input', () => {
   }
 });
 
-name.addEventListener('blur', () => {
-  if (!name.value.trim()) return;
-  const error = fullNameError(name.value);
-  if (!error) name.value = capitalizeName(name.value);
-  setFieldError(name, error);
-});
+validateOnBlur(name, fullNameError, { onValid: () => (name.value = capitalizeName(name.value)) });
 
 // Телефон: лише цифри, автоформат «67 123 45 67», підтримка вставки «+38 (067) 123-45-67»
 phone.addEventListener('input', () => {
   phone.value = formatPhoneInput(phoneDigits(phone.value));
   if (phone.closest('.field').classList.contains('field--error')) setFieldError(phone, phoneError(phone.value));
 });
-phone.addEventListener('blur', () => {
-  if (phone.value) setFieldError(phone, phoneError(phone.value));
-});
+validateOnBlur(phone, phoneError);
 
 // Підказки до пароля в реальному часі
 password.addEventListener('input', () => {

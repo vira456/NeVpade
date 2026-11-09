@@ -8,18 +8,20 @@ const ALLOWED_CHARS = new RegExp(`^[${LETTERS}'’ʼ\\s-]*$`);
 // Прибирає зайві пробіли на початку, в кінці та між словами
 export const normalizeName = (v) => v.trim().replace(/\s+/g, ' ');
 
-// Повертає текст помилки або '' якщо все добре
-export function fullNameError(value) {
+// Повертає текст помилки або '' якщо все добре.
+// maxWords: 2 — «Ім'я Прізвище» (реєстрація), 3 — ще й по батькові (профіль)
+export function fullNameError(value, { maxWords = 2 } = {}) {
   const name = normalizeName(value);
-  if (!name) return "Введіть ім'я та прізвище";
+  const what = maxWords === 2 ? "ім'я та прізвище" : "прізвище, ім'я та по батькові";
+  if (!name) return `Введіть ${what}`;
   if (!ALLOWED_CHARS.test(name)) return "Дозволені лише літери, апостроф і дефіс (без цифр і символів)";
 
   const words = name.split(' ');
-  if (words.length < 2) return "Введіть ім'я та прізвище через пробіл";
-  if (words.length > 2) return "Введіть лише два слова: ім'я та прізвище";
+  if (words.length < 2) return maxWords === 2 ? "Введіть ім'я та прізвище через пробіл" : "Введіть щонайменше прізвище та ім'я через пробіл";
+  if (words.length > maxWords) return maxWords === 2 ? "Введіть лише два слова: ім'я та прізвище" : `Максимум ${maxWords} слова: ${what}`;
   if (words.some((w) => !NAME_WORD.test(w))) return 'Апостроф і дефіс можуть стояти лише всередині слова';
   if (words.some((w) => w.replace(/['’ʼ-]/g, '').length < 2)) return 'Кожне слово має містити щонайменше 2 літери';
-  if (name.length > 60) return 'Задовге значення (максимум 60 символів)';
+  if (name.length > (maxWords === 2 ? 60 : 80)) return `Задовге значення (максимум ${maxWords === 2 ? 60 : 80} символів)`;
   return '';
 }
 
@@ -46,6 +48,19 @@ export function setFieldError(input, message) {
   field?.classList.toggle('field--error', Boolean(message));
   const hint = field?.querySelector('.field__error');
   if (hint) hint.textContent = message || '';
+}
+
+// Перевірка поля при виході з нього. Із затримкою: інакше текст помилки, що з'являється
+// під полем, зсуває кнопку «Зберегти» вниз, і клік по ній «промахується».
+export function validateOnBlur(input, getError, { onValid } = {}) {
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (!input.value.trim()) return;
+      const error = getError(input.value);
+      setFieldError(input, error);
+      if (!error) onValid?.();
+    }, 200);
+  });
 }
 
 export function clearErrors(form) {

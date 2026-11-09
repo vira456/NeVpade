@@ -1,5 +1,81 @@
 [
-  { "id": "drv_01", "name": "Петро Іваненко", "phone": "+380501112233", "viber": "+380501112233", "licenseCategories": ["C", "CE"], "vehicleId": "veh_01", "ratePerKm": 10, "status": "available" },
-  { "id": "drv_02", "name": "Андрій Ткачук", "phone": "+380662223344", "viber": "+380662223344", "licenseCategories": ["C", "CE"], "vehicleId": "veh_02", "ratePerKm": 11, "status": "on_trip" },
-  { "id": "drv_03", "name": "Олег Бондар", "phone": "+380973334455", "viber": "+380973334455", "licenseCategories": ["C", "CE"], "vehicleId": "veh_03", "ratePerKm": 10, "status": "day_off" }
+  {
+    "id": "drv_01",
+    "name": "Петро Іваненко",
+    "phone": "+380501112233",
+    "viber": "+380501112233",
+    "licenseCategories": [
+      "C",
+      "CE"
+    ],
+    "vehicleId": "veh_01",
+    "ratePerKm": 10,
+    "status": "available"
+  },
+  {
+    "id": "drv_02",
+    "name": "Андрій Ткачук",
+    "phone": "+380662223344",
+    "viber": "+380662223344",
+    "licenseCategories": [
+      "C",
+      "CE"
+    ],
+    "vehicleId": "veh_02",
+    "ratePerKm": 11,
+    "status": "on_trip"
+  },
+  {
+    "id": "drv_03",
+    "name": "Олег Бондар",
+    "phone": "+380973334455",
+    "viber": "+380973334455",
+    "licenseCategories": [
+      "C",
+      "CE"
+    ],
+    "vehicleId": "veh_03",
+    "ratePerKm": 10,
+    "status": "day_off"
+  },
+  {
+    "id": "drv_04",
+    "name": "Сергій Литвиненко",
+    "phone": "+380504445566",
+    "viber": "+380504445566",
+    "licenseCategories": [
+      "C",
+      "CE"
+    ],
+    "vehicleId": "veh_04",
+    "ratePerKm": 11,
+    "status": "on_trip"
+  },
+  {
+    "id": "drv_05",
+    "name": "Василь Кравець",
+    "phone": "+380685556677",
+    "viber": "+380685556677",
+    "licenseCategories": [
+      "C",
+      "CE",
+      "D"
+    ],
+    "vehicleId": "veh_05",
+    "ratePerKm": 10,
+    "status": "available"
+  },
+  {
+    "id": "drv_06",
+    "name": "Микола Гнатюк",
+    "phone": "+380936667788",
+    "viber": "+380936667788",
+    "licenseCategories": [
+      "C",
+      "CE"
+    ],
+    "vehicleId": "veh_06",
+    "ratePerKm": 12,
+    "status": "on_trip"
+  }
 ]

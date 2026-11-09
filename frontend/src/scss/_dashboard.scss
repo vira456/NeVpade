@@ -1,0 +1,233 @@
+@use 'variables' as *;
+
+// ---------- Стрічка показників ----------
+.ledger {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 0;
+  margin-bottom: $gap;
+
+  @media (max-width: 1100px) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: $bp-phone) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  &__cell {
+    display: grid;
+    gap: 2px;
+    align-content: start;
+    padding: 18px 20px;
+    border-left: 1px solid $color-border;
+
+    &:first-child { border-left: 0; }
+
+    @media (max-width: 1100px) {
+      border-top: 1px solid $color-border;
+      &:nth-child(-n + 3) { border-top: 0; }
+      &:nth-child(3n + 1) { border-left: 0; }
+    }
+    @media (max-width: $bp-phone) {
+      padding: 14px 16px;
+      &:nth-child(3) { border-top: 1px solid $color-border; }
+      &:nth-child(3n + 1) { border-left: 1px solid $color-border; }
+      &:nth-child(odd) { border-left: 0; }
+    }
+  }
+
+  &__label { font-size: 14px; color: $color-muted; }
+
+  &__value {
+    font-family: $font-display;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    @media (max-width: 1300px) { font-size: 26px; }
+  }
+
+  &__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: $color-muted; }
+
+  &__delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    svg { width: 14px; height: 14px; stroke-width: 2.4; }
+    &.is-good { color: $color-success; }
+    &.is-bad { color: $color-error; }
+  }
+}
+
+// ---------- Сітка дашборда ----------
+.dash {
+  &__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: $gap;
+    align-items: start;
+
+    @media (max-width: 1100px) { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  &__side { display: grid; gap: $gap; }
+
+  &__note { font-size: 14px; color: $color-muted; white-space: nowrap; }
+  &__alert { margin: -8px 0 10px; font-size: 14px; font-weight: 500; color: $color-error; &:empty { display: none; } }
+
+  &__table-toggle { margin-top: 12px; }
+  #chartTable { margin-top: 12px; }
+}
+
+.card__count {
+  font-family: $font;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-muted;
+  margin-left: 4px;
+}
+
+// ---------- Графік ----------
+.legend {
+  list-style: none;
+  margin: -6px 0 12px;
+  padding: 0;
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+  color: $color-muted;
+
+  li { display: inline-flex; align-items: center; gap: 8px; }
+
+  &__swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    &--income { background: $series-income; }
+    &--expense { background: $series-expense; }
+  }
+}
+
+.chart-box { position: relative; height: 300px; }
+
+// ---------- Горизонтальні смуги витрат ----------
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+  }
+
+  &__label { font-size: 15px; }
+  &__value {
+    font-family: $font-display;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    small { font-family: $font; font-weight: 400; color: $color-muted; font-size: 13px; margin-left: 4px; }
+  }
+
+  &__track { grid-column: 1 / -1; height: 8px; background: $color-surface-2; border-radius: 4px; overflow: hidden; }
+  &__fill { display: block; height: 100%; background: $series-expense; border-radius: 0 4px 4px 0; }
+}
+
+// ---------- Рейси в роботі ----------
+.trip-rows { list-style: none; margin: -8px -20px -20px; padding: 0; }
+
+.trip-row {
+  border-top: 1px solid $color-border;
+
+  &__link {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr) 150px 124px;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover { background: $color-surface-2; --route-bg: #{$color-surface-2}; }
+
+    @media (max-width: 700px) {
+      grid-template-columns: 1fr auto;
+      grid-template-areas: 'id badge' 'route route' 'driver driver';
+      gap: 8px 12px;
+      .route { grid-area: route; }
+      .badge { grid-area: badge; justify-self: end; }
+    }
+  }
+
+  &__id {
+    display: grid;
+    line-height: 1.3;
+    strong { font-family: $font-display; font-size: 16px; font-weight: 600; }
+    span { font-size: 13px; color: $color-muted; }
+    @media (max-width: 700px) { grid-area: id; }
+  }
+
+  &__driver {
+    font-size: 14px;
+    color: $color-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    @media (max-width: 700px) { grid-area: driver; }
+  }
+
+  .badge { justify-self: start; }
+}
+
+// ---------- Завдання ----------
+.mini-tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.mini-task {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    align-self: center;
+    &--high { background: $color-error; }
+    &--medium { background: $color-accent; }
+    &--low { background: $color-faint; }
+  }
+
+  &__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+// ---------- Стан автопарку ----------
+.fleet-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 14px;
+
+  &__seg {
+    &--on_trip { background: $status-progress; }
+    &--available { background: $status-done; }
+    &--repair { background: $color-error; }
+  }
+}
+
+.fleet-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+
+  li { display: flex; justify-content: space-between; align-items: center; }
+  strong { font-family: $font-display; font-size: 18px; font-weight: 600; }
+}

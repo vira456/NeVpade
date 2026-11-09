@@ -21,6 +21,7 @@ export default defineConfig({
         map: resolve(__dirname, 'pages/map.html'),
         fleet: resolve(__dirname, 'pages/fleet.html'),
         kanban: resolve(__dirname, 'pages/kanban.html'),
+        profile: resolve(__dirname, 'pages/profile.html'),
       },
     },
   },

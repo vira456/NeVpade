@@ -20,7 +20,10 @@ function checkMockCode(code) {
 export function saveSession({ token, user }) {
   localStorage.setItem('token', token);
   localStorage.setItem('user', JSON.stringify(user));
+  localStorage.setItem('loginAt', new Date().toISOString()); // для блоку «Активна сесія»
 }
+
+export const getLoginTime = () => localStorage.getItem('loginAt');
 
 export function getCurrentUser() {
   try {
@@ -35,6 +38,7 @@ export const isLoggedIn = () => Boolean(localStorage.getItem('token'));
 export function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  localStorage.removeItem('loginAt');
   location.href = '/pages/login.html';
 }
 
