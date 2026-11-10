@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+  <meta name="theme-color" content="#1b1c1f" />
+  <script>
+    // Тема, мова й стан бокової панелі — до показу сторінки, щоб не було «спалаху»
+    (function () {
+      var root = document.documentElement;
+      function get(k, d) { try { var v = localStorage.getItem('nevpade.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+      var theme = get('theme', 'system');
+      var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'dark' : 'light';
+      if (get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
+      if (get('lang', 'uk') === 'en') {
+        root.lang = 'en';
+        root.classList.add('i18n-pending');
+        setTimeout(function () { root.classList.remove('i18n-pending'); }, 1500);
+      }
+    })();
+  </script>
+  <style>.i18n-pending body { visibility: hidden; }</style>
+  <title>Аналітика · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main dash">
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Аналітика</h1>
+          <p class="main__subtitle" id="dashSubtitle">&nbsp;</p>
+        </div>
+        <div class="seg" id="periodSwitch" role="group" aria-label="Період">
+          <button class="seg__btn" type="button" data-period="week" aria-pressed="false">Тиждень</button>
+          <button class="seg__btn" type="button" data-period="month" aria-pressed="true">Місяць</button>
+          <button class="seg__btn" type="button" data-period="year" aria-pressed="false">Рік</button>
+        </div>
+      </header>
+
+      <!-- Ключові показники за період -->
+      <section class="ledger card" id="ledger" aria-label="Ключові показники"></section>
+
+      <div class="dash__grid">
+        <section class="card dash__chart">
+          <div class="card__head">
+            <h2 class="card__title">Доходи та витрати</h2>
+            <span class="dash__note" id="marginNote"></span>
+          </div>
+          <ul class="legend" aria-hidden="true">
+            <li><span class="legend__swatch legend__swatch--income"></span>Дохід</li>
+            <li><span class="legend__swatch legend__swatch--expense"></span>Витрати</li>
+          </ul>
+          <div class="chart-box"><canvas id="incomeChart" role="img" aria-label="Графік доходів і витрат за період"></canvas></div>
+          <button class="btn--link dash__table-toggle" id="chartTableToggle" type="button" aria-expanded="false" aria-controls="chartTable">Показати таблицею</button>
+          <div class="table-wrap" id="chartTable" hidden></div>
+        </section>
+
+        <section class="card dash__expenses">
+          <div class="card__head">
+            <h2 class="card__title">Структура витрат</h2>
+            <span class="dash__note" id="expensesTotal"></span>
+          </div>
+          <ul class="bars" id="expenseBars"></ul>
+        </section>
+
+        <section class="card dash__trips">
+          <div class="card__head">
+            <h2 class="card__title">Рейси в роботі <span class="card__count" id="activeCount"></span></h2>
+            <a class="card__link" href="/pages/trips.html">Усі рейси</a>
+          </div>
+          <ul class="trip-rows" id="activeTrips"></ul>
+        </section>
+
+        <div class="dash__side">
+          <section class="card">
+            <div class="card__head">
+              <h2 class="card__title">Найближчі завдання</h2>
+              <a class="card__link" href="/pages/kanban.html">Дошка</a>
+            </div>
+            <p class="dash__alert" id="tasksNote"></p>
+            <ul class="mini-tasks" id="upcomingTasks"></ul>
+          </section>
+
+          <section class="card">
+            <div class="card__head">
+              <h2 class="card__title">Автопарк</h2>
+              <a class="card__link" href="/pages/fleet.html">Усі машини</a>
+            </div>
+            <div class="fleet-bar" id="fleetBar"></div>
+            <ul class="fleet-legend" id="fleetLegend"></ul>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/dashboard.js"></script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 // Повторювані елементи інтерфейсу, які малюються з JS
+import { locale } from '../i18n/index.js';
 import { escapeHtml, TRIP_STATUS } from './format.js';
 
 // Лінія маршруту: «Київ ●┄┄ 475 км ┄┄● Одеса»
@@ -20,4 +21,4 @@ export const statusBadge = (status, labels = TRIP_STATUS) =>
   `<span class="badge badge--${status}">${labels[status] ?? status}</span>`;
 
 // «12 лист.» / «12.11.2026»
-export const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+export const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });

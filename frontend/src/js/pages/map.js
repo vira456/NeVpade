@@ -1,3 +1,4 @@
+import { locale } from '../i18n/index.js';
 import { renderLayout } from '../utils/layout.js';
 import { getTrips } from '../api/trips.js';
 import { getDrivers } from '../api/drivers.js';
@@ -56,7 +57,7 @@ function renderList() {
             <span class="badge badge--${t.status}">${TRIP_STATUS[t.status]}</span>
           </span>
           <span class="trip-item__route">${escapeHtml(t.from.city)} → ${escapeHtml(t.to.city)}</span>
-          <span class="trip-item__meta">${new Date(t.loadDate).toLocaleDateString('uk-UA')} · ${t.distanceKm} км · ${escapeHtml(t.cargo.type)}</span>
+          <span class="trip-item__meta">${new Date(t.loadDate).toLocaleDateString(locale())} · ${t.distanceKm} км · ${escapeHtml(t.cargo.type)}</span>
         </button>
       </li>`
         )

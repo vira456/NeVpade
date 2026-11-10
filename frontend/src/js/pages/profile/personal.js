@@ -1,6 +1,8 @@
 // Вкладка «Особисті дані»: KPI-картки та форма редагування
+import { locale } from '../../i18n/index.js';
 import { getKpi, updateProfile } from '../../api/profile.js';
 import { renderSidebarUser } from '../../utils/layout.js';
+import { getLang, setLang } from '../../utils/prefs.js';
 import { showToast } from '../../utils/toast.js';
 import {
   isEmail,
@@ -46,7 +48,7 @@ function fill(profile) {
   fullName.value = profile.fullName;
   email.value = profile.email;
   phone.value = formatPhoneInput(phoneDigits(profile.phone));
-  language.value = profile.language;
+  language.value = profile.language ?? getLang();
   clearErrors(form);
   updateButtons();
 }
@@ -66,7 +68,7 @@ function validate() {
 
 export async function renderKpi() {
   const kpi = await getKpi();
-  document.getElementById('kpiTrips').textContent = kpi.tripsCount.toLocaleString('uk-UA');
+  document.getElementById('kpiTrips').textContent = kpi.tripsCount.toLocaleString(locale());
   document.getElementById('kpiRating').innerHTML = `${kpi.rating.toFixed(1)}<small>/${kpi.ratingMax.toFixed(1)}</small>`;
   document.getElementById('kpiRatingBar').style.width = `${(kpi.rating / kpi.ratingMax) * 100}%`;
   document.getElementById('kpiDrivers').textContent = kpi.activeDrivers;
@@ -77,6 +79,7 @@ export async function renderKpi() {
  * @param {(profile) => void} onSaved
  */
 export function initPersonal(profile, onSaved) {
+  profile.language = getLang(); // джерело правди — поточна мова інтерфейсу (її змінюють і в боковій панелі)
   saved = profile;
   fill(profile);
 
@@ -101,10 +104,11 @@ export function initPersonal(profile, onSaved) {
       const values = formValues();
       saved = await withLoading(saveBtn, () => updateProfile(values));
       fill(saved);
-      document.documentElement.lang = saved.language === 'en' ? 'en' : 'uk';
       renderSidebarUser();
       onSaved(saved);
       showToast('Зміни збережено');
+      // Мова з профілю = мова інтерфейсу (сторінка перезавантажиться вже потрібною мовою)
+      if (saved.language !== getLang()) setTimeout(() => setLang(saved.language), 600);
     } catch (err) {
       if (err.code === 'email_taken') setFieldError(email, 'Цей email уже використовується');
       else if (err.code === 'phone_taken') setFieldError(phone, 'Цей номер уже використовується');

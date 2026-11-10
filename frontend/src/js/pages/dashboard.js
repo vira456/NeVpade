@@ -1,8 +1,9 @@
 // Аналітика: ключові показники за період, графіки доходів і витрат, оперативний стан
+import { locale } from '../i18n/index.js';
 import { Chart } from 'chart.js/auto';
 import { renderLayout } from '../utils/layout.js';
 import { getSummary, getIncome, getExpenses } from '../api/analytics.js';
-import { getTrips } from '../api/trips.js';
+import { getTrips, myId } from '../api/trips.js';
 import { getDrivers } from '../api/drivers.js';
 import { getVehicles } from '../api/vehicles.js';
 import { getTasks } from '../api/tasks.js';
@@ -10,6 +11,7 @@ import { money, km, escapeHtml, compactMoney, VEHICLE_STATUS } from '../utils/fo
 import { routeLine, statusBadge, shortDate } from '../utils/components.js';
 import { icons } from '../utils/icons.js';
 import { dueLabel, isOverdue } from './kanban/config.js';
+import { t } from '../i18n/index.js';
 
 renderLayout();
 
@@ -21,8 +23,14 @@ const PERIODS = {
 
 const EXPENSE_LABELS = { fuel: 'Пальне', salary: 'Зарплата водіїв', repair: 'Ремонт і ТО', tolls: 'Дороги та стоянки', other: 'Інше' };
 
-// Кольори графіка (перевірено валідатором на дальтонізм)
-const COLORS = { income: '#1f5aa6', expense: '#c27400', grid: '#e4e7e3', text: '#5b646d', ink: '#1e2328' };
+// Кольори графіка беремо з поточної теми (CSS-змінні); пари перевірені на дальтонізм
+const COLORS = {};
+function readColors() {
+  const css = getComputedStyle(document.documentElement);
+  const v = (name) => css.getPropertyValue(name).trim();
+  Object.assign(COLORS, { income: v('--series-income'), expense: v('--series-expense'), grid: v('--border'), text: v('--muted'), ink: v('--text') });
+}
+readColors();
 
 let period = 'month';
 let chart = null;
@@ -33,7 +41,7 @@ function delta(current, previous, { lowerIsBetter = false } = {}) {
   const pct = ((current - previous) / previous) * 100;
   const up = pct >= 0;
   const good = lowerIsBetter ? !up : up;
-  const text = `${Math.abs(pct).toLocaleString('uk-UA', { maximumFractionDigits: 1 })} %`;
+  const text = `${Math.abs(pct).toLocaleString(locale(), { maximumFractionDigits: 1 })} %`;
   return `<span class="ledger__delta ${good ? 'is-good' : 'is-bad'}">${up ? icons.arrowUp : icons.arrowDown}${text}</span>`;
 }
 
@@ -104,9 +112,10 @@ const crosshair = {
 };
 
 function renderChart(data) {
+  lastIncome = data;
   const datasets = [
-    { label: 'Дохід', data: data.income, borderColor: COLORS.income, backgroundColor: COLORS.income },
-    { label: 'Витрати', data: data.expenses, borderColor: COLORS.expense, backgroundColor: COLORS.expense },
+    { label: t('Дохід'), data: data.income, borderColor: COLORS.income, backgroundColor: COLORS.income },
+    { label: t('Витрати'), data: data.expenses, borderColor: COLORS.expense, backgroundColor: COLORS.expense },
   ].map((d) => ({
     ...d,
     borderWidth: 2,
@@ -117,8 +126,9 @@ function renderChart(data) {
     pointHoverBorderColor: '#fff',
   }));
 
+  const labels = data.labels.map((l) => t(l));
   if (chart) {
-    chart.data.labels = data.labels;
+    chart.data.labels = labels;
     chart.data.datasets = datasets;
     chart.update();
   } else {
@@ -126,7 +136,7 @@ function renderChart(data) {
     Chart.defaults.color = COLORS.text;
     chart = new Chart(document.getElementById('incomeChart'), {
       type: 'line',
-      data: { labels: data.labels, datasets },
+      data: { labels, datasets },
       plugins: [endLabels, crosshair],
       options: {
         maintainAspectRatio: false,
@@ -193,6 +203,7 @@ function renderExpenses(e) {
 // ---------- Оперативний стан ----------
 function renderActiveTrips(trips, drivers) {
   const list = trips
+    .filter((t) => t.managerId === myId())
     .filter((t) => t.status === 'in_progress' || t.status === 'planned')
     .sort((a, b) => (a.status === b.status ? a.loadDate.localeCompare(b.loadDate) : a.status === 'in_progress' ? -1 : 1));
 
@@ -278,5 +289,16 @@ async function init() {
   renderFleet(vehicles);
   await loadPeriod(period);
 }
+
+// Зміна теми — перемальовуємо графік новими кольорами
+let lastIncome = null;
+window.addEventListener('themechange', () => {
+  readColors();
+  if (!chart || !lastIncome) return;
+  Chart.defaults.color = COLORS.text;
+  chart.options.scales.x.border.color = COLORS.grid;
+  chart.options.scales.y.grid.color = COLORS.grid;
+  renderChart(lastIncome);
+});
 
 init();

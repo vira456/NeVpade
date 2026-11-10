@@ -11,7 +11,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
+        main: resolve(__dirname, 'index.html'), // лендинг
+        dashboard: resolve(__dirname, 'pages/dashboard.html'),
         login: resolve(__dirname, 'pages/login.html'),
         register: resolve(__dirname, 'pages/register.html'),
         verifyEmail: resolve(__dirname, 'pages/verify-email.html'),
@@ -22,6 +23,8 @@ export default defineConfig({
         fleet: resolve(__dirname, 'pages/fleet.html'),
         kanban: resolve(__dirname, 'pages/kanban.html'),
         profile: resolve(__dirname, 'pages/profile.html'),
+        team: resolve(__dirname, 'pages/team.html'),
+        chat: resolve(__dirname, 'pages/chat.html'),
       },
     },
   },

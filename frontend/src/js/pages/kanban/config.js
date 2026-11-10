@@ -1,3 +1,4 @@
+import { locale } from '../../i18n/index.js';
 // Колонки, пріоритети та робота з термінами
 export const COLUMNS = [
   { status: 'todo', title: 'Маю зробити' },
@@ -33,7 +34,7 @@ export const isOverdue = (task) => task.status !== 'done' && task.dueDate && day
 // Підпис терміну на картці: { text, tone }
 export function dueLabel(task) {
   if (!task.dueDate) return null;
-  const date = new Date(`${task.dueDate}T00:00:00`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+  const date = new Date(`${task.dueDate}T00:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
   if (task.status === 'done') return { text: date, tone: 'muted' };
 
   const left = daysLeft(task.dueDate);

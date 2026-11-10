@@ -3,13 +3,19 @@ import { request, ApiError } from './client.js';
 // У режимі моків правильний код підтвердження завжди такий:
 export const MOCK_CODE = '123456';
 
-const mockUser = (email, name = 'Менеджер', phone = '+380671234567', phoneVerified = true) => ({
+// Код запрошення тестової компанії в режимі моків
+export const MOCK_INVITE = 'NVP-4821';
+const MOCK_COMPANY = 'ТОВ «Західтранс»';
+
+const mockUser = (email, name = 'Федорова Віра Дмитрівна', phone = '+380671234567', phoneVerified = true) => ({
   id: 'usr_01',
   name,
   email,
   phone,
   phoneVerified,
   role: 'manager',
+  companyId: 'cmp_01',
+  companyName: sessionStorage.getItem('mockCompany') || getCurrentUser()?.companyName || MOCK_COMPANY,
 });
 
 function checkMockCode(code) {
@@ -54,16 +60,21 @@ export async function login(email, password) {
   return data.user;
 }
 
-// Реєстрація НЕ видає токен: спершу треба підтвердити пошту, потім телефон
-export const register = ({ name, email, phone, password }) =>
+// Реєстрація НЕ видає токен: спершу треба підтвердити пошту, потім телефон.
+// company: { mode: 'create', name } — нова компанія, або { mode: 'join', code } — за кодом запрошення колеги
+export const register = ({ name, email, phone, password, company }) =>
   request('/auth/register', {
     method: 'POST',
     auth: false,
-    body: { name, email, phone, password },
+    body: { name, email, phone, password, company },
     mock: () => {
+      if (company?.mode === 'join' && company.code.toUpperCase() !== MOCK_INVITE) {
+        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у колеги', 404, 'company_not_found');
+      }
       // щоб у моках показати введені дані
       sessionStorage.setItem('mockName', name);
       sessionStorage.setItem('mockPhone', phone);
+      sessionStorage.setItem('mockCompany', company?.mode === 'create' ? company.name : MOCK_COMPANY);
       return { email, message: 'Код підтвердження надіслано на пошту' };
     },
   });
@@ -115,7 +126,7 @@ export const addPhone = (email, phone) =>
 export const nextPageFor = (user) =>
   user && user.phoneVerified === false
     ? `/pages/verify-phone.html?mode=add&email=${encodeURIComponent(user.email)}`
-    : '/index.html';
+    : '/pages/dashboard.html';
 
 // purpose: verify (пошта) | verify_phone (SMS) | reset (відновлення пароля)
 export const resendCode = (email, purpose = 'verify') =>

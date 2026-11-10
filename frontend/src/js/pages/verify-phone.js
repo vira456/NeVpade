@@ -73,7 +73,7 @@ codeForm.addEventListener('submit', async (e) => {
   try {
     await withLoading(codeForm.querySelector('[type=submit]'), () => verifyPhone(email, code.value()));
     ['pendingEmail', 'pendingPhone', 'mockName', 'mockPhone'].forEach((k) => sessionStorage.removeItem(k));
-    location.replace('/index.html');
+    location.replace('/pages/dashboard.html');
   } catch (err) {
     code.setError(true);
     code.clear();

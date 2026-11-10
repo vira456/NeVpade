@@ -4,7 +4,7 @@ $color-todo: $status-planned;
 
 $priority: (
   high: $color-error,
-  medium: $color-accent,
+  medium: $color-warning,
   low: $color-faint,
 );
 
@@ -51,14 +51,16 @@ $priority: (
 }
 
 .column {
-  background: #e2e5e1;
-  border-radius: $radius;
+  background: color-mix(in srgb, $color-surface-2 80%, transparent);
+  border: 1px solid $color-border;
+  box-shadow: var(--shadow-inset);
+  border-radius: 22px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   min-height: 200px;
   scroll-snap-align: start;
-  border-top: 3px solid var(--accent);
+
 
   &--todo { --accent: #{$color-todo}; }
   &--in_progress { --accent: #{$status-progress}; }
@@ -78,7 +80,7 @@ $priority: (
     font-size: 12px;
     font-weight: 600;
     color: $color-muted;
-    background: rgba(#fff, .7);
+    background: $color-raised;
     border-radius: 999px;
     padding: 1px 8px;
   }
@@ -95,8 +97,8 @@ $priority: (
     line-height: 1;
     cursor: pointer;
 
-    &:hover { background: rgba(#fff, .8); color: $color-primary; }
-    &:focus-visible { outline: 2px solid rgba($color-primary, .4); }
+    &:hover { background: $color-raised; color: $color-text; }
+    &:focus-visible { outline: 2px solid color-mix(in srgb, $color-primary 40%, transparent); }
   }
 
   &__list {
@@ -117,7 +119,7 @@ $priority: (
       display: grid;
       place-items: center;
       min-height: 80px;
-      border: 2px dashed rgba($color-muted, .25);
+      border: 2px dashed color-mix(in srgb, $color-muted 25%, transparent);
       border-radius: 8px;
       color: $color-muted;
       font-size: 13px;
@@ -128,15 +130,16 @@ $priority: (
 }
 
 // Під час перетягування підсвічуємо зони, куди можна кинути
-.board.is-dragging .column__list { background: rgba(#fff, .45); outline: 2px dashed rgba($color-primary, .25); outline-offset: 2px; }
+.board.is-dragging .column__list { background: color-mix(in srgb, $color-raised 50%, transparent); outline: 2px dashed color-mix(in srgb, $color-primary 25%, transparent); outline-offset: 2px; }
 
 // ---------- Картка ----------
 .task {
   position: relative;
-  background: $color-surface;
-  border-radius: $radius;
-  padding: 12px 12px 12px 14px;
-  box-shadow: 0 1px 2px rgba(20, 33, 61, .08), 0 0 0 1px rgba(20, 33, 61, .04);
+  background: var(--card-gradient);
+  border: 1px solid $color-border;
+  border-radius: 16px;
+  padding: 14px 14px 14px 16px;
+  box-shadow: $shadow-card;
   cursor: grab;
   display: grid;
   gap: 6px;
@@ -147,8 +150,8 @@ $priority: (
     content: '';
     position: absolute;
     left: 0;
-    top: 10px;
-    bottom: 10px;
+    top: 14px;
+    bottom: 14px;
     width: 3px;
     border-radius: 0 3px 3px 0;
     background: var(--priority);
@@ -158,8 +161,8 @@ $priority: (
     &--#{$name} { --priority: #{$color}; }
   }
 
-  &:hover { box-shadow: 0 4px 12px rgba(20, 33, 61, .12), 0 0 0 1px rgba(20, 33, 61, .06); }
-  &:focus-within { box-shadow: 0 0 0 2px rgba($color-primary, .45); }
+  &:hover { box-shadow: $shadow-raised; }
+  &:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, $color-primary 45%, transparent); }
 
   &__top { display: flex; align-items: center; justify-content: space-between; }
 
@@ -196,11 +199,11 @@ $priority: (
     font-size: 13px;
     font-weight: 600;
     color: $color-primary;
-    background: rgba($color-primary, .08);
+    background: color-mix(in srgb, $color-primary 8%, transparent);
     border-radius: $radius-sm;
     padding: 2px 8px;
     text-decoration: none;
-    &:hover { background: rgba($color-primary, .16); }
+    &:hover { background: color-mix(in srgb, $color-primary 16%, transparent); }
   }
 
   &__check {
@@ -215,14 +218,14 @@ $priority: (
   }
 
   &.is-done {
-    .task__open { color: $color-muted; text-decoration: line-through; text-decoration-color: rgba($color-muted, .6); }
+    .task__open { color: $color-muted; text-decoration: line-through; text-decoration-color: color-mix(in srgb, $color-muted 60%, transparent); }
     &::before { background: $color-success; }
   }
 
   // Стани SortableJS
   &--ghost { opacity: .35; box-shadow: none; outline: 2px dashed $color-primary; }
   &--chosen { cursor: grabbing; }
-  &--drag { transform: rotate(2deg); box-shadow: 0 12px 28px rgba(20, 33, 61, .25); }
+  &--drag { transform: rotate(2deg); box-shadow: 0 18px 40px rgba(0, 0, 0, .3); }
 }
 
 .priority {
@@ -243,9 +246,9 @@ $priority: (
   background: $color-bg;
   color: $color-muted;
 
-  &--overdue { background: rgba($color-error, .1); color: $color-error; font-weight: 600; }
-  &--today { background: rgba($color-accent, .2); color: $color-warning; font-weight: 600; }
-  &--soon { background: rgba($color-accent, .12); color: $color-warning; }
+  &--overdue { background: color-mix(in srgb, $color-error 10%, transparent); color: $color-error; font-weight: 600; }
+  &--today { background: color-mix(in srgb, $color-warning 18%, transparent); color: $color-warning; font-weight: 600; }
+  &--soon { background: color-mix(in srgb, $color-warning 10%, transparent); color: $color-warning; }
 }
 
 // ---------- Вибір пріоритету в модальному вікні ----------
@@ -273,9 +276,9 @@ $priority: (
     }
 
     @each $name, $color in $priority {
-      &--#{$name} input:checked + span { border-color: $color; background: rgba($color, .1); color: $color-text; font-weight: 600; box-shadow: inset 0 0 0 1px $color; }
+      &--#{$name} input:checked + span { border-color: $color; background: color-mix(in srgb, $color 10%, transparent); color: $color-text; font-weight: 600; box-shadow: inset 0 0 0 1px $color; }
     }
 
-    input:focus-visible + span { outline: 2px solid rgba($color-primary, .4); outline-offset: 2px; }
+    input:focus-visible + span { outline: 2px solid color-mix(in srgb, $color-primary 40%, transparent); outline-offset: 2px; }
   }
 }

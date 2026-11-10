@@ -8,7 +8,7 @@ import defaults from '../mock/profile.json';
 // Пароль для перевірки «поточного пароля» в режимі моків
 export const MOCK_PASSWORD = 'Manager2026';
 
-const mockProfile = () => load('mock.profile') ?? defaults.profile;
+const mockProfile = () => load('mock.profile') ?? { ...defaults.profile, language: load('lang', 'uk') };
 const mockSettings = () => ({ ...defaults.settings, ...load('mock.settings') });
 
 // Оновлює ім'я/фото в боковому меню (дані про користувача в localStorage)

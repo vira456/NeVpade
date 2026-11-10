@@ -5,8 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@500;600;700&family=Fira+Sans:wght@400;500;600&display=swap" />
-  <meta name="theme-color" content="#23282d" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+  <meta name="theme-color" content="#1b1c1f" />
+  <script>
+    // Тема, мова й стан бокової панелі — до показу сторінки, щоб не було «спалаху»
+    (function () {
+      var root = document.documentElement;
+      function get(k, d) { try { var v = localStorage.getItem('nevpade.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+      var theme = get('theme', 'system');
+      var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'dark' : 'light';
+      if (get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
+      if (get('lang', 'uk') === 'en') {
+        root.lang = 'en';
+        root.classList.add('i18n-pending');
+        setTimeout(function () { root.classList.remove('i18n-pending'); }, 1500);
+      }
+    })();
+  </script>
+  <style>.i18n-pending body { visibility: hidden; }</style>
   <title>Рейси · NeVpade</title>
 </head>
 <body>
@@ -21,7 +38,13 @@
       </header>
 
       <div class="toolbar">
-        <div class="seg" id="statusTabs" role="group" aria-label="Статус рейсу"></div>
+        <div class="toolbar__group">
+          <div class="seg" id="scopeTabs" role="group" aria-label="Чиї рейси">
+            <button class="seg__btn" type="button" data-scope="mine" aria-pressed="true">Мої</button>
+            <button class="seg__btn" type="button" data-scope="all" aria-pressed="false">Уся компанія</button>
+          </div>
+          <div class="seg" id="statusTabs" role="group" aria-label="Статус рейсу"></div>
+        </div>
         <input class="input toolbar__search" id="search" type="search" placeholder="Номер, місто, вантаж, водій" aria-label="Пошук рейсів" />
       </div>
 
@@ -34,6 +57,7 @@
                 <th>Маршрут</th>
                 <th>Вантаж</th>
                 <th>Водій і авто</th>
+                <th class="col-manager">Менеджер</th>
                 <th class="num">Вартість</th>
                 <th>Статус</th>
                 <th><span class="visually-hidden">Дії</span></th>
@@ -49,6 +73,29 @@
   <!-- Картка рейсу -->
   <dialog class="drawer" id="tripDrawer" aria-labelledby="drawerTitle">
     <div class="trip-card" id="tripCard"></div>
+  </dialog>
+
+  <!-- Передача рейсу колезі -->
+  <dialog class="modal" id="transferDialog" aria-labelledby="transferTitle">
+    <form class="modal__body" id="transferForm" novalidate>
+      <h2 class="modal__title" id="transferTitle">Передати рейс колезі</h2>
+      <p class="modal__text" id="transferText"></p>
+      <fieldset class="field" style="border:0;padding:0;margin:0">
+        <legend class="field__label">Кому</legend>
+        <ul class="transfer-list" id="transferList"></ul>
+        <div class="field__error"></div>
+      </fieldset>
+      <div class="field">
+        <label class="field__label" for="transferComment">Коментар <span class="field__optional">необов'язково</span></label>
+        <textarea class="input textarea textarea--plain" id="transferComment" rows="3" maxlength="500" placeholder="Причина, домовленості з клієнтом, що вже зроблено"></textarea>
+      </div>
+      <p class="field__hint">Колега побачить рейс у своєму списку, а в чаті компанії з'явиться повідомлення про передачу.</p>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" id="transferCancel">Скасувати</button>
+        <button class="btn" type="submit">Передати рейс</button>
+      </div>
+    </form>
   </dialog>
 
   <script type="module" src="/src/js/pages/trips.js"></script>

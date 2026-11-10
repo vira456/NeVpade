@@ -1,6 +1,10 @@
-export const money = (n) => `${Number(n).toLocaleString('uk-UA')} грн`;
-export const km = (n) => `${Number(n).toLocaleString('uk-UA')} км`;
-export const date = (iso) => new Date(iso).toLocaleDateString('uk-UA');
+import { locale, isEnglish } from '../i18n/index.js';
+
+const UAH = isEnglish ? 'UAH' : 'грн';
+const KM = isEnglish ? 'km' : 'км';
+export const money = (n) => `${Number(n).toLocaleString(locale())} ${UAH}`;
+export const km = (n) => `${Number(n).toLocaleString(locale())} ${KM}`;
+export const date = (iso) => new Date(iso).toLocaleDateString(locale());
 
 export const TRIP_STATUS = {
   planned: 'Заплановано',
@@ -23,8 +27,8 @@ export const DRIVER_STATUS = {
 
 // 412000 → «412 тис.», 4194000 → «4,19 млн»
 export function compactMoney(n) {
-  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toLocaleString('uk-UA', { maximumFractionDigits: 2 })} млн`;
-  if (Math.abs(n) >= 1e3) return `${Math.round(n / 1e3).toLocaleString('uk-UA')} тис.`;
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toLocaleString(locale(), { maximumFractionDigits: 2 })} ${isEnglish ? 'M' : 'млн'}`;
+  if (Math.abs(n) >= 1e3) return `${Math.round(n / 1e3).toLocaleString(locale())} ${isEnglish ? 'K' : 'тис.'}`;
   return String(n);
 }
 

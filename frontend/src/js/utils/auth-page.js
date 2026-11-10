@@ -1,10 +1,12 @@
 // Спільне для сторінок входу/реєстрації
+import '../i18n/index.js';
 import '../../scss/main.scss';
+import { renderPrefs } from './prefs-ui.js';
 import { isMockMode } from '../api/client.js';
 import { isLoggedIn } from '../api/auth.js';
 
 export function initAuthPage({ redirectIfLoggedIn = true } = {}) {
-  if (redirectIfLoggedIn && isLoggedIn()) location.replace('/index.html');
+  if (redirectIfLoggedIn && isLoggedIn()) location.replace('/pages/dashboard.html');
 
   // Показати/сховати пароль
   document.querySelectorAll('[data-toggle-password]').forEach((btn) => {
@@ -17,6 +19,12 @@ export function initAuthPage({ redirectIfLoggedIn = true } = {}) {
   });
 
   if (isMockMode) document.querySelectorAll('[data-mock-only]').forEach((el) => (el.hidden = false));
+
+  // Тема й мова — у правому верхньому куті
+  const prefs = document.createElement('div');
+  prefs.className = 'auth__prefs';
+  document.querySelector('.auth__panel')?.prepend(prefs);
+  renderPrefs(prefs);
 }
 
 // Email передаємо між сторінками через sessionStorage + параметр URL

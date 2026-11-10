@@ -36,13 +36,13 @@
 
   &__value {
     font-family: $font-display;
-    font-size: 32px;
-    font-weight: 600;
+    font-size: clamp(21px, 1.9vw, 28px);
+    font-weight: 800;
+    letter-spacing: -.03em;
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 
-    @media (max-width: 1300px) { font-size: 26px; }
   }
 
   &__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: $color-muted; }
@@ -198,7 +198,7 @@
     border-radius: 2px;
     align-self: center;
     &--high { background: $color-error; }
-    &--medium { background: $color-accent; }
+    &--medium { background: $color-warning; }
     &--low { background: $color-faint; }
   }
 

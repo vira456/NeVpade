@@ -31,7 +31,8 @@
     "distanceKm": 240,
     "status": "planned",
     "source": "manual",
-    "createdAt": "2026-11-09T10:00:00Z"
+    "createdAt": "2026-11-09T10:00:00Z",
+    "managerId": "usr_01"
   },
   {
     "id": "trp_002",
@@ -65,7 +66,8 @@
     "distanceKm": 475,
     "status": "in_progress",
     "source": "import",
-    "createdAt": "2026-11-07T08:30:00Z"
+    "createdAt": "2026-11-07T08:30:00Z",
+    "managerId": "usr_01"
   },
   {
     "id": "trp_003",
@@ -99,7 +101,8 @@
     "distanceKm": 280,
     "status": "done",
     "source": "manual",
-    "createdAt": "2026-11-02T12:00:00Z"
+    "createdAt": "2026-11-02T12:00:00Z",
+    "managerId": "usr_01"
   },
   {
     "id": "trp_004",
@@ -133,7 +136,8 @@
     "distanceKm": 480,
     "status": "in_progress",
     "source": "import",
-    "createdAt": "2026-11-06T14:10:00Z"
+    "createdAt": "2026-11-06T14:10:00Z",
+    "managerId": "usr_01"
   },
   {
     "id": "trp_005",
@@ -167,7 +171,8 @@
     "distanceKm": 460,
     "status": "planned",
     "source": "import",
-    "createdAt": "2026-11-08T09:40:00Z"
+    "createdAt": "2026-11-08T09:40:00Z",
+    "managerId": "usr_03"
   },
   {
     "id": "trp_006",
@@ -201,7 +206,8 @@
     "distanceKm": 390,
     "status": "planned",
     "source": "manual",
-    "createdAt": "2026-11-09T11:20:00Z"
+    "createdAt": "2026-11-09T11:20:00Z",
+    "managerId": "usr_01"
   },
   {
     "id": "trp_007",
@@ -235,7 +241,8 @@
     "distanceKm": 270,
     "status": "done",
     "source": "manual",
-    "createdAt": "2026-10-30T16:00:00Z"
+    "createdAt": "2026-10-30T16:00:00Z",
+    "managerId": "usr_02"
   },
   {
     "id": "trp_008",
@@ -269,7 +276,8 @@
     "distanceKm": 240,
     "status": "done",
     "source": "import",
-    "createdAt": "2026-10-28T10:30:00Z"
+    "createdAt": "2026-10-28T10:30:00Z",
+    "managerId": "usr_02"
   },
   {
     "id": "trp_009",
@@ -303,6 +311,7 @@
     "distanceKm": 540,
     "status": "in_progress",
     "source": "manual",
-    "createdAt": "2026-11-07T13:00:00Z"
+    "createdAt": "2026-11-07T13:00:00Z",
+    "managerId": "usr_01"
   }
 ]

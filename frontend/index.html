@@ -3,84 +3,174 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NeVpade — вебсистема для менеджера вантажоперевезень: рейси, карта маршрутів, автопарк, завдання, аналітика та повідомлення водіям у Viber." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@500;600;700&family=Fira+Sans:wght@400;500;600&display=swap" />
-  <meta name="theme-color" content="#23282d" />
-  <title>Аналітика · NeVpade</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+  <meta name="theme-color" content="#1b1c1f" />
+  <script>
+    // Тема, мова й стан бокової панелі — до показу сторінки, щоб не було «спалаху»
+    (function () {
+      var root = document.documentElement;
+      function get(k, d) { try { var v = localStorage.getItem('nevpade.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+      var theme = get('theme', 'system');
+      var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'dark' : 'light';
+      if (get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
+      if (get('lang', 'uk') === 'en') {
+        root.lang = 'en';
+        root.classList.add('i18n-pending');
+        setTimeout(function () { root.classList.remove('i18n-pending'); }, 1500);
+      }
+    })();
+  </script>
+  <style>.i18n-pending body { visibility: hidden; }</style>
+  <title>NeVpade — робоче місце менеджера вантажоперевезень</title>
 </head>
-<body>
-  <div class="app">
-    <aside class="sidebar"></aside>
-    <main class="main dash">
-      <header class="main__header">
-        <div>
-          <h1 class="main__title">Аналітика</h1>
-          <p class="main__subtitle" id="dashSubtitle">&nbsp;</p>
-        </div>
-        <div class="seg" id="periodSwitch" role="group" aria-label="Період">
-          <button class="seg__btn" type="button" data-period="week" aria-pressed="false">Тиждень</button>
-          <button class="seg__btn" type="button" data-period="month" aria-pressed="true">Місяць</button>
-          <button class="seg__btn" type="button" data-period="year" aria-pressed="false">Рік</button>
-        </div>
-      </header>
-
-      <!-- Ключові показники за період -->
-      <section class="ledger card" id="ledger" aria-label="Ключові показники"></section>
-
-      <div class="dash__grid">
-        <section class="card dash__chart">
-          <div class="card__head">
-            <h2 class="card__title">Доходи та витрати</h2>
-            <span class="dash__note" id="marginNote"></span>
-          </div>
-          <ul class="legend" aria-hidden="true">
-            <li><span class="legend__swatch legend__swatch--income"></span>Дохід</li>
-            <li><span class="legend__swatch legend__swatch--expense"></span>Витрати</li>
-          </ul>
-          <div class="chart-box"><canvas id="incomeChart" role="img" aria-label="Графік доходів і витрат за період"></canvas></div>
-          <button class="btn--link dash__table-toggle" id="chartTableToggle" type="button" aria-expanded="false" aria-controls="chartTable">Показати таблицею</button>
-          <div class="table-wrap" id="chartTable" hidden></div>
-        </section>
-
-        <section class="card dash__expenses">
-          <div class="card__head">
-            <h2 class="card__title">Структура витрат</h2>
-            <span class="dash__note" id="expensesTotal"></span>
-          </div>
-          <ul class="bars" id="expenseBars"></ul>
-        </section>
-
-        <section class="card dash__trips">
-          <div class="card__head">
-            <h2 class="card__title">Рейси в роботі <span class="card__count" id="activeCount"></span></h2>
-            <a class="card__link" href="/pages/trips.html">Усі рейси</a>
-          </div>
-          <ul class="trip-rows" id="activeTrips"></ul>
-        </section>
-
-        <div class="dash__side">
-          <section class="card">
-            <div class="card__head">
-              <h2 class="card__title">Найближчі завдання</h2>
-              <a class="card__link" href="/pages/kanban.html">Дошка</a>
-            </div>
-            <p class="dash__alert" id="tasksNote"></p>
-            <ul class="mini-tasks" id="upcomingTasks"></ul>
-          </section>
-
-          <section class="card">
-            <div class="card__head">
-              <h2 class="card__title">Автопарк</h2>
-              <a class="card__link" href="/pages/fleet.html">Усі машини</a>
-            </div>
-            <div class="fleet-bar" id="fleetBar"></div>
-            <ul class="fleet-legend" id="fleetLegend"></ul>
-          </section>
-        </div>
+<body class="lp">
+  <header class="lp-header">
+    <div class="lp-wrap lp-header__inner">
+      <a class="lp-header__logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+      <nav class="lp-header__nav" aria-label="Розділи сторінки">
+        <a href="#features">Можливості</a>
+        <a href="#how">Як це працює</a>
+      </nav>
+      <div class="lp-header__prefs" id="lpPrefs"></div>
+      <div class="lp-header__actions" data-guest>
+        <a class="btn btn--ghost" href="/pages/login.html">Увійти</a>
       </div>
-    </main>
-  </div>
-  <script type="module" src="/src/js/pages/dashboard.js"></script>
+      <div class="lp-header__actions" data-user hidden>
+        <a class="btn" href="/pages/dashboard.html" data-app-link>Відкрити кабінет</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ========== Перший екран ========== -->
+    <section class="lp-hero">
+      <div class="lp-wrap lp-hero__inner">
+        <div class="lp-hero__text">
+          <h1 class="lp-hero__title"><span class="lp-hero__word">NeVpade</span><span class="lp-hero__sub">Робоче місце менеджера вантажоперевезень</span></h1>
+          <p class="lp-hero__lead">Рейси, машини, водії, завдання й чат команди — в одній системі. Плануйте маршрути на карті, рахуйте прибуток кожного рейсу й відправляйте водіям деталі у Viber.</p>
+          <div class="lp-hero__cta" data-guest>
+            <a class="btn btn--lg" href="/pages/register.html">Почати роботу</a>
+          </div>
+          <div class="lp-hero__cta" data-user hidden>
+            <a class="btn btn--lg" href="/pages/dashboard.html" data-app-link>Перейти до кабінету</a>
+          </div>
+        </div>
+
+        <!-- Прев'ю інтерфейсу: табло рейсів -->
+        <figure class="preview" aria-label="Приклад екрана системи: рейси в роботі">
+          <div class="preview__bar">
+            <span class="preview__title">Рейси в роботі</span>
+            <span class="preview__date">Сьогодні</span>
+          </div>
+          <ul class="preview__list">
+              <li class="preview__row">
+                <span class="preview__id"><strong>TR-0041</strong><span>10 лист.</span></span>
+                <div class="route"><span class="route__city">Київ</span><span class="route__line" aria-hidden="true"><span class="route__km">475 км</span></span><span class="route__city">Одеса</span></div>
+                <span class="badge badge--in_progress">В дорозі</span>
+              </li>
+              <li class="preview__row">
+                <span class="preview__id"><strong>TR-0043</strong><span>9 лист.</span></span>
+                <div class="route"><span class="route__city">Харків</span><span class="route__line" aria-hidden="true"><span class="route__km">480 км</span></span><span class="route__city">Київ</span></div>
+                <span class="badge badge--in_progress">В дорозі</span>
+              </li>
+              <li class="preview__row">
+                <span class="preview__id"><strong>TR-0042</strong><span>15 лист.</span></span>
+                <div class="route"><span class="route__city">Хмельницький</span><span class="route__line" aria-hidden="true"><span class="route__km">240 км</span></span><span class="route__city">Львів</span></div>
+                <span class="badge badge--planned">Заплановано</span>
+              </li>
+          </ul>
+          <dl class="preview__stats">
+            <div><dt>Дохід за місяць</dt><dd>412 000 грн</dd></div>
+            <div><dt>Прибуток</dt><dd>144 000 грн</dd></div>
+            <div><dt>Машин у рейсі</dt><dd>3 з 6</dd></div>
+          </dl>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ========== Можливості ========== -->
+    <section class="lp-section" id="features" aria-labelledby="features-title">
+      <div class="lp-wrap">
+        <h2 class="lp-section__title" id="features-title">Що вміє система</h2>
+        <p class="lp-section__lead">Те, що менеджер зазвичай тримає в таблицях, месенджерах і блокноті, — в одному вікні.</p>
+        <ul class="features">
+          <li class="feature">
+            <span class="feature__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16"/></svg></span>
+            <h3 class="feature__title">Картки рейсів</h3>
+            <p class="feature__text">Маршрут, вантаж, клієнт, водій і машина в одній картці. Система сама рахує пальне, зарплату водія та прибуток рейсу.</p>
+          </li>
+          <li class="feature">
+            <span class="feature__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span>
+            <h3 class="feature__title">Маршрути на карті</h3>
+            <p class="feature__text">Кожен рейс на карті Google: відстань, час у дорозі й посилання, яке водій відкриє в навігаторі.</p>
+          </li>
+          <li class="feature">
+            <span class="feature__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 6h12v10H2zM14 9.5h4l3 3.5v3h-7z"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg></span>
+            <h3 class="feature__title">Облік автопарку</h3>
+            <p class="feature__text">Стан кожної машини, пробіг до ТО і термін страховки. Про те, що час на сервіс, система нагадає заздалегідь.</p>
+          </li>
+          <li class="feature">
+            <span class="feature__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg></span>
+            <h3 class="feature__title">Команда й спільний чат</h3>
+            <p class="feature__text">Менеджери однієї компанії бачать одне одного, спілкуються в чаті й передають рейси колегам в один клік.</p>
+          </li>
+          <li class="feature">
+            <span class="feature__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/></svg></span>
+            <h3 class="feature__title">Аналітика доходів</h3>
+            <p class="feature__text">Доходи, витрати й прибуток за тиждень, місяць чи рік з порівнянням до попереднього періоду.</p>
+          </li>
+          <li class="feature">
+            <span class="feature__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></span>
+            <h3 class="feature__title">Повідомлення у Viber</h3>
+            <p class="feature__text">Один клік — і водій отримує маршрут, адресу, вантаж і контакти клієнта. Шаблон повідомлення налаштовується.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== Як це працює ========== -->
+    <section class="lp-section lp-section--alt" id="how" aria-labelledby="how-title">
+      <div class="lp-wrap">
+        <h2 class="lp-section__title" id="how-title">Як це працює</h2>
+        <p class="lp-section__lead">Шлях одного рейсу — від заявки до прибутку.</p>
+        <ol class="steps-road">
+          <li class="steps-road__stop">
+            <span class="steps-road__num" aria-hidden="true">1</span>
+            <h3 class="steps-road__title">Рейс з’являється в системі</h3>
+            <p class="steps-road__text">Додайте його вручну або імпортуйте з логістичної платформи.</p>
+          </li>
+          <li class="steps-road__stop">
+            <span class="steps-road__num" aria-hidden="true">2</span>
+            <h3 class="steps-road__title">Призначаєте виконавців</h3>
+            <p class="steps-road__text">Обираєте вільну машину й водія — їхній стан видно одразу.</p>
+          </li>
+          <li class="steps-road__stop">
+            <span class="steps-road__num" aria-hidden="true">3</span>
+            <h3 class="steps-road__title">Відправляєте водію у Viber</h3>
+            <p class="steps-road__text">Водій отримує всі деталі рейсу й посилання на маршрут.</p>
+          </li>
+          <li class="steps-road__stop">
+            <span class="steps-road__num" aria-hidden="true">4</span>
+            <h3 class="steps-road__title">Стежите за результатом</h3>
+            <p class="steps-road__text">Статус рейсу, витрати й прибуток — на дашборді та в аналітиці.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="lp-footer">
+    <div class="lp-wrap lp-footer__inner">
+      <span class="lp-footer__logo"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg>NeVpade</span>
+      <span>Курсовий проєкт з конструювання програмного забезпечення · 2026</span>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/js/pages/landing.js"></script>
 </body>
 </html>

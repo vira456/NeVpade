@@ -19,13 +19,21 @@ export const icons = {
   arrowDown: svg('<path d="M12 5v14M6 13l6 6 6-6"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>'),
   wrench: svg('<path d="M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.5-7.5z"/><path d="M14.5 6.5 17 4l3 3-2.5 2.5"/>'),
+  sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  moon: svg('<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>'),
+  monitor: svg('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>'),
+  menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  chevronLeft: svg('<path d="M15 6l-6 6 6 6"/>'),
+  team: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3-5.5 6.5-5.5s6 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.2 4.4 2 4.9 4.9"/>'),
+  chat: svg('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/>'),
+  transfer: svg('<path d="M4 8h13l-3-3M20 16H7l3 3"/>'),
   shield: svg('<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/>'),
 };
 
 // Логотип: маршрут від А до Б на сигнальному бурштині
 export const logoMark = `<svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-  <rect width="28" height="28" rx="5" fill="#f2a900"/>
-  <circle cx="8.5" cy="19.5" r="3" fill="#23282d"/>
-  <circle cx="19.5" cy="8.5" r="2.6" fill="none" stroke="#23282d" stroke-width="2"/>
-  <path d="M11 17l5.6-5.6" stroke="#23282d" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/>
+  <rect width="28" height="28" rx="8" style="fill:var(--accent)"/>
+  <circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/>
+  <circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/>
+  <path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/>
 </svg>`;

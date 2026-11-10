@@ -1,11 +1,14 @@
 @use 'variables' as *;
 
 // ---------- Картка ----------
+// М'яка «піднята» поверхня з відблиском зверху, як на зразку
 .card {
-  background: $color-surface;
+  background: var(--card-gradient);
   border: 1px solid $color-border;
   border-radius: $radius;
-  padding: 20px;
+  box-shadow: $shadow-card;
+  padding: 22px;
+  --route-bg: var(--card-mid);
 }
 
 .card__head {
@@ -16,8 +19,8 @@
   margin-bottom: 16px;
 }
 
-.card__title { margin: 0; font-size: 19px; }
-.card__link { font-size: 14px; text-decoration: none; &:hover { text-decoration: underline; } }
+.card__title { margin: 0; font-size: 18px; font-weight: 700; }
+.card__link { font-size: 14px; font-weight: 600; color: $color-muted; text-decoration: none; &:hover { color: $color-text; } }
 
 // ---------- Кнопки ----------
 .btn {
@@ -27,14 +30,15 @@
   gap: 8px;
   border: 1px solid transparent;
   border-radius: $radius-sm;
-  padding: 9px 16px;
-  font-family: $font-display;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 10px 18px;
+  font-family: $font;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.2;
   cursor: pointer;
   background: $color-accent;
-  color: $color-text;
+  color: $color-on-accent;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .15), 0 6px 14px rgba(0, 0, 0, .12);
   text-decoration: none;
   transition: background .15s, border-color .15s, color .15s;
 
@@ -44,10 +48,11 @@
   &:disabled { opacity: .5; cursor: not-allowed; }
 
   &--ghost {
-    background: $color-surface;
+    background: $color-raised;
     color: $color-text;
-    border-color: $color-border-strong;
-    &:hover { background: $color-surface-2; border-color: $color-text; }
+    border-color: $color-border;
+    box-shadow: $shadow-raised;
+    &:hover { background: $color-raised; border-color: $color-border-strong; }
   }
 }
 
@@ -65,7 +70,7 @@
   text-decoration: none;
 
   svg { width: 18px; height: 18px; }
-  &:hover { background: $color-surface-2; border-color: $color-border; color: $color-text; }
+  &:hover { background: $color-raised; border-color: $color-border; color: $color-text; box-shadow: $shadow-raised; }
 }
 
 // ---------- Поля ----------
@@ -73,14 +78,15 @@
   font: inherit;
   color: $color-text;
   padding: 9px 12px;
-  border: 1px solid $color-border-strong;
+  border: 1px solid $color-border;
   border-radius: $radius-sm;
-  background: $color-surface;
-  min-height: 40px;
+  background: $color-surface-2;
+  box-shadow: var(--shadow-inset);
+  min-height: 42px;
 
   &::placeholder { color: $color-faint; }
-  &:hover { border-color: $color-muted; }
-  &:focus { outline: 2px solid rgba($color-primary, .25); outline-offset: 0; border-color: $color-primary; }
+  &:hover { border-color: $color-border-strong; }
+  &:focus { outline: 2px solid color-mix(in srgb, $color-text 18%, transparent); outline-offset: 0; border-color: $color-border-strong; }
 }
 
 // ---------- Статус ----------
@@ -114,7 +120,7 @@
   gap: 10px;
   min-width: 0;
 
-  &__city { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  &__city { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   &__line {
     position: relative;
@@ -129,7 +135,7 @@
       left: 4px;
       right: 4px;
       top: 50%;
-      border-top: 2px dashed color-mix(in srgb, $color-primary 45%, transparent);
+      border-top: 2px dashed color-mix(in srgb, $color-text 30%, transparent);
     }
 
     // точки А і Б
@@ -138,8 +144,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle, $color-primary 3.5px, transparent 4px) left center / 9px 9px no-repeat,
-        radial-gradient(circle, $color-surface 2px, $color-primary 2.5px, $color-primary 3.5px, transparent 4px) right center / 9px 9px no-repeat;
+        radial-gradient(circle, $color-text 3.5px, transparent 4px) left center / 9px 9px no-repeat,
+        radial-gradient(circle, var(--route-bg, #{$color-surface}) 2px, $color-text 2.5px, $color-text 3.5px, transparent 4px) right center / 9px 9px no-repeat;
     }
   }
 
@@ -147,6 +153,7 @@
     position: relative;
     z-index: 1;
     background: var(--route-bg, #{$color-surface});
+    border-radius: 6px;
     padding: 0 6px;
     font-family: $font-display;
     font-size: 13px;
@@ -207,10 +214,10 @@
   th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid $color-border; vertical-align: middle; }
 
   th {
-    font-weight: 500;
+    font-weight: 600;
     font-size: 13px;
     color: $color-muted;
-    background: $color-surface-2;
+    background: color-mix(in srgb, $color-surface-2 70%, transparent);
     white-space: nowrap;
   }
 
@@ -223,11 +230,12 @@
 // ---------- Вкладки-перемикачі (статуси, періоди) ----------
 .seg {
   display: inline-flex;
-  padding: 3px;
+  padding: 4px;
   gap: 2px;
-  background: $color-surface;
+  background: $color-surface-2;
   border: 1px solid $color-border;
-  border-radius: $radius;
+  border-radius: 14px;
+  box-shadow: var(--shadow-inset);
   overflow-x: auto;
   max-width: 100%;
   scrollbar-width: none;
@@ -239,16 +247,16 @@
     gap: 6px;
     border: 0;
     background: none;
-    font-family: $font-display;
-    font-size: 15px;
-    font-weight: 500;
+    font-family: $font;
+    font-size: 14px;
+    font-weight: 600;
     color: $color-muted;
-    padding: 6px 12px;
-    border-radius: $radius-sm;
+    padding: 7px 14px;
+    border-radius: 10px;
     cursor: pointer;
 
-    &:hover { color: $color-text; background: $color-surface-2; }
-    &[aria-pressed='true'], &[aria-selected='true'] { background: $color-sidebar; color: #fff; }
+    &:hover { color: $color-text; }
+    &[aria-pressed='true'], &[aria-selected='true'] { background: $color-raised; color: $color-text; box-shadow: $shadow-raised; }
   }
 
   &__count {
@@ -256,10 +264,10 @@
     font-variant-numeric: tabular-nums;
     padding: 0 6px;
     border-radius: 999px;
-    background: rgba($color-text, .08);
+    background: color-mix(in srgb, $color-text 9%, transparent);
   }
 
-  &__btn[aria-pressed='true'] &__count, &__btn[aria-selected='true'] &__count { background: rgba(#fff, .18); }
+
 }
 
 // ---------- Порожній стан ----------

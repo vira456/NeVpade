@@ -56,8 +56,8 @@
 
 // ---------- Картка рейсу (бічна панель) ----------
 .trip-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 
   &__head {
@@ -74,7 +74,7 @@
   &__meta { margin: 2px 0 0; font-size: 13px; color: $color-muted; }
   &__close { margin-top: 2px; }
 
-  &__body { overflow-y: auto; padding: 20px 24px; display: grid; gap: 24px; align-content: start; }
+  &__body { flex: 1; overflow-y: auto; padding: 20px 24px; display: grid; gap: 24px; align-content: start; }
 
   &__route { display: grid; gap: 6px; }
 
@@ -153,4 +153,23 @@
     dd { font-family: $font-display; font-size: 22px; font-weight: 600; color: $color-success; }
     &.is-loss dd { color: $color-error; }
   }
+}
+
+.toolbar__group { display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; }
+
+// Стовпець «Менеджер» видно лише в режимі «Уся компанія»
+.trips-table .col-manager { display: none; }
+.trips-table.show-manager .col-manager { display: table-cell; white-space: nowrap; }
+@media (max-width: 760px) { .trips-table.show-manager .col-manager { display: block; grid-column: 1 / -1; font-size: 14px; } }
+
+.trip-card__owner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 24px;
+  font-size: 14px;
+  color: $color-muted;
+  border-top: 1px solid $color-border;
+  b { color: $color-text; }
 }

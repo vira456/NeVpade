@@ -27,7 +27,6 @@ async function init() {
     const [p, settings] = await Promise.all([getProfile(), getSettings()]);
     profile = p;
     renderSidebarUser(); // ім'я та фото в меню — з профілю
-    document.documentElement.lang = profile.language === 'en' ? 'en' : 'uk';
 
     renderHeader(profile);
     initAvatar(

@@ -1,4 +1,5 @@
 // Вкладка «Безпека»: зміна пароля та інформація про активну сесію
+import { locale } from '../../i18n/index.js';
 import { changePassword } from '../../api/profile.js';
 import { getLoginTime, logout } from '../../api/auth.js';
 import { showToast } from '../../utils/toast.js';
@@ -102,7 +103,7 @@ function renderSession() {
   set('sessionOS', `${detectOS()} · ${deviceType()}`);
   set(
     'sessionLogin',
-    loginAt.toLocaleString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    loginAt.toLocaleString(locale(), { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   );
 
   const tick = () => set('sessionDuration', formatDuration(Date.now() - loginAt.getTime()));

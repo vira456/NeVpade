@@ -1,11 +1,38 @@
-import { request } from './client.js';
-import { load } from '../utils/storage.js';
-import trips from '../mock/trips.json';
+import { request, ApiError } from './client.js';
+import { load, save } from '../utils/storage.js';
+import { getCurrentUser } from './auth.js';
+import { mockTransferMessage } from './chat.js';
+import seedTrips from '../mock/trips.json';
 import vehicles from '../mock/vehicles.json';
 import drivers from '../mock/drivers.json';
 
-export const getTrips = () => request('/trips', { mock: trips });
-export const getTrip = (id) => request(`/trips/${id}`, { mock: trips.find((t) => t.id === id) });
+// Рейси всієї компанії (поле managerId — відповідальний менеджер). У моках зберігаються
+// в localStorage, щоб передача рейсу колезі не зникала після перезавантаження.
+const mockTrips = () => load('mock.trips') ?? seedTrips;
+const trips = { find: (fn) => mockTrips().find(fn) };
+
+export const myId = () => getCurrentUser()?.id ?? 'usr_01';
+
+export const getTrips = () => request('/trips', { mock: mockTrips });
+export const getTrip = (id) => request(`/trips/${id}`, { mock: () => mockTrips().find((t) => t.id === id) });
+
+// Передати рейс іншому менеджеру компанії. Сервер сам додає повідомлення в чат компанії.
+export const transferTrip = (id, toManagerId, comment = '') =>
+  request(`/trips/${id}/transfer`, {
+    method: 'POST',
+    body: { toManagerId, comment },
+    mock: () => {
+      const all = mockTrips();
+      const trip = all.find((t) => t.id === id);
+      if (!trip) throw new ApiError('Рейс не знайдено', 404);
+      if (trip.managerId !== myId()) throw new ApiError('Передати можна лише свій рейс', 403, 'not_owner');
+      trip.managerId = toManagerId;
+      trip.transferredAt = new Date().toISOString();
+      save('mock.trips', all);
+      mockTransferMessage({ tripId: id, toId: toManagerId, text: comment });
+      return trip;
+    },
+  });
 export const createTrip = (data) =>
   request('/trips', { method: 'POST', body: data, mock: { ...data, id: crypto.randomUUID() } });
 export const updateTrip = (id, data) =>

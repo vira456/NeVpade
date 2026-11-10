@@ -1,4 +1,5 @@
 // Автопарк: стан машин (ТО, страховка) і список водіїв
+import { locale, t } from '../i18n/index.js';
 import { renderLayout } from '../utils/layout.js';
 import { getVehicles } from '../api/vehicles.js';
 import { getDrivers } from '../api/drivers.js';
@@ -18,7 +19,7 @@ let vehicles = [];
 let drivers = [];
 let trips = [];
 
-const nf = (n) => n.toLocaleString('uk-UA');
+const nf = (n) => n.toLocaleString(locale());
 const daysUntil = (iso) => Math.ceil((new Date(`${iso}T00:00:00`) - new Date().setHours(0, 0, 0, 0)) / 864e5);
 const activeTripOf = (key, id) => trips.find((t) => t[key] === id && t.status === 'in_progress');
 
@@ -33,7 +34,7 @@ function serviceState(v) {
 
 function insuranceState(v) {
   const days = daysUntil(v.insuranceUntil);
-  const date = new Date(`${v.insuranceUntil}T00:00:00`).toLocaleDateString('uk-UA');
+  const date = new Date(`${v.insuranceUntil}T00:00:00`).toLocaleDateString(locale());
   if (days < 0) return { tone: 'bad', label: 'Страховка', text: 'прострочена' };
   if (days <= INSURANCE_WARN_DAYS) return { tone: 'warn', label: `Страховка · ${days} дн.`, text: date };
   return { tone: 'ok', label: 'Страховка до', text: date };
@@ -107,15 +108,15 @@ function renderDrivers() {
 function renderSummary() {
   const onTrip = vehicles.filter((v) => v.status === 'on_trip').length;
   const free = vehicles.filter((v) => v.status === 'available').length;
-  document.getElementById('fleetSummary').textContent = `${vehicles.length} машин · ${onTrip} в рейсі · ${free} вільні`;
+  document.getElementById('fleetSummary').textContent = t('{n} машин · {m} в рейсі · {k} вільні', { n: vehicles.length, m: onTrip, k: free });
   document.getElementById('vehiclesCount').textContent = vehicles.length;
   document.getElementById('driversCount').textContent = drivers.length;
 
   const service = vehicles.filter((v) => serviceState(v).tone !== 'ok').length;
   const insurance = vehicles.filter((v) => insuranceState(v).tone !== 'ok').length;
   const parts = [];
-  if (service) parts.push(`${service} ${service === 1 ? 'машині' : 'машинам'} скоро ТО`);
-  if (insurance) parts.push(`${insurance} ${insurance === 1 ? 'страховка закінчується' : 'страховки закінчуються'}`);
+  if (service) parts.push(t(service === 1 ? '{n} машині скоро ТО' : '{n} машинам скоро ТО', { n: service }));
+  if (insurance) parts.push(t(insurance === 1 ? '{n} страховка закінчується' : '{n} страховки закінчуються', { n: insurance }));
   const note = document.getElementById('fleetAlerts');
   note.innerHTML = parts.length ? `${icons.wrench}<span>${parts.join(', ')}</span>` : '';
 }

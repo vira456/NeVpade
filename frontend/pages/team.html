@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+  <meta name="theme-color" content="#1b1c1f" />
+  <script>
+    // Тема, мова й стан бокової панелі — до показу сторінки, щоб не було «спалаху»
+    (function () {
+      var root = document.documentElement;
+      function get(k, d) { try { var v = localStorage.getItem('nevpade.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+      var theme = get('theme', 'system');
+      var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'dark' : 'light';
+      if (get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
+      if (get('lang', 'uk') === 'en') {
+        root.lang = 'en';
+        root.classList.add('i18n-pending');
+        setTimeout(function () { root.classList.remove('i18n-pending'); }, 1500);
+      }
+    })();
+  </script>
+  <style>.i18n-pending body { visibility: hidden; }</style>
+  <title>Команда · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Команда</h1>
+          <p class="main__subtitle" id="teamSummary">&nbsp;</p>
+        </div>
+        <a class="btn" href="/pages/chat.html">Відкрити чат компанії</a>
+      </header>
+
+      <div class="team">
+        <section class="card team__members">
+          <div class="card__head">
+            <h2 class="card__title">Менеджери компанії</h2>
+            <input class="input team__search" id="memberSearch" type="search" placeholder="Пошук за ім'ям" aria-label="Пошук менеджера" />
+          </div>
+          <ul class="members" id="members"></ul>
+        </section>
+
+        <aside class="team__side">
+          <section class="card invite">
+            <h2 class="card__title">Код запрошення</h2>
+            <p class="invite__text">Дайте цей код колезі — під час реєстрації він обере «Приєднатися за кодом» і потрапить у вашу компанію.</p>
+            <div class="invite__code">
+              <strong id="inviteCode" data-no-i18n>—</strong>
+              <button class="icon-btn" id="copyInvite" type="button" title="Скопіювати код" aria-label="Скопіювати код"></button>
+            </div>
+            <button class="btn--link" id="regenInvite" type="button">Створити новий код</button>
+          </section>
+
+          <section class="card company-card">
+            <h2 class="card__title" id="companyName" data-no-i18n>&nbsp;</h2>
+            <dl class="company-card__facts" id="companyFacts"></dl>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/team.js"></script>
+</body>
+</html>
