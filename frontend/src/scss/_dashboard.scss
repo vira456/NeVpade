@@ -217,7 +217,10 @@
   &__seg {
     &--on_trip { background: $status-progress; }
     &--available { background: $status-done; }
-    &--repair { background: $color-error; }
+    &--broken { background: $color-error; }
+    &--repair { background: $status-cancelled; }
+    &--loading { background: $color-warning; }
+    &--unloaded { background: $status-planned; }
   }
 }
 

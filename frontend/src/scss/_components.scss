@@ -108,7 +108,10 @@
   &--in_progress, &--on_trip { --tone: #{$status-progress}; }
   &--done, &--available { --tone: #{$status-done}; }
   &--cancelled, &--day_off { --tone: #{$status-cancelled}; }
-  &--repair { --tone: #{$color-error}; }
+  &--broken { --tone: #{$color-error}; }
+  &--repair { --tone: #{$status-cancelled}; }
+  &--loading { --tone: #{$color-warning}; }
+  &--unloaded { --tone: #{$status-planned}; }
 }
 
 // ---------- Лінія маршруту — фірмовий елемент ----------

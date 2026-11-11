@@ -35,20 +35,21 @@ export async function request(path, options = {}) {
 async function doRequest(path, { method = 'GET', body, mock, auth = true } = {}) {
   if (USE_MOCK) {
     if (MOCK_DELAY) await new Promise((r) => setTimeout(r, MOCK_DELAY));
-    const data = typeof mock === 'function' ? mock(body) : mock;
+    const data = typeof mock === 'function' ? await mock(body) : mock; // мок може бути async (напр. файли в IndexedDB)
     return data === undefined ? null : structuredClone(data);
   }
 
   const token = localStorage.getItem('token');
+  const isForm = body instanceof FormData; // файли — multipart/form-data, заголовок браузер ставить сам
   let res;
   try {
     res = await fetch(`${API_URL}${path}`, {
       method,
       headers: {
-        'Content-Type': 'application/json',
+        ...(!isForm && { 'Content-Type': 'application/json' }),
         ...(auth && token && { Authorization: `Bearer ${token}` }),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: isForm ? body : body ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError('Сервер недоступний. Перевірте підключення.', 0);

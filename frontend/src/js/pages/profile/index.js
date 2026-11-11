@@ -1,12 +1,11 @@
 // Сторінка «Профіль менеджера» — точка входу
 import { renderLayout, renderSidebarUser } from '../../utils/layout.js';
 import { isMockMode } from '../../api/client.js';
-import { getProfile, getSettings, MOCK_PASSWORD } from '../../api/profile.js';
+import { getProfile, MOCK_PASSWORD } from '../../api/profile.js';
 import { showToast } from '../../utils/toast.js';
 import { initTabs } from './tabs.js';
 import { renderHeader, initAvatar, initOnlineStatus } from './header.js';
 import { initPersonal, renderKpi, setSavedProfile } from './personal.js';
-import { initNotifications } from './notifications.js';
 import { initSecurity } from './security.js';
 
 renderLayout();
@@ -26,8 +25,7 @@ async function init() {
   // статистика вантажиться паралельно з профілем
   renderKpi().catch(() => showToast('Не вдалося завантажити статистику', 'error'));
   try {
-    const [p, settings] = await Promise.all([getProfile(), getSettings()]);
-    profile = p;
+    profile = await getProfile();
     renderSidebarUser(); // ім'я та фото в меню — з профілю
 
     renderHeader(profile);
@@ -42,7 +40,6 @@ async function init() {
       profile = updated;
       renderHeader(updated);
     });
-    await initNotifications(settings);
   } catch (err) {
     showToast(`Не вдалося завантажити профіль: ${err.message}`, 'error', 0);
   } finally {

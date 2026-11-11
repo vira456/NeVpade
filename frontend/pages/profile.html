@@ -41,7 +41,6 @@
       <!-- ========== Вкладки ========== -->
       <div class="tabs" id="profileTabs" role="tablist" aria-label="Розділи профілю">
         <button class="tabs__tab" id="tab-personal" role="tab" data-tab="personal" aria-controls="panel-personal">Особисті дані</button>
-        <button class="tabs__tab" id="tab-notifications" role="tab" data-tab="notifications" aria-controls="panel-notifications">Сповіщення та Viber</button>
         <button class="tabs__tab" id="tab-security" role="tab" data-tab="security" aria-controls="panel-security">Безпека</button>
       </div>
 
@@ -102,68 +101,7 @@
         </form>
       </section>
 
-      <!-- ========== 2. Сповіщення та Viber ========== -->
-      <section class="tab-panel" id="panel-notifications" role="tabpanel" aria-labelledby="tab-notifications" tabindex="0" hidden>
-        <div class="profile-grid">
-          <form class="card profile-form" id="viberForm" novalidate>
-            <h2 class="profile-form__title">Шаблон Viber-повідомлення водію</h2>
-            <p class="profile-form__desc">Цей текст підставляється, коли ви надсилаєте рейс водію кнопкою «Viber» на сторінці рейсів. Натисніть змінну, щоб вставити її в місце курсора.</p>
-
-            <div class="chips" id="viberChips"></div>
-
-            <div class="field">
-              <label class="field__label" for="viberTemplate">Текст шаблону</label>
-              <textarea class="input textarea" id="viberTemplate" rows="8" spellcheck="false"></textarea>
-              <div class="textarea-meta">
-                <span class="textarea-meta__warning" id="viberWarning" hidden></span>
-                <span class="textarea-meta__counter" id="viberCounter"></span>
-              </div>
-            </div>
-
-            <div class="profile-form__actions profile-form__actions--split">
-              <button class="btn btn--text" id="viberDefault" type="button">Відновити стандартний</button>
-              <div class="profile-form__actions">
-                <button class="btn btn--ghost" id="viberTest" type="button">Тест у Viber</button>
-                <button class="btn" id="viberSave" type="submit" disabled>Зберегти шаблон</button>
-              </div>
-            </div>
-          </form>
-
-          <aside class="card viber-preview">
-            <h3 class="viber-preview__title">Попередній перегляд</h3>
-            <p class="viber-preview__sub" id="viberSampleLabel">на прикладі рейсу</p>
-            <div class="viber-preview__phone">
-              <div class="viber-preview__bubble" id="viberPreview"></div>
-            </div>
-          </aside>
-        </div>
-
-        <section class="card profile-form">
-          <h2 class="profile-form__title">Сповіщення</h2>
-          <div class="setting">
-            <div class="setting__text">
-              <span class="setting__name" id="pushLabel">Push-сповіщення</span>
-              <span class="setting__desc">Нові рейси, зміни статусів і нагадування про завдання — навіть коли вкладка неактивна</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="pushToggle" role="switch" aria-labelledby="pushLabel" />
-              <span class="switch__track" aria-hidden="true"></span>
-            </label>
-          </div>
-          <div class="setting">
-            <div class="setting__text">
-              <span class="setting__name" id="soundLabel">Звукові сигнали</span>
-              <span class="setting__desc">Короткий звук при надходженні нового сповіщення</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="soundToggle" role="switch" aria-labelledby="soundLabel" />
-              <span class="switch__track" aria-hidden="true"></span>
-            </label>
-          </div>
-        </section>
-      </section>
-
-      <!-- ========== 3. Безпека ========== -->
+      <!-- ========== 2. Безпека ========== -->
       <section class="tab-panel" id="panel-security" role="tabpanel" aria-labelledby="tab-security" tabindex="0" hidden>
         <div class="profile-grid">
           <form class="card profile-form" id="passwordForm" novalidate>

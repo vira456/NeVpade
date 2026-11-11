@@ -561,7 +561,89 @@ export default {
     "Вантажів не знайдено. Змініть фільтри на Della.": "No cargo found. Change the filters on Della.",
     "Вставте посилання на сторінку пошуку Della, наприклад https://della.ua/search/….html": "Paste a link to a Della search page, e.g. https://della.ua/search/….html",
     "Немає зв'язку з Della. Перевірте інтернет і що сайт запущено через npm run dev.": "Can't reach Della. Check your internet connection and that the site runs via npm run dev.",
-    "Della не віддала список вантажів (можливо, тимчасове обмеження). Спробуйте за хвилину.": "Della didn't return the cargo list (possibly a temporary limit). Try again in a minute."
+    "Della не віддала список вантажів (можливо, тимчасове обмеження). Спробуйте за хвилину.": "Della didn't return the cargo list (possibly a temporary limit). Try again in a minute.",
+    "Додати машину": "Add vehicle",
+    "Додати водія": "Add driver",
+    "Нова машина": "New vehicle",
+    "Новий водій": "New driver",
+    "Дані водія": "Driver details",
+    "Номер": "Plate number",
+    "Марка й модель": "Make and model",
+    "Тип": "Type",
+    "Вантажопідйомність, т": "Payload, t",
+    "Витрата пального, л/100 км": "Fuel consumption, l/100 km",
+    "Пробіг, км": "Mileage, km",
+    "Наступне ТО на пробігу, км": "Next service at, km",
+    "Стан": "Status",
+    "Viber": "Viber",
+    "якщо інший номер": "if a different number",
+    "Категорії посвідчення": "Licence categories",
+    "Ставка, грн/км": "Rate, UAH/km",
+    "Закріплена машина": "Assigned vehicle",
+    "Без водія": "No driver",
+    "Без машини": "No vehicle",
+    "Вільна": "Available",
+    "На завантаженні": "Loading",
+    "Розвантажилась": "Unloaded",
+    "Зламалась": "Broken down",
+    "На ремонті": "In repair",
+    "Призначити водія": "Assign driver",
+    "Редагувати": "Edit",
+    "У автопарку ще немає машин": "No vehicles in the fleet yet",
+    "Водіїв ще немає": "No drivers yet",
+    "не вказано": "not set",
+    "Номер у форматі «ВХ 1234 АК»": "Plate in the format “ВХ 1234 АК”",
+    "Вкажіть марку й модель": "Enter the make and model",
+    "Вкажіть вантажопідйомність у тоннах": "Enter the payload in tonnes",
+    "Вкажіть витрату пального": "Enter fuel consumption",
+    "Вкажіть пробіг": "Enter the mileage",
+    "Вкажіть ставку в грн за км": "Enter the rate in UAH per km",
+    "Позначте хоча б одну категорію": "Select at least one category",
+    "Машина з таким номером уже є в автопарку": "A vehicle with this plate is already in the fleet",
+    "Машину буде прибрано з автопарку. Дію не можна скасувати.": "The vehicle will be removed from the fleet. This can't be undone.",
+    "Водія буде прибрано зі списку. Дію не можна скасувати.": "The driver will be removed from the list. This can't be undone.",
+    "Видалити рейс": "Delete trip",
+    "Рейс зараз виконується. Якщо його скасували, краще змінити статус на «Скасовано» — тоді він залишиться в історії.": "This trip is in progress. If it was called off, set its status to “Cancelled” instead — it will stay in the history.",
+    "Рейс зникне зі списку й аналітики. Дію не можна скасувати.": "The trip will disappear from the list and analytics. This can't be undone.",
+    "Змінювати можна лише свої рейси": "You can only change your own trips",
+    "Машину не знайдено": "Vehicle not found",
+    "Водія не знайдено": "Driver not found",
+    "Мій профіль": "My profile",
+    "Документи": "Documents",
+    "Документи машини": "Vehicle documents",
+    "Документи водія": "Driver documents",
+    "Додайте фото документів": "Add photos of documents",
+    "— перетягніть сюди або натисніть, щоб вибрати. З телефона можна одразу сфотографувати.": "— drag them here or click to choose. On a phone you can take a photo right away.",
+    "JPG, PNG або PDF, до 10 МБ. Великі фото стискаються автоматично.": "JPG, PNG or PDF, up to 10 MB. Large photos are compressed automatically.",
+    "Завантажуємо…": "Loading…",
+    "Документів ще немає. Додайте фото техпаспорта, страховки чи посвідчення — вони завжди будуть під рукою.": "No documents yet. Add photos of the registration, insurance or licence — they'll always be at hand.",
+    "Копію буде видалено назавжди.": "The copy will be deleted permanently.",
+    "Можна додати лише фото або PDF": "Only photos or PDF can be added",
+    "Тип документа": "Document type",
+    "Тип документа…": "Document type…",
+    "Дійсний до": "Valid until",
+    "Оберіть тип для кожного документа": "Choose a type for each document",
+    "Документ збережено": "Document saved",
+    "Не вдалося відкрити фото. Збережіть його як JPG або PNG і спробуйте ще раз.": "Couldn't open the photo. Save it as JPG or PNG and try again.",
+    "Браузер не дозволяє зберігати файли (приватний режим?)": "The browser doesn't allow saving files (private mode?)",
+    "Не вдалося зберегти файл у браузері": "Couldn't save the file in the browser",
+    "Видалити документ": "Delete document",
+    "Завантажити файл": "Download file",
+    "Закрити перегляд": "Close viewer",
+    "Попередній документ": "Previous document",
+    "Наступний документ": "Next document",
+    "Техпаспорт": "Registration certificate",
+    "Страховий поліс": "Insurance policy",
+    "Техогляд": "Roadworthiness test",
+    "Ліцензія / дозвіл": "Licence / permit",
+    "Договір оренди": "Lease agreement",
+    "Посвідчення водія": "Driving licence",
+    "Паспорт": "Passport",
+    "ІПН": "Tax ID",
+    "Медична довідка": "Medical certificate",
+    "Картка водія (тахограф)": "Driver card (tachograph)",
+    "є прострочені": "some are expired",
+    "скоро закінчуються": "some expire soon"
   },
   patterns: [
     [
@@ -903,6 +985,178 @@ export default {
     [
         "Della не відповідає (код {#n}). Спробуйте пізніше.",
         "Della isn't responding (code {n}). Try again later."
+    ],
+    [
+        "Стан машини {plate}",
+        "Status of vehicle {plate}"
+    ],
+    [
+        "Стан оновлено {ago}",
+        "Status updated {ago}"
+    ],
+    [
+        "Редагувати машину {plate}",
+        "Edit vehicle {plate}"
+    ],
+    [
+        "Видалити машину {plate}",
+        "Delete vehicle {plate}"
+    ],
+    [
+        "Машина водія {name}",
+        "Vehicle of {name}"
+    ],
+    [
+        "Категорії {list}",
+        "Categories {list}"
+    ],
+    [
+        "Редагувати водія {name}",
+        "Edit driver {name}"
+    ],
+    [
+        "Видалити водія {name}",
+        "Delete driver {name}"
+    ],
+    [
+        "зламаних: {n}",
+        "broken down: {n}"
+    ],
+    [
+        "Машина {plate}",
+        "Vehicle {plate}"
+    ],
+    [
+        "Машину {plate} додано",
+        "Vehicle {plate} added"
+    ],
+    [
+        "Машина зараз закріплена за іншим водієм ({name}) — її буде переведено.",
+        "This vehicle is assigned to another driver ({name}) — it will be reassigned."
+    ],
+    [
+        "Водія {name} додано",
+        "Driver {name} added"
+    ],
+    [
+        "Видалити машину {plate}?",
+        "Delete vehicle {plate}?"
+    ],
+    [
+        "Її буде знято із запланованих рейсів ({n}). Дію не можна скасувати.",
+        "It will be removed from planned trips ({n}). This can't be undone."
+    ],
+    [
+        "Машину {plate} видалено",
+        "Vehicle {plate} deleted"
+    ],
+    [
+        "Видалити водія {name}?",
+        "Delete driver {name}?"
+    ],
+    [
+        "Його буде знято із запланованих рейсів ({n}). Дію не можна скасувати.",
+        "They will be removed from planned trips ({n}). This can't be undone."
+    ],
+    [
+        "Водія {name} видалено",
+        "Driver {name} deleted"
+    ],
+    [
+        "Машину {plate} закріплено. Водій: {name}",
+        "Vehicle {plate} assigned. Driver: {name}"
+    ],
+    [
+        "Водій {name} тепер без машини",
+        "Driver {name} now has no vehicle"
+    ],
+    [
+        "Рейс {n}",
+        "Trip {n}"
+    ],
+    [
+        "Видалити рейс {n}?",
+        "Delete trip {n}?"
+    ],
+    [
+        "Рейс {n} видалено",
+        "Trip {n} deleted"
+    ],
+    [
+        "Рейс {n} оновлено",
+        "Trip {n} updated"
+    ],
+    [
+        "Машина зараз у рейсі {n}. Спершу завершіть або змініть рейс.",
+        "The vehicle is on trip {n}. Finish or change the trip first."
+    ],
+    [
+        "Водій зараз у рейсі {n}. Спершу завершіть або змініть рейс.",
+        "The driver is on trip {n}. Finish or change the trip first."
+    ],
+    [
+        "Прострочено з {date}",
+        "Expired on {date}"
+    ],
+    [
+        "Дійсний до {date} · {n} дн.",
+        "Valid until {date} · {n} days"
+    ],
+    [
+        "Дійсний до {date}",
+        "Valid until {date}"
+    ],
+    [
+        "Відкрити: {name}",
+        "Open: {name}"
+    ],
+    [
+        "Додано {date}",
+        "Added {date}"
+    ],
+    [
+        "Видалити: {name}",
+        "Delete: {name}"
+    ],
+    [
+        "Видалити документ «{name}»?",
+        "Delete document “{name}”?"
+    ],
+    [
+        "Документ «{name}» видалено",
+        "Document “{name}” deleted"
+    ],
+    [
+        "PDF завеликий: максимум {n} МБ",
+        "PDF is too large: {n} MB max"
+    ],
+    [
+        "Прибрати {name}",
+        "Remove {name}"
+    ],
+    [
+        "Зберегти ({n})",
+        "Save ({n})"
+    ],
+    [
+        "Збережено документів: {n}",
+        "Documents saved: {n}"
+    ],
+    [
+        "Документи ({n})",
+        "Documents ({n})"
+    ],
+    [
+        "Документи: {name}",
+        "Documents: {name}"
+    ],
+    [
+        "{#n} КБ",
+        "{n} KB"
+    ],
+    [
+        "{#n} МБ",
+        "{n} MB"
     ]
   ],
 };

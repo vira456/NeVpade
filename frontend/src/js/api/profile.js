@@ -9,7 +9,6 @@ import defaults from '../mock/profile.json';
 export const MOCK_PASSWORD = 'Manager2026';
 
 const mockProfile = () => load('mock.profile') ?? { ...defaults.profile, language: load('lang', 'uk') };
-const mockSettings = () => ({ ...defaults.settings, ...load('mock.settings') });
 
 // Оновлює ім'я/фото в боковому меню (дані про користувача в localStorage)
 function syncCurrentUser(profile) {
@@ -17,9 +16,6 @@ function syncCurrentUser(profile) {
   if (!user) return;
   localStorage.setItem('user', JSON.stringify({ ...user, name: profile.fullName, avatarUrl: profile.avatarUrl }));
 }
-
-// Кеш налаштувань — щоб сторінка рейсів брала шаблон Viber без запиту на сервер
-const cacheSettings = (settings) => (save('settings', settings), settings);
 
 // ---------- Профіль ----------
 export async function getProfile() {
@@ -58,24 +54,6 @@ export async function updateAvatar(image) {
 }
 
 export const getKpi = () => request('/profile/kpi', { mock: defaults.kpi });
-
-// ---------- Налаштування сповіщень ----------
-export async function getSettings() {
-  return cacheSettings(await request('/profile/settings', { mock: mockSettings }));
-}
-
-export async function updateSettings(patch) {
-  const settings = await request('/profile/settings', {
-    method: 'PATCH',
-    body: patch,
-    mock: () => {
-      const updated = { ...mockSettings(), ...patch };
-      save('mock.settings', updated);
-      return updated;
-    },
-  });
-  return cacheSettings(settings);
-}
 
 // ---------- Безпека ----------
 export const changePassword = (currentPassword, newPassword) =>

@@ -1,21 +1,7 @@
 // Формування структурованого повідомлення для диспетчеризації у Viber (URI Scheme)
-import { load } from './storage.js';
 
-// Змінні, які можна вставляти в шаблон
-export const PLACEHOLDERS = [
-  { key: 'ID', label: 'Номер рейсу' },
-  { key: 'ROUTE', label: 'Маршрут' },
-  { key: 'DATE', label: 'Дата завантаження' },
-  { key: 'ADDRESS', label: 'Адреса завантаження' },
-  { key: 'CARGO', label: 'Вантаж' },
-  { key: 'WEIGHT', label: 'Вага' },
-  { key: 'DRIVER', label: 'Водій' },
-  { key: 'VEHICLE', label: 'Авто' },
-  { key: 'CLIENT', label: 'Клієнт' },
-  { key: 'PHONE', label: 'Телефон клієнта' },
-];
-
-export const DEFAULT_VIBER_TEMPLATE = [
+// Текст повідомлення водію (кнопка «Viber» на сторінках рейсів і карти)
+const VIBER_TEMPLATE = [
   '🚚 Рейс №{ID}: {ROUTE}',
   '📅 Завантаження: {DATE}',
   '📍 Адреса: {ADDRESS}',
@@ -27,7 +13,7 @@ export const DEFAULT_VIBER_TEMPLATE = [
 const date = (iso) => (iso ? new Date(iso).toLocaleDateString('uk-UA') : '');
 
 // Значення змінних для конкретного рейсу
-export function tripVariables(trip, driver, vehicle) {
+function tripVariables(trip, driver, vehicle) {
   return {
     ID: trip.number,
     ROUTE: `${trip.from.city} → ${trip.to.city}`,
@@ -43,20 +29,11 @@ export function tripVariables(trip, driver, vehicle) {
 }
 
 // Підставляє значення; невідомі змінні лишає як є, щоб помилку було видно
-export const fillTemplate = (template, vars) =>
+const fillTemplate = (template, vars) =>
   template.replace(/\{([A-Z_]+)\}/g, (match, key) => (key in vars ? vars[key] : match));
 
-// Змінні в шаблоні, яких немає в списку PLACEHOLDERS
-export function unknownPlaceholders(template) {
-  const known = new Set(PLACEHOLDERS.map((p) => p.key));
-  return [...new Set([...template.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]))].filter((k) => !known.has(k));
-}
-
-// Шаблон, збережений у профілі (Сповіщення та Viber), або стандартний
-export const getViberTemplate = () => load('settings')?.viberTemplate || DEFAULT_VIBER_TEMPLATE;
-
 export const buildTripMessage = (trip, driver, vehicle) =>
-  fillTemplate(getViberTemplate(), tripVariables(trip, driver, vehicle));
+  fillTemplate(VIBER_TEMPLATE, tripVariables(trip, driver, vehicle));
 
 export function sendToViber(text) {
   // Відкриває Viber з вибором контакту для пересилання

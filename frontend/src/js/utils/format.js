@@ -13,11 +13,17 @@ export const TRIP_STATUS = {
   cancelled: 'Скасовано',
 };
 
+// Стан машини (менеджер змінює його на картці машини в «Автопарку»)
 export const VEHICLE_STATUS = {
-  available: 'Вільний',
-  on_trip: 'В рейсі',
-  repair: 'Ремонт',
+  available: 'Вільна',
+  loading: 'На завантаженні',
+  on_trip: 'В дорозі',
+  unloaded: 'Розвантажилась',
+  broken: 'Зламалась',
+  repair: 'На ремонті',
 };
+// Машини, що зараз працюють на рейсі (для підсумків)
+export const VEHICLE_BUSY = ['loading', 'on_trip', 'unloaded'];
 
 export const DRIVER_STATUS = {
   available: 'Вільний',

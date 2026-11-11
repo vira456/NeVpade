@@ -1,10 +1,9 @@
 // Рейси: список з фільтром за статусом, пошук і картка рейсу в бічній панелі
-import { locale } from '../i18n/index.js';
 import { renderLayout } from '../utils/layout.js';
-import { getTrips, calculateTrip, transferTrip, myId } from '../api/trips.js';
+import { getTrips, calculateTrip, transferTrip, deleteTrip, myId } from '../api/trips.js';
 import { getMembers } from '../api/company.js';
 import { shortName, avatar } from '../utils/people.js';
-import { t as tr } from '../i18n/index.js';
+import { t as tr, locale } from '../i18n/index.js';
 import { getDrivers } from '../api/drivers.js';
 import { getVehicles } from '../api/vehicles.js';
 import { money, escapeHtml } from '../utils/format.js';
@@ -14,6 +13,7 @@ import { initDellaImport, openDellaImport } from './della-import.js';
 import { buildTripMessage, sendToViber, copyText } from '../utils/viber.js';
 import { driveAway, flyAway } from '../utils/motion.js';
 import { showToast } from '../utils/toast.js';
+import { confirmDialog } from '../utils/confirm.js';
 import { icons } from '../utils/icons.js';
 import { debounce } from '../utils/debounce.js';
 
@@ -179,6 +179,14 @@ async function openTrip(id) {
         ? `<p class="trip-card__owner">${avatar(managerOf(t) ?? { name: '?' }, { size: 28, dot: false })}<span>${tr('Рейс веде {name}', { name: `<b data-no-i18n>${escapeHtml(managerOf(t)?.name ?? '—')}</b>` })}</span></p>`
         : ''
     }
+    ${
+      t.managerId === myId()
+        ? `<div class="trip-card__manage">
+            <button class="btn btn--ghost" type="button" data-edit="${t.id}">${icons.edit}Редагувати</button>
+            <button class="btn btn--danger" type="button" data-delete="${t.id}">${icons.trash}Видалити рейс</button>
+          </div>`
+        : ''
+    }
     <footer class="trip-card__actions">
       <a class="btn btn--ghost" href="/pages/map.html?trip=${t.id}">${icons.map}На карті</a>
       <button class="btn btn--ghost" type="button" data-copy="${t.id}">${icons.copy}Копіювати</button>
@@ -213,6 +221,17 @@ drawer.addEventListener('click', (e) => {
 
 // ---------- Події ----------
 async function handleAction(e) {
+  const edit = e.target.closest('[data-edit]');
+  if (edit) {
+    drawer.close();
+    openTripForm({ trip: trips.find((t) => t.id === edit.dataset.edit) });
+    return true;
+  }
+  const del = e.target.closest('[data-delete]');
+  if (del) {
+    removeTrip(trips.find((t) => t.id === del.dataset.delete));
+    return true;
+  }
   const transfer = e.target.closest('[data-transfer]');
   if (transfer) {
     openTransfer(trips.find((t) => t.id === transfer.dataset.transfer));
@@ -335,8 +354,37 @@ async function init() {
   const fromUrl = new URLSearchParams(location.search).get('trip');
   if (fromUrl) openTrip(fromUrl);
 
-  initTripForm({ getTrips: () => trips, drivers, vehicles, onCreated: showCreated });
+  initTripForm({ getTrips: () => trips, drivers, vehicles, onCreated: showCreated, onUpdated: showUpdated });
   initDellaImport({ getTrips: () => trips, onCreated: showCreated });
+}
+
+async function removeTrip(t) {
+  const ok = await confirmDialog({
+    title: tr('Видалити рейс {n}?', { n: t.number }),
+    text:
+      t.status === 'in_progress'
+        ? 'Рейс зараз виконується. Якщо його скасували, краще змінити статус на «Скасовано» — тоді він залишиться в історії.'
+        : 'Рейс зникне зі списку й аналітики. Дію не можна скасувати.',
+  });
+  if (!ok) return;
+  try {
+    await deleteTrip(t.id);
+    trips = trips.filter((x) => x.id !== t.id);
+    drawer.close();
+    renderTabs();
+    render();
+    showToast(tr('Рейс {n} видалено', { n: t.number }));
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function showUpdated(trip) {
+  trips = trips.map((x) => (x.id === trip.id ? trip : x));
+  justCreated = new Set([trip.id]);
+  renderTabs();
+  render();
+  showToast(tr('Рейс {n} оновлено', { n: trip.number }));
 }
 
 // Нові рейси (один з форми або кілька з Della) — у таблицю й підсвітити

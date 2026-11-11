@@ -1,8 +1,8 @@
 // Форма «Новий рейс»: вручну або з оголошення Della (вставлений текст / кнопка-закладка в браузері)
-import { createTrip } from '../api/trips.js';
+import { createTrip, updateTrip } from '../api/trips.js';
 import { parseDellaListing, dellaBookmarklet, dellaNotes, sameCargo } from '../utils/della.js';
 import { setFieldError, clearErrors, showAlert, withLoading } from '../utils/validation.js';
-import { escapeHtml } from '../utils/format.js';
+import { escapeHtml, TRIP_STATUS } from '../utils/format.js';
 import { t as tr } from '../i18n/index.js';
 
 const dialog = document.getElementById('tripFormDialog');
@@ -15,7 +15,8 @@ const $ = (id) => document.getElementById(id);
 
 const FIELD_LABELS = { route: 'маршрут', date: 'дату', cargo: 'вантаж', weight: 'вагу', distance: 'відстань', price: 'ціну' };
 
-let ctx = { getTrips: () => [], drivers: [], vehicles: [], onCreated: () => {} };
+let ctx = { getTrips: () => [], drivers: [], vehicles: [], onCreated: () => {}, onUpdated: () => {} };
+let editing = null; // рейс, який редагуємо (null — новий)
 let imported = null; // дані, розпізнані з Della (для source/importedFrom)
 let duplicateWarned = false;
 
@@ -43,7 +44,30 @@ const fill = (id, value) => {
   el.classList.add('is-autofilled');
 };
 
+// Редагування: усі поля з рейсу
+function fillFromTrip(t) {
+  const set = (id, v) => ($(id).value = v ?? '');
+  set('tfFromCity', t.from.city);
+  set('tfFromAddress', t.from.address);
+  set('tfToCity', t.to.city);
+  set('tfToAddress', t.to.address);
+  set('tfLoadDate', t.loadDate);
+  set('tfUnloadDate', t.unloadDate);
+  set('tfCargo', t.cargo.type);
+  set('tfWeight', t.cargo.weightT);
+  set('tfVolume', t.cargo.volumeM3);
+  set('tfDistance', t.distanceKm);
+  set('tfPrice', t.price);
+  set('tfClient', t.client?.name);
+  set('tfClientPhone', t.client?.phone);
+  set('tfDriver', t.driverId);
+  set('tfVehicle', t.vehicleId);
+  set('tfNotes', t.notes);
+  set('tfStatus', t.status);
+}
+
 function fillOptions() {
+  $('tfStatus').innerHTML = Object.entries(TRIP_STATUS).map(([v, label]) => `<option value="${v}">${label}</option>`).join('');
   $('tfDriver').innerHTML =
     `<option value="">Не призначено</option>` +
     ctx.drivers
@@ -58,18 +82,27 @@ function fillOptions() {
 /**
  * Відкрити форму.
  * della: true — показати блок вставки оголошення; text — одразу розпізнати цей текст;
- * listing — вантаж, уже розібраний зі сторінки пошуку Della
+ * listing — вантаж, уже розібраний зі сторінки пошуку Della; trip — редагувати цей рейс
  */
-export function openTripForm({ della = false, text = '', listing = null } = {}) {
+export function openTripForm({ della = false, text = '', listing = null, trip = null } = {}) {
   form.reset();
   clearErrors(form);
   alertEl.hidden = true;
   imported = null;
+  editing = trip;
   duplicateWarned = false;
   form.querySelectorAll('.is-autofilled').forEach((el) => el.classList.remove('is-autofilled'));
   fillOptions();
-  $('tripFormTitle').textContent = della ? 'Новий рейс з Della' : 'Новий рейс';
-  box.hidden = !della;
+  $('tripFormTitle').textContent = trip ? tr('Рейс {n}', { n: trip.number }) : della ? 'Новий рейс з Della' : 'Новий рейс';
+  $('tfStatusField').hidden = !trip;
+  form.querySelector('[type=submit]').textContent = trip ? 'Зберегти зміни' : 'Створити рейс';
+  box.hidden = !della || Boolean(trip);
+  if (trip) {
+    fillFromTrip(trip);
+    if (!dialog.open) dialog.showModal();
+    $('tfFromCity').focus();
+    return;
+  }
   result.textContent = '';
   pasteArea.value = text;
   if (!dialog.open) dialog.showModal();
@@ -142,6 +175,12 @@ form.addEventListener('input', (e) => e.target.classList?.remove('is-autofilled'
 
 $('tripFormCancel').addEventListener('click', () => dialog.close());
 
+// Обрали водія — підставляємо закріплену за ним машину
+$('tfDriver').addEventListener('change', () => {
+  const driver = ctx.drivers.find((d) => d.id === $('tfDriver').value);
+  if (driver?.vehicleId && ctx.vehicles.some((v) => v.id === driver.vehicleId)) $('tfVehicle').value = driver.vehicleId;
+});
+
 // ---------- Збереження ----------
 const value = (id) => $(id).value.trim();
 const number = (id) => (value(id) === '' ? null : Number(value(id)));
@@ -186,6 +225,26 @@ form.addEventListener('submit', async (e) => {
     source: imported ? 'import' : 'manual',
     importedFrom: imported ? { platform: 'della', url: imported.url || null } : null,
   };
+
+  if (editing) {
+    // місто чи адресу змінили — старі координати вже не підходять
+    const place = (key) => {
+      const old = editing[key];
+      const same = old.city === data[key].city && (old.address ?? '') === data[key].address;
+      return same ? { ...old, ...data[key] } : data[key];
+    };
+    const changes = { ...data, from: place('from'), to: place('to'), status: value('tfStatus') };
+    delete changes.source; // звідки рейс узявся — не змінюється
+    delete changes.importedFrom;
+    try {
+      const trip = await withLoading(form.querySelector('[type=submit]'), () => updateTrip(editing.id, changes));
+      dialog.close();
+      ctx.onUpdated(trip);
+    } catch (err) {
+      showAlert(form, err.message);
+    }
+    return;
+  }
 
   const dup = findDuplicate(data);
   if (dup && !duplicateWarned) {

@@ -28,7 +28,6 @@ const SECTIONS = [
     links: [
       { href: '/pages/team.html', label: 'Команда', icon: icons.team },
       { href: '/pages/chat.html', label: 'Чат', icon: icons.chat, badge: 'chat' },
-      { href: '/pages/profile.html', label: 'Профіль', icon: icons.profile },
     ],
   },
 ];
@@ -102,7 +101,7 @@ export function renderLayout() {
         </div>
       </div>
       <div class="sidebar__user">
-        <a class="sidebar__profile" href="/pages/profile.html" title="Профіль"></a>
+        <a class="sidebar__profile ${current === '/pages/profile.html' ? 'is-active' : ''}" href="/pages/profile.html" title="Мій профіль" ${current === '/pages/profile.html' ? 'aria-current="page"' : ''}></a>
         <button class="sidebar__logout" id="logoutBtn" type="button" title="Вийти" aria-label="Вийти">${icons.logout}</button>
       </div>
     </div>

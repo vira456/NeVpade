@@ -34,34 +34,69 @@
 ```json
 {
   "token": "eyJhbGciOi...",
-  "user": { "id": "usr_01", "name": "Олена Коваль", "email": "olena@nevpade.ua", "role": "manager" }
+  "user": {
+    "id": "usr_01", "name": "Олена Коваль", "email": "olena@nevpade.ua",
+    "phone": "+380671234567", "phoneVerified": true, "role": "manager",
+    "companyId": "cmp_01", "companyName": "ТОВ «Західтранс»"
+  }
 }
 ```
 Далі це називається **AuthResponse**.
 
+**Порядок реєстрації:** `register` → код на пошту → `verify-email` → SMS на телефон → `verify-phone` → токен.
+Телефон завжди у форматі E.164: `+380XXXXXXXXX` (12 цифр після `+`), лише мобільні коди 039, 050, 063, 066, 067, 068, 073, 089, 091–099.
+
 ### POST `/auth/register` — реєстрація
 ```json
-{ "name": "Олена Коваль", "email": "olena@nevpade.ua", "password": "secret123" }
+{
+  "name": "Олена Коваль", "email": "olena@nevpade.ua", "phone": "+380671234567", "password": "secret123",
+  "company": { "mode": "create", "name": "ТОВ «Західтранс»" }
+}
 ```
-- Створює користувача з `emailVerified: false`, генерує 6-значний код і надсилає його листом
-- Токен **не** видається, доки пошту не підтверджено
+`company` — або `{ "mode": "create", "name": "..." }` (нова компанія, користувач стає її власником `role: "owner"`), або `{ "mode": "join", "code": "NVP-4821" }` (приєднатися до наявної за кодом запрошення).
+- 404 `{ "detail": "Компанію з таким кодом не знайдено…", "code": "company_not_found" }`
+- Створює користувача з `emailVerified: false`, `phoneVerified: false`, генерує 6-значний код і надсилає його листом
+- Токен **не** видається, доки не підтверджено і пошту, і телефон
 - Відповідь 201: `{ "email": "olena@nevpade.ua", "message": "Код підтвердження надіслано на пошту" }`
 - 409 — email уже зареєстровано
-- 422 — невалідні дані (пароль: мінімум 8 символів, літера й цифра)
+- 409 `{ "detail": "Номер уже використовується", "code": "phone_taken" }`
+- 422 — невалідні дані:
+  - `name` — рівно два слова (ім'я та прізвище) через пробіл; лише українські/латинські літери, апостроф (`'`, `’`, `ʼ`) і дефіс усередині слова; кожне слово ≥ 2 літер; до 60 символів. Regex для Python: `^[A-Za-zА-ЩЬЮЯҐЄІЇа-щьюяґєії]{1,}(?:['’ʼ-][A-Za-zА-ЩЬЮЯҐЄІЇа-щьюяґєії]+)* [A-Za-zА-ЩЬЮЯҐЄІЇа-щьюяґєії]+(?:['’ʼ-][A-Za-zА-ЩЬЮЯҐЄІЇа-щьюяґєії]+)*$` (+ перевірка довжини слів)
+  - `phone` — regex `^\+380(39|50|63|66|67|68|73|89|9[1-9])\d{7}$`
+  - `password` — мінімум 8 символів, літера й цифра
 
 ### POST `/auth/verify-email` — підтвердження коду
 ```json
 { "email": "olena@nevpade.ua", "code": "123456" }
 ```
-- 200 → **AuthResponse** (одразу входимо в систему)
+- Позначає `emailVerified: true`, генерує новий код і надсилає його **SMS** на номер користувача
+- 200 `{ "next": "verify_phone", "phone": "+380671234567" }` (токен ще не видається)
 - 400 `{ "detail": "Невірний код підтвердження", "code": "invalid_code" }`
 - 400 `{ "detail": "Термін дії коду минув", "code": "code_expired" }`
+
+### POST `/auth/verify-phone` — підтвердження коду з SMS
+```json
+{ "email": "olena@nevpade.ua", "code": "123456" }
+```
+- Позначає `phoneVerified: true`
+- 200 → **AuthResponse** (користувач увійшов)
+- 400 `invalid_code` / `code_expired` — як у verify-email
+
+### POST `/auth/phone` — вказати або змінити номер до підтвердження
+```json
+{ "email": "olena@nevpade.ua", "phone": "+380671234567" }
+```
+Використовується, коли користувач помилився в номері («Змінити номер») або увійшов через Google/Facebook (соцмережі не дають телефон).
+- Дозволено лише для користувача з `phoneVerified: false`; якщо в запиті є `Authorization` — брати користувача з токена, а не з `email`
+- Зберігає номер і надсилає SMS з кодом
+- 200 `{ "phone": "+380671234567", "message": "Код надіслано в SMS" }`
+- 409 `phone_taken`, 422 — невалідний номер
 
 ### POST `/auth/resend-code` — надіслати код повторно
 ```json
 { "email": "olena@nevpade.ua", "purpose": "verify" }
 ```
-- `purpose`: `verify` (підтвердження пошти) | `reset` (відновлення пароля)
+- `purpose`: `verify` (лист на пошту) | `verify_phone` (SMS) | `reset` (відновлення пароля)
 - 200 `{ "message": "Код надіслано повторно" }`
 - 429 — якщо запит частіше ніж раз на 60 с (фронт і так блокує кнопку на 60 с)
 
@@ -91,8 +126,9 @@
 { "credential": "<ID-токен від Google Identity Services>" }
 ```
 - Бекенд перевіряє підпис токена (Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`), бере `email`, `name`, `sub`
-- Якщо користувача з таким email нема — створює (пошта вважається підтвердженою), якщо є — прив'язує `googleId`
+- Якщо користувача з таким email нема — створює (пошта вважається підтвердженою, `phoneVerified: false`), якщо є — прив'язує `googleId`
 - 200 → **AuthResponse**; 401 — токен недійсний
+- Якщо у відповіді `user.phoneVerified: false`, фронт відкриває сторінку «Вкажіть номер телефону» (`/auth/phone` → `/auth/verify-phone`). Інші ендпоінти (рейси тощо) для такого користувача мають повертати 403
 
 ### POST `/auth/facebook` — вхід через Facebook
 ```json
@@ -106,9 +142,10 @@
 Потребує токен. Повертає `user` поточного користувача.
 
 ### Вимоги до кодів (для бекенду)
-- 6 цифр, дійсний 10 хвилин, після використання видаляється
+- 6 цифр; код з пошти дійсний 10 хвилин, з SMS — 5 хвилин; після використання видаляється
 - Зберігати в БД хеш коду, а не сам код; максимум 5 спроб введення
 - Лист надсилати через SMTP (наприклад, Gmail з паролем застосунку) або сервіс на кшталт SendGrid / Brevo
+- SMS надсилати через SMS-шлюз з API (наприклад, TurboSMS чи Twilio). Для розробки й захисту можна мати режим, коли код SMS не відправляється, а пишеться в лог сервера
 
 ### Спільні ключі
 `GOOGLE_CLIENT_ID` (Google Cloud Console → OAuth client ID, тип Web, Authorized JavaScript origins: `http://localhost:5173`) і `FACEBOOK_APP_ID` однакові для фронту й бекенду. Фронт тримає їх у `frontend/.env`, бекенд — у своєму `.env`.
@@ -122,10 +159,9 @@
 | GET | `/trips?status=planned&search=Львів` | список (фільтри необов'язкові) |
 | GET | `/trips/{id}` | один рейс |
 | POST | `/trips` | створити |
-| PUT | `/trips/{id}` | оновити |
-| DELETE | `/trips/{id}` | видалити |
+| PUT | `/trips/{id}` | оновити (усі поля, зокрема `status`, `driverId`, `vehicleId`) — лише свій рейс, інакше `403` |
+| DELETE | `/trips/{id}` | видалити — лише свій рейс, інакше `403`; відповідь `204` |
 | POST | `/trips/{id}/calculate` | розрахунок вартості, пального, ЗП |
-| POST | `/trips/import` | запуск парсингу рейсів з логістичної платформи |
 
 Об'єкт рейсу:
 ```json
@@ -149,26 +185,46 @@
 ```
 - `status`: `planned` | `in_progress` | `done` | `cancelled`
 - `source`: `manual` | `import`
-- При POST/PUT поля `id` і `createdAt` не надсилаються
+- `importedFrom` (для `source: "import"`): `{ "platform": "della", "url": "https://della.ua/…" | null }`, інакше `null`
+- `notes`: рядок, необов'язково (тип кузова, завантаження, умови оплати)
+- Можуть бути `null` або порожніми: `unloadDate`, `cargo.volumeM3`, `vehicleId`, `driverId`, `client.name`, `client.phone`, а також `lat`/`lng` (у вантажу з Della координат немає — фронт будує маршрут за назвою міста й адресою; бекенд може дописати координати геокодуванням)
+- При PUT поля `id` і `createdAt` не надсилаються
 
-Відповідь `POST /trips/{id}/calculate`:
-```json
-{
-  "distanceKm": 240,
-  "fuelLiters": 76.8,
-  "fuelCost": 4224,
-  "driverSalary": 2400,
-  "otherCosts": 800,
-  "totalCost": 7424,
-  "profit": 16576
-}
-```
+### POST `/trips` — новий рейс
+Фронт надсилає: `from`, `to` (`city`, `address`), `loadDate`, `unloadDate`, `cargo`, `distanceKm`, `price`, `client`, `driverId`, `vehicleId`, `notes`, `source`, `importedFrom`.
+Сервер сам ставить `id`, `number` (наступний `TR-XXXX`), `status: "planned"`, `managerId` (поточний користувач) і `createdAt`. Відповідь — створений рейс.
+Обов'язкові: `from.city`, `to.city`, `loadDate`, `cargo.type`, `cargo.weightT > 0`, `distanceKm > 0`, `price > 0`; інакше `422`.
+
+### Імпорт вантажу з Della (парсинг)
+Менеджер вставляє посилання на сторінку пошуку Della (`https://della.ua/search/….html`), фронт завантажує її HTML, розбирає картки вантажів (`frontend/src/js/utils/della.js` → `parseDellaSearchPage`) і показує список. Вибрані вантажі створюються звичайним `POST /trips` з `source: "import"`, `importedFrom: { "platform": "della", "url": "<сторінка пошуку>" }`.
+
+Браузер не може читати della.ua напряму (CORS), тому HTML отримує посередник:
+- **розробка** (`npm run dev`): проксі Vite `/della/…` → `https://della.ua/…` (`vite.config.js`), бекенд не потрібен;
+- **робоча версія**: бекенд.
+
+| Метод | URL | Опис |
+|---|---|---|
+| GET | `/import/della?path=/search/a204bd204eflolh0ilk0m1.html` | HTML сторінки пошуку Della |
+
+Відповідь `200`: `{ "html": "<!DOCTYPE html>…" }`
+- `path` — лише шляхи, що починаються з `/search/`; інакше `400` (щоб ендпоінт не став відкритим проксі на будь-який сайт)
+- бекенд запитує `https://della.ua{path}` (звичайний браузерний `User-Agent`, `Accept-Language: uk`), кешує відповідь на 60 с і не робить більше ~1 запиту на 15 с — не навантажуємо Della
+- Della недоступна / відповіла не `200` → `502` з `{ "detail": "Della не відповідає" }`
+- приклад на Python: `httpx.get("https://della.ua" + path, headers={...}, timeout=10).text`
+
+Також можна вставити текст одного оголошення вручну або кнопкою-закладкою «→ NeVpade» — тоді розбір іде з тексту (`parseDellaListing`).
 
 ---
 
 ## 3. Автопарк `/vehicles`
 
-CRUD: GET (список), GET `/{id}`, POST, PUT `/{id}`, DELETE `/{id}`.
+| Метод | URL | Опис |
+|---|---|---|
+| GET | `/vehicles` | список |
+| POST | `/vehicles` | додати машину |
+| PUT | `/vehicles/{id}` | змінити дані |
+| PATCH | `/vehicles/{id}/status` | змінити лише стан: `{ "status": "loading" }` |
+| DELETE | `/vehicles/{id}` | видалити (`204`) |
 
 ```json
 {
@@ -181,17 +237,27 @@ CRUD: GET (список), GET `/{id}`, POST, PUT `/{id}`, DELETE `/{id}`.
   "mileageKm": 412000,
   "nextServiceKm": 420000,
   "insuranceUntil": "2027-03-01",
-  "status": "on_trip"
+  "status": "on_trip",
+  "statusUpdatedAt": "2026-11-11T17:40:00Z"
 }
 ```
-- `status`: `available` | `on_trip` | `repair`
-- `fuelConsumption` — л/100 км
+- `status` — стан машини: `available` (вільна) | `loading` (на завантаженні) | `on_trip` (в дорозі) | `unloaded` (розвантажилась) | `broken` (зламалась) | `repair` (на ремонті)
+- `statusUpdatedAt` — сервер ставить сам при кожній зміні `status`
+- `fuelConsumption` — л/100 км; `nextServiceKm` і `insuranceUntil` можуть бути `null`
+- `plate` — унікальний у компанії (формат `ВХ 1234 АК`, кирилиця); дубль → `409` з `code: "plate_taken"`
+- DELETE: якщо машина в рейсі зі статусом `in_progress` → `409` (`code: "vehicle_busy"`); інакше сервер знімає її із запланованих рейсів (`vehicleId = null`) і з водія
 
 ---
 
 ## 4. Водії `/drivers`
 
-CRUD аналогічно до автопарку.
+| Метод | URL | Опис |
+|---|---|---|
+| GET | `/drivers` | список |
+| POST | `/drivers` | додати водія |
+| PUT | `/drivers/{id}` | змінити дані (разом із `vehicleId`) |
+| PUT | `/drivers/{id}/vehicle` | закріпити машину: `{ "vehicleId": "veh_02" }` або `{ "vehicleId": null }` — відкріпити |
+| DELETE | `/drivers/{id}` | видалити (`204`) |
 
 ```json
 {
@@ -206,6 +272,45 @@ CRUD аналогічно до автопарку.
 }
 ```
 - `status`: `available` | `on_trip` | `day_off`
+- Одна машина — один водій: коли машину закріплюють за водієм, сервер знімає її з попереднього водія
+- `phone`, `viber` — у форматі `+380XXXXXXXXX`; `licenseCategories` — з `B`, `C1`, `C`, `CE`, `D`
+- DELETE: водій у рейсі `in_progress` → `409` (`code: "driver_busy"`); із запланованих рейсів сервер його знімає
+
+---
+
+## 4а. Документи машин і водіїв (копії: фото або PDF)
+
+`{owner}` — `vehicles` або `drivers`.
+
+| Метод | URL | Опис |
+|---|---|---|
+| GET | `/{owner}/{id}/documents` | список документів (новіші першими) |
+| POST | `/{owner}/{id}/documents` | завантажити копію — **multipart/form-data** |
+| DELETE | `/{owner}/{id}/documents/{docId}` | видалити (`204`) |
+| GET | `/{owner}/documents/summary` | лічильники для списку: `{ "veh_01": { "count": 3, "expiring": 1, "expired": 0 } }` |
+
+POST, поля форми:
+- `file` — JPG/PNG/WEBP або PDF, до 10 МБ (фото фронт уже стискає до 2000 px по довшій стороні, ~200–400 КБ)
+- `type` — машина: `registration` (техпаспорт), `insurance` (страховий поліс), `inspection` (техогляд), `license` (ліцензія/дозвіл), `lease` (договір оренди), `other`; водій: `license` (посвідчення водія), `passport`, `tax_id` (ІПН), `medical` (медична довідка), `tachograph` (картка водія), `other`
+- `validUntil` — `YYYY-MM-DD`, необов'язково
+
+Об'єкт документа:
+```json
+{
+  "id": "doc_01",
+  "type": "insurance",
+  "validUntil": "2027-03-01",
+  "name": "polis.jpg",
+  "mime": "image/jpeg",
+  "size": 231456,
+  "createdAt": "2026-11-11T19:30:00Z",
+  "url": "https://.../files/doc_01.jpg?token=..."
+}
+```
+- `url` відкривається в `<img>` / новій вкладці без заголовка `Authorization`, тому це має бути тимчасове підписане посилання (або файли за сесійною cookie). Лише для своєї компанії.
+- Неправильний тип файлу → `415`, завеликий → `413`.
+- `summary`: `expiring` — документи, у яких `validUntil` протягом 30 днів, `expired` — уже прострочені.
+- Коли видаляють машину чи водія, їхні документи теж видаляються.
 
 ---
 
@@ -213,11 +318,11 @@ CRUD аналогічно до автопарку.
 
 | Метод | URL | Опис |
 |---|---|---|
-| GET | `/tasks` | усі завдання |
+| GET | `/tasks` | усі завдання поточного менеджера |
 | POST | `/tasks` | створити |
-| PUT | `/tasks/{id}` | оновити повністю |
-| PATCH | `/tasks/{id}` | часткове оновлення, напр. `{ "status": "done", "order": 0 }` |
-| DELETE | `/tasks/{id}` | видалити |
+| PUT | `/tasks/{id}` | оновити (усі поля, крім `id` і `createdAt`) |
+| DELETE | `/tasks/{id}` | видалити → 204 |
+| PUT | `/tasks/reorder` | зберегти порядок після перетягування |
 
 ```json
 {
@@ -228,23 +333,39 @@ CRUD аналогічно до автопарку.
   "priority": "high",
   "dueDate": "2026-11-14",
   "tripId": "trp_001",
-  "order": 0
+  "order": 0,
+  "createdAt": "2026-11-08T09:00:00Z"
 }
 ```
 - `status`: `todo` («Маю зробити») | `in_progress` («В процесі») | `done` («Зроблено»)
 - `priority`: `low` | `medium` | `high`
+- `title` — 3–120 символів; `description` — до 1000 символів (може бути `""`)
+- `dueDate` — `YYYY-MM-DD` або `null`; при створенні не може бути в минулому
+- `tripId` — id рейсу або `null`; якщо рейсу не існує — 422
+- `order` — позиція картки в колонці (0 — найвища). Нове завдання фронт створює з `order: 0`, а інші картки колонки зсуває через `/tasks/reorder`
+
+### PUT `/tasks/reorder`
+```json
+{ "items": [ { "id": "tsk_03", "status": "in_progress", "order": 0 }, { "id": "tsk_01", "status": "in_progress", "order": 1 } ] }
+```
+У FastAPI маршрут `/tasks/reorder` треба оголосити **перед** `/tasks/{id}`, інакше "reorder" сприйметься як id. Надсилаються лише картки, у яких змінилися `status` або `order`. Бекенд оновлює їх одним запитом (MongoDB `bulk_write`). Відповідь 204. Якщо сервер поверне помилку, фронт поверне картки на попередні місця.
 
 ---
 
 ## 6. Аналітика `/analytics`
 
+Параметр `period`: `week` | `month` | `year` (поточний тиждень / місяць / рік).
+
 ### GET `/analytics/summary?period=month`
 ```json
-{ "income": 412000, "expenses": 268000, "profit": 144000, "tripsCount": 18, "distanceKm": 7350 }
+{
+  "income": 412000, "expenses": 268000, "profit": 144000, "tripsCount": 18, "distanceKm": 7350,
+  "previous": { "income": 418000, "expenses": 271000, "profit": 147000, "tripsCount": 19, "distanceKm": 7620 }
+}
 ```
+`previous` — ті самі показники за попередній такий самий період; фронт показує зміну у %.
 
 ### GET `/analytics/income?period=year`
-`period`: `week` | `month` | `year`
 ```json
 {
   "labels": ["Січ", "Лют", "Бер"],
@@ -252,6 +373,7 @@ CRUD аналогічно до автопарку.
   "expenses": [205000, 198000, 221000]
 }
 ```
+Підписи: для `week` — дні («Пн»…«Нд»), для `month` — тижні («1–7 лист.»), для `year` — місяці.
 
 ### GET `/analytics/expenses?period=month`
 ```json
@@ -263,11 +385,117 @@ CRUD аналогічно до автопарку.
 [ { "driverId": "drv_01", "name": "Петро Іваненко", "trips": 6, "income": 138000 } ]
 ```
 
+### Розрахунок рейсу — POST `/trips/{id}/calculate`
+Фронт показує його в картці рейсу. У моках рахується так (бекенд може уточнити формули):
+- пальне, л = `distanceKm × fuelConsumption / 100` (витрата з автомобіля рейсу); вартість = л × ціна пального (56 грн/л)
+- зарплата водія = `distanceKm × ratePerKm` (ставка з водія рейсу)
+- інші витрати (дороги, стоянки, амортизація) = `distanceKm × 3.5`
+- `profit = price − (fuelCost + driverSalary + otherCosts)`
+
+---
+
+## 7. Профіль менеджера `/profile`
+
+Усі запити з `Authorization`.
+
+### GET `/profile`
+```json
+{
+  "id": "usr_01",
+  "fullName": "Федорова Віра Дмитрівна",
+  "position": "Старший менеджер з вантажоперевезень",
+  "email": "v.fedorova@nevpade.ua",
+  "phone": "+380671234567",
+  "language": "uk",
+  "avatarUrl": "https://.../avatars/usr_01.jpg"
+}
+```
+- `language`: `uk` | `en`
+- `avatarUrl`: посилання на фото або `null`
+- `position` редагує лише адміністратор (у формі профілю його немає)
+
+### PUT `/profile`
+Тіло: `{ "fullName", "email", "phone", "language" }` → оновлений профіль.
+- `fullName` — 2–3 слова (прізвище, ім'я, по батькові), ті самі символи, що й при реєстрації, до 80 символів
+- 409 `email_taken` / `phone_taken`
+
+### PUT `/profile/avatar`
+```json
+{ "image": "data:image/jpeg;base64,/9j/4AAQ..." }
+```
+Фронт сам обрізає фото до квадрата 256×256 і стискає в JPEG (~20–40 КБ). Відповідь — оновлений профіль з `avatarUrl`.
+
+### DELETE `/profile/avatar`
+Видаляє фото → профіль з `avatarUrl: null`.
+
+### GET `/profile/kpi`
+```json
+{ "tripsCount": 142, "rating": 4.9, "ratingMax": 5, "activeDrivers": 8 }
+```
+Рахується на бекенді: кількість рейсів менеджера, середня оцінка, кількість водіїв зі статусом не `day_off`, закріплених за менеджером.
+
+### POST `/auth/change-password`
+```json
+{ "currentPassword": "old123abc", "newPassword": "newSecret1" }
+```
+- 200 `{ "message": "Пароль змінено" }`
+- 400 `{ "detail": "Невірний поточний пароль", "code": "invalid_password" }`
+- 422 — новий пароль не відповідає вимогам або збігається з поточним
+
+---
+
+## 8. Компанія, команда, чат
+
+Кожен користувач належить рівно одній компанії. **Усі дані (рейси, автопарк, водії, завдання, аналітика) бекенд фільтрує за `companyId` користувача з токена** — менеджери різних компаній не бачать чужого.
+
+### GET `/company`
+```json
+{ "id": "cmp_01", "name": "ТОВ «Західтранс»", "inviteCode": "NVP-4821", "city": "Хмельницький", "createdAt": "2025-03-12" }
+```
+
+### POST `/company/invite` — новий код запрошення
+→ `{ "inviteCode": "NVP-7310" }`. Старий код перестає діяти. Формат: три латинські літери, дефіс, чотири цифри.
+
+### GET `/company/members`
+```json
+[
+  { "id": "usr_02", "name": "Мельничук Олег Петрович", "position": "Менеджер з вантажоперевезень",
+    "email": "o.melnychuk@nevpade.ua", "phone": "+380672345678", "avatarUrl": null,
+    "online": true, "lastSeen": "2026-11-10T08:40:00Z", "role": "manager" }
+]
+```
+`online` — користувач робив запити останні ~2 хвилини (можна оновлювати `lastSeen` у middleware авторизації).
+
+### Чат компанії
+| Метод | URL | Опис |
+|---|---|---|
+| GET | `/company/chat?after=<id>` | повідомлення після вказаного (без `after` — останні 100); фронт опитує кожні 4 с |
+| POST | `/company/chat` | `{ "text": "..." }` (1–2000 символів) → створене повідомлення |
+
+```json
+{ "id": "msg_005", "authorId": "usr_03", "text": "Хтось має вільну машину?", "createdAt": "2026-11-10T08:32:00Z" }
+```
+Системне повідомлення про передачу рейсу (створює сервер, див. нижче):
+```json
+{ "id": "msg_007", "type": "transfer", "authorId": "usr_01", "toId": "usr_02", "tripId": "trp_004",
+  "text": "Коментар, якщо був", "createdAt": "2026-11-10T09:15:00Z" }
+```
+Фронт сам рахує непрочитані (пам'ятає id останнього прочитаного). За бажанням пізніше можна замінити опитування на WebSocket.
+
+### POST `/trips/{id}/transfer` — передати рейс колезі
+```json
+{ "toManagerId": "usr_02", "comment": "Я на лікарняному до кінця тижня" }
+```
+- У рейсі з'являється поле `managerId` (відповідальний менеджер); `GET /trips` повертає рейси всієї компанії, фронт сам фільтрує «Мої / Уся компанія»
+- Передати може лише поточний `managerId` → інакше 403 `not_owner`; `toManagerId` має бути з тієї ж компанії → інакше 422
+- Сервер змінює `managerId`, записує `transferredAt` і додає в чат повідомлення `type: "transfer"`
+- Відповідь — оновлений рейс
+
 ---
 
 ## Відкриті питання
 
-- [ ] Яка саме логістична платформа для парсингу (Della?) і які поля з неї беремо
+- [x] Логістична платформа — Della: парсинг сторінки пошуку (див. розділ 2, «Імпорт вантажу з Della»); Іра робить `GET /import/della`
 - [ ] Формула ЗП водія: за км, % від рейсу чи фіксована ставка
 - [ ] Ціна пального: константа в налаштуваннях чи окремий ендпоінт `/settings`
-- [ ] Чи потрібні ролі, окрім `manager`
+- [ ] Чи потрібні ролі, окрім `manager` і `owner` (власник компанії може, наприклад, оновлювати код запрошення)

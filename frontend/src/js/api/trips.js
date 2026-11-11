@@ -1,15 +1,9 @@
 import { request, ApiError } from './client.js';
-import { load, save } from '../utils/storage.js';
 import { getCurrentUser } from './auth.js';
 import { mockTransferMessage } from './chat.js';
-import seedTrips from '../mock/trips.json';
-import vehicles from '../mock/vehicles.json';
-import drivers from '../mock/drivers.json';
+import { mockTrips, saveTrips, mockVehicles, mockDrivers } from './mock-store.js';
 
-// Рейси всієї компанії (поле managerId — відповідальний менеджер). У моках зберігаються
-// в localStorage, щоб передача рейсу колезі не зникала після перезавантаження.
-const mockTrips = () => load('mock.trips') ?? seedTrips;
-const trips = { find: (fn) => mockTrips().find(fn) };
+// Рейси всієї компанії (поле managerId — відповідальний менеджер)
 
 export const myId = () => getCurrentUser()?.id ?? 'usr_01';
 
@@ -28,7 +22,7 @@ export const transferTrip = (id, toManagerId, comment = '') =>
       if (trip.managerId !== myId()) throw new ApiError('Передати можна лише свій рейс', 403, 'not_owner');
       trip.managerId = toManagerId;
       trip.transferredAt = new Date().toISOString();
-      save('mock.trips', all);
+      saveTrips(all);
       mockTransferMessage({ tripId: id, toId: toManagerId, text: comment });
       return trip;
     },
@@ -49,13 +43,40 @@ export const createTrip = (data) =>
         managerId: myId(),
         createdAt: new Date().toISOString(),
       };
-      save('mock.trips', [...all, trip]);
+      saveTrips([...all, trip]);
       return trip;
     },
   });
+// Редагувати й видаляти можна лише свої рейси (сервер теж перевіряє)
+function ownTrip(all, id) {
+  const trip = all.find((t) => t.id === id);
+  if (!trip) throw new ApiError('Рейс не знайдено', 404);
+  if (trip.managerId !== myId()) throw new ApiError('Змінювати можна лише свої рейси', 403, 'not_owner');
+  return trip;
+}
+
 export const updateTrip = (id, data) =>
-  request(`/trips/${id}`, { method: 'PUT', body: data, mock: { ...data, id } });
-export const deleteTrip = (id) => request(`/trips/${id}`, { method: 'DELETE', mock: null });
+  request(`/trips/${id}`, {
+    method: 'PUT',
+    body: data,
+    mock: () => {
+      const all = mockTrips();
+      const trip = Object.assign(ownTrip(all, id), data, { updatedAt: new Date().toISOString() });
+      saveTrips(all);
+      return trip;
+    },
+  });
+
+export const deleteTrip = (id) =>
+  request(`/trips/${id}`, {
+    method: 'DELETE',
+    mock: () => {
+      const all = mockTrips();
+      ownTrip(all, id);
+      saveTrips(all.filter((t) => t.id !== id));
+      return null;
+    },
+  });
 
 // Розрахунок собівартості рейсу (на сервері — бізнес-логіка Іри).
 // У моках рахуємо так само, як описано в контракті, щоб інтерфейс показував правдоподібні цифри.
@@ -64,11 +85,12 @@ export const calculateTrip = (id) =>
   request(`/trips/${id}/calculate`, {
     method: 'POST',
     mock: () => {
-      const trip = trips.find((t) => t.id === id);
-      const vehicle = vehicles.find((v) => v.id === trip.vehicleId);
-      const driver = drivers.find((d) => d.id === trip.driverId);
+      const trip = mockTrips().find((t) => t.id === id);
+      if (!trip) throw new ApiError('Рейс не знайдено', 404);
+      const vehicle = mockVehicles().find((v) => v.id === trip.vehicleId);
+      const driver = mockDrivers().find((d) => d.id === trip.driverId);
       const fuelLiters = +((trip.distanceKm * (vehicle?.fuelConsumption ?? 32)) / 100).toFixed(1);
-      const fuelCost = Math.round(fuelLiters * (load('settings')?.fuelPrice ?? FUEL_PRICE));
+      const fuelCost = Math.round(fuelLiters * FUEL_PRICE);
       const driverSalary = Math.round(trip.distanceKm * (driver?.ratePerKm ?? 10));
       const otherCosts = Math.round(trip.distanceKm * 3.5); // дороги, стоянки, амортизація
       const totalCost = fuelCost + driverSalary + otherCosts;

@@ -13,10 +13,5 @@
     "rating": 4.9,
     "ratingMax": 5,
     "activeDrivers": 8
-  },
-  "settings": {
-    "viberTemplate": null,
-    "pushEnabled": true,
-    "soundEnabled": false
   }
 }

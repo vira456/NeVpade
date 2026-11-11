@@ -260,13 +260,15 @@ function renderTasks(tasks) {
 }
 
 function renderFleet(vehicles) {
-  const order = ['on_trip', 'available', 'repair'];
+  const order = ['loading', 'on_trip', 'unloaded', 'available', 'broken', 'repair'];
   const counts = Object.fromEntries(order.map((s) => [s, vehicles.filter((v) => v.status === s).length]));
   document.getElementById('fleetBar').innerHTML = order
     .filter((s) => counts[s])
-    .map((s) => `<span class="fleet-bar__seg fleet-bar__seg--${s}" style="flex:${counts[s]}" title="${VEHICLE_STATUS[s]}: ${counts[s]}"></span>`)
+    .map((s) => `<span class="fleet-bar__seg fleet-bar__seg--${s}" style="flex:${counts[s]}" title="${t(VEHICLE_STATUS[s])}: ${counts[s]}"></span>`)
     .join('');
+  // у легенді — лише стани, які зараз є (+ «вільна» завжди)
   document.getElementById('fleetLegend').innerHTML = order
+    .filter((s) => counts[s] || s === 'available')
     .map((s) => `<li><span class="badge badge--${s}">${VEHICLE_STATUS[s]}</span><strong>${counts[s]}</strong></li>`)
     .join('');
 }
