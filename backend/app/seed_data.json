@@ -1,0 +1,542 @@
+{
+ "vehicles": [
+  {
+   "id": "veh_01",
+   "plate": "ВХ 1234 АК",
+   "model": "DAF XF 480",
+   "type": "тягач + тент",
+   "capacityT": 22,
+   "fuelConsumption": 32,
+   "mileageKm": 412000,
+   "nextServiceKm": 420000,
+   "insuranceUntil": "2027-03-01",
+   "status": "available"
+  },
+  {
+   "id": "veh_02",
+   "plate": "АА 5678 ВВ",
+   "model": "Volvo FH 500",
+   "type": "рефрижератор",
+   "capacityT": 20,
+   "fuelConsumption": 34,
+   "mileageKm": 298000,
+   "nextServiceKm": 300000,
+   "insuranceUntil": "2026-12-20",
+   "status": "on_trip"
+  },
+  {
+   "id": "veh_03",
+   "plate": "АВ 9012 ІК",
+   "model": "MAN TGX 18.470",
+   "type": "тягач + тент",
+   "capacityT": 22,
+   "fuelConsumption": 31,
+   "mileageKm": 515000,
+   "nextServiceKm": 530000,
+   "insuranceUntil": "2027-06-15",
+   "status": "repair"
+  },
+  {
+   "id": "veh_04",
+   "plate": "АХ 3344 ЕМ",
+   "model": "Scania R 450",
+   "type": "тягач + платформа",
+   "capacityT": 24,
+   "fuelConsumption": 33,
+   "mileageKm": 365000,
+   "nextServiceKm": 380000,
+   "insuranceUntil": "2027-01-25",
+   "status": "on_trip"
+  },
+  {
+   "id": "veh_05",
+   "plate": "АЕ 7781 КО",
+   "model": "Mercedes-Benz Actros 1845",
+   "type": "тягач + зерновоз",
+   "capacityT": 25,
+   "fuelConsumption": 30,
+   "mileageKm": 221000,
+   "nextServiceKm": 240000,
+   "insuranceUntil": "2026-11-30",
+   "status": "available"
+  },
+  {
+   "id": "veh_06",
+   "plate": "ВО 2210 СН",
+   "model": "Renault T 480",
+   "type": "тягач + тент",
+   "capacityT": 22,
+   "fuelConsumption": 31,
+   "mileageKm": 174000,
+   "nextServiceKm": 180000,
+   "insuranceUntil": "2027-08-10",
+   "status": "on_trip"
+  }
+ ],
+ "drivers": [
+  {
+   "id": "drv_01",
+   "name": "Петро Іваненко",
+   "phone": "+380501112233",
+   "viber": "+380501112233",
+   "licenseCategories": [
+    "C",
+    "CE"
+   ],
+   "vehicleId": "veh_01",
+   "ratePerKm": 10,
+   "status": "available"
+  },
+  {
+   "id": "drv_02",
+   "name": "Андрій Ткачук",
+   "phone": "+380662223344",
+   "viber": "+380662223344",
+   "licenseCategories": [
+    "C",
+    "CE"
+   ],
+   "vehicleId": "veh_02",
+   "ratePerKm": 11,
+   "status": "on_trip"
+  },
+  {
+   "id": "drv_03",
+   "name": "Олег Бондар",
+   "phone": "+380973334455",
+   "viber": "+380973334455",
+   "licenseCategories": [
+    "C",
+    "CE"
+   ],
+   "vehicleId": "veh_03",
+   "ratePerKm": 10,
+   "status": "day_off"
+  },
+  {
+   "id": "drv_04",
+   "name": "Сергій Литвиненко",
+   "phone": "+380504445566",
+   "viber": "+380504445566",
+   "licenseCategories": [
+    "C",
+    "CE"
+   ],
+   "vehicleId": "veh_04",
+   "ratePerKm": 11,
+   "status": "on_trip"
+  },
+  {
+   "id": "drv_05",
+   "name": "Василь Кравець",
+   "phone": "+380685556677",
+   "viber": "+380685556677",
+   "licenseCategories": [
+    "C",
+    "CE",
+    "D"
+   ],
+   "vehicleId": "veh_05",
+   "ratePerKm": 10,
+   "status": "available"
+  },
+  {
+   "id": "drv_06",
+   "name": "Микола Гнатюк",
+   "phone": "+380936667788",
+   "viber": "+380936667788",
+   "licenseCategories": [
+    "C",
+    "CE"
+   ],
+   "vehicleId": "veh_06",
+   "ratePerKm": 12,
+   "status": "on_trip"
+  }
+ ],
+ "trips": [
+  {
+   "id": "trp_001",
+   "number": "TR-0042",
+   "from": {
+    "city": "Хмельницький",
+    "address": "вул. Проскурівська, 1",
+    "lat": 49.4229,
+    "lng": 26.9871
+   },
+   "to": {
+    "city": "Львів",
+    "address": "вул. Городоцька, 120",
+    "lat": 49.8397,
+    "lng": 24.0297
+   },
+   "loadDate": "2026-11-15",
+   "unloadDate": "2026-11-16",
+   "cargo": {
+    "type": "Будматеріали",
+    "weightT": 18,
+    "volumeM3": 60
+   },
+   "vehicleId": "veh_01",
+   "driverId": "drv_01",
+   "client": {
+    "name": "ТОВ «БудСервіс»",
+    "phone": "+380671234567"
+   },
+   "price": 24000,
+   "distanceKm": 240,
+   "status": "planned",
+   "source": "manual",
+   "createdAt": "2026-11-09T10:00:00Z",
+   "managerId": "usr_01"
+  },
+  {
+   "id": "trp_002",
+   "number": "TR-0041",
+   "from": {
+    "city": "Київ",
+    "address": "вул. Набережно-Хрещатицька, 10",
+    "lat": 50.4501,
+    "lng": 30.5234
+   },
+   "to": {
+    "city": "Одеса",
+    "address": "Митна площа, 1",
+    "lat": 46.4825,
+    "lng": 30.7233
+   },
+   "loadDate": "2026-11-10",
+   "unloadDate": "2026-11-11",
+   "cargo": {
+    "type": "Продукти (реф)",
+    "weightT": 12,
+    "volumeM3": 45
+   },
+   "vehicleId": "veh_02",
+   "driverId": "drv_02",
+   "client": {
+    "name": "ФОП Мельник",
+    "phone": "+380931112233"
+   },
+   "price": 31000,
+   "distanceKm": 475,
+   "status": "in_progress",
+   "source": "import",
+   "createdAt": "2026-11-07T08:30:00Z",
+   "managerId": "usr_01"
+  },
+  {
+   "id": "trp_003",
+   "number": "TR-0040",
+   "from": {
+    "city": "Вінниця",
+    "address": "вул. Келецька, 50",
+    "lat": 49.2331,
+    "lng": 28.4682
+   },
+   "to": {
+    "city": "Рівне",
+    "address": "вул. Соборна, 300",
+    "lat": 50.6199,
+    "lng": 26.2516
+   },
+   "loadDate": "2026-11-05",
+   "unloadDate": "2026-11-05",
+   "cargo": {
+    "type": "Меблі",
+    "weightT": 7,
+    "volumeM3": 80
+   },
+   "vehicleId": "veh_03",
+   "driverId": "drv_03",
+   "client": {
+    "name": "ТОВ «Меблі-Захід»",
+    "phone": "+380672223344"
+   },
+   "price": 17500,
+   "distanceKm": 280,
+   "status": "done",
+   "source": "manual",
+   "createdAt": "2026-11-02T12:00:00Z",
+   "managerId": "usr_01"
+  },
+  {
+   "id": "trp_004",
+   "number": "TR-0043",
+   "from": {
+    "city": "Харків",
+    "address": "просп. Гагаріна, 20",
+    "lat": 49.9935,
+    "lng": 36.2304
+   },
+   "to": {
+    "city": "Київ",
+    "address": "вул. Електриків, 29",
+    "lat": 50.4501,
+    "lng": 30.5234
+   },
+   "loadDate": "2026-11-09",
+   "unloadDate": "2026-11-10",
+   "cargo": {
+    "type": "Металопрокат",
+    "weightT": 20,
+    "volumeM3": 40
+   },
+   "vehicleId": "veh_04",
+   "driverId": "drv_04",
+   "client": {
+    "name": "ПрАТ «Харківсталь»",
+    "phone": "+380577001122"
+   },
+   "price": 38500,
+   "distanceKm": 480,
+   "status": "in_progress",
+   "source": "import",
+   "createdAt": "2026-11-06T14:10:00Z",
+   "managerId": "usr_01"
+  },
+  {
+   "id": "trp_005",
+   "number": "TR-0044",
+   "from": {
+    "city": "Дніпро",
+    "address": "вул. Січеславська Набережна, 15",
+    "lat": 48.4647,
+    "lng": 35.0462
+   },
+   "to": {
+    "city": "Одеса",
+    "address": "вул. Промислова, 4",
+    "lat": 46.4825,
+    "lng": 30.7233
+   },
+   "loadDate": "2026-11-12",
+   "unloadDate": "2026-11-13",
+   "cargo": {
+    "type": "Зерно",
+    "weightT": 22,
+    "volumeM3": 70
+   },
+   "vehicleId": "veh_05",
+   "driverId": "drv_05",
+   "client": {
+    "name": "ТОВ «АгроЛан»",
+    "phone": "+380563334455"
+   },
+   "price": 33000,
+   "distanceKm": 460,
+   "status": "planned",
+   "source": "import",
+   "createdAt": "2026-11-08T09:40:00Z",
+   "managerId": "usr_03"
+  },
+  {
+   "id": "trp_006",
+   "number": "TR-0045",
+   "from": {
+    "city": "Тернопіль",
+    "address": "вул. Микулинецька, 116",
+    "lat": 49.5535,
+    "lng": 25.5948
+   },
+   "to": {
+    "city": "Ужгород",
+    "address": "вул. Минайська, 16",
+    "lat": 48.6208,
+    "lng": 22.2879
+   },
+   "loadDate": "2026-11-18",
+   "unloadDate": "2026-11-18",
+   "cargo": {
+    "type": "Побутова техніка",
+    "weightT": 9,
+    "volumeM3": 82
+   },
+   "vehicleId": "veh_06",
+   "driverId": "drv_06",
+   "client": {
+    "name": "ТОВ «ТехноДім»",
+    "phone": "+380352501010"
+   },
+   "price": 29500,
+   "distanceKm": 390,
+   "status": "planned",
+   "source": "manual",
+   "createdAt": "2026-11-09T11:20:00Z",
+   "managerId": "usr_01"
+  },
+  {
+   "id": "trp_007",
+   "number": "TR-0039",
+   "from": {
+    "city": "Житомир",
+    "address": "вул. Покровська, 85",
+    "lat": 50.2547,
+    "lng": 28.6587
+   },
+   "to": {
+    "city": "Луцьк",
+    "address": "вул. Рівненська, 76",
+    "lat": 50.7472,
+    "lng": 25.3254
+   },
+   "loadDate": "2026-11-03",
+   "unloadDate": "2026-11-03",
+   "cargo": {
+    "type": "Пиломатеріали",
+    "weightT": 16,
+    "volumeM3": 64
+   },
+   "vehicleId": "veh_01",
+   "driverId": "drv_01",
+   "client": {
+    "name": "ФОП Савчук",
+    "phone": "+380412445566"
+   },
+   "price": 19000,
+   "distanceKm": 270,
+   "status": "done",
+   "source": "manual",
+   "createdAt": "2026-10-30T16:00:00Z",
+   "managerId": "usr_02"
+  },
+  {
+   "id": "trp_008",
+   "number": "TR-0038",
+   "from": {
+    "city": "Полтава",
+    "address": "вул. Зінківська, 6",
+    "lat": 49.5883,
+    "lng": 34.5514
+   },
+   "to": {
+    "city": "Черкаси",
+    "address": "вул. Смілянська, 120",
+    "lat": 49.4444,
+    "lng": 32.0598
+   },
+   "loadDate": "2026-11-01",
+   "unloadDate": "2026-11-01",
+   "cargo": {
+    "type": "Молочна продукція (реф)",
+    "weightT": 10,
+    "volumeM3": 40
+   },
+   "vehicleId": "veh_02",
+   "driverId": "drv_02",
+   "client": {
+    "name": "ТОВ «Полтавамолоко»",
+    "phone": "+380532607070"
+   },
+   "price": 15500,
+   "distanceKm": 240,
+   "status": "done",
+   "source": "import",
+   "createdAt": "2026-10-28T10:30:00Z",
+   "managerId": "usr_02"
+  },
+  {
+   "id": "trp_009",
+   "number": "TR-0046",
+   "from": {
+    "city": "Чернівці",
+    "address": "вул. Головна, 265",
+    "lat": 48.2921,
+    "lng": 25.9358
+   },
+   "to": {
+    "city": "Київ",
+    "address": "вул. Колекторна, 3",
+    "lat": 50.4501,
+    "lng": 30.5234
+   },
+   "loadDate": "2026-11-09",
+   "unloadDate": "2026-11-10",
+   "cargo": {
+    "type": "Текстиль",
+    "weightT": 6,
+    "volumeM3": 75
+   },
+   "vehicleId": "veh_06",
+   "driverId": "drv_06",
+   "client": {
+    "name": "ТОВ «БукТекстиль»",
+    "phone": "+380372558899"
+   },
+   "price": 27000,
+   "distanceKm": 540,
+   "status": "in_progress",
+   "source": "manual",
+   "createdAt": "2026-11-07T13:00:00Z",
+   "managerId": "usr_01"
+  }
+ ],
+ "tasks": [
+  {
+   "id": "tsk_01",
+   "title": "Підтвердити завантаження TR-0042",
+   "description": "Зателефонувати клієнту ТОВ «БудСервіс» і узгодити час подачі машини.",
+   "status": "todo",
+   "priority": "high",
+   "dueDate": "2026-11-14",
+   "tripId": "trp_001",
+   "order": 0,
+   "createdAt": "2026-11-08T09:00:00Z"
+  },
+  {
+   "id": "tsk_02",
+   "title": "Продовжити страховку АА 5678 ВВ",
+   "description": "Поліс закінчується 20.12. Запросити пропозиції від двох страхових.",
+   "status": "todo",
+   "priority": "medium",
+   "dueDate": "2026-12-15",
+   "tripId": null,
+   "order": 1,
+   "createdAt": "2026-11-05T12:30:00Z"
+  },
+  {
+   "id": "tsk_05",
+   "title": "Записати MAN TGX на ТО",
+   "description": "Пробіг наближається до планового обслуговування.",
+   "status": "todo",
+   "priority": "low",
+   "dueDate": null,
+   "tripId": null,
+   "order": 2,
+   "createdAt": "2026-11-07T08:15:00Z"
+  },
+  {
+   "id": "tsk_03",
+   "title": "Відправити документи по TR-0041",
+   "description": "ТТН і рахунок на пошту клієнта.",
+   "status": "in_progress",
+   "priority": "high",
+   "dueDate": "2026-11-06",
+   "tripId": "trp_002",
+   "order": 0,
+   "createdAt": "2026-11-04T10:00:00Z"
+  },
+  {
+   "id": "tsk_06",
+   "title": "Узгодити маршрут з водієм Ткачуком",
+   "description": "",
+   "status": "in_progress",
+   "priority": "medium",
+   "dueDate": "2026-11-10",
+   "tripId": "trp_002",
+   "order": 1,
+   "createdAt": "2026-11-08T16:45:00Z"
+  },
+  {
+   "id": "tsk_04",
+   "title": "Закрити рейс TR-0040",
+   "description": "Перевірити оплату та підписані акти.",
+   "status": "done",
+   "priority": "low",
+   "dueDate": "2026-11-06",
+   "tripId": "trp_003",
+   "order": 0,
+   "createdAt": "2026-11-01T11:00:00Z"
+  }
+ ]
+}
