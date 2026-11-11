@@ -6,7 +6,16 @@ const KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
 export const hasApiKey = Boolean(KEY);
 
-const point = (p) => `${p.lat},${p.lng}`;
+// Координати, а якщо їх немає (рейс з Della) — текстова адреса, Google знайде її сам
+export const place = (p) => {
+  if (p.lat != null && p.lng != null) return { lat: p.lat, lng: p.lng };
+  const parts = /обл|район|р-н/i.test(p.address ?? '') ? [p.city, p.address] : [p.address, p.city]; // «Ковель, Волинська обл.» / «вул. …, Львів»
+  return [...parts, 'Україна'].filter(Boolean).join(', ');
+};
+const point = (p) => {
+  const v = place(p);
+  return typeof v === 'string' ? encodeURIComponent(v) : `${v.lat},${v.lng}`;
+};
 
 // Офіційний формат посилання Google Maps (працює і в браузері, і в застосунку на телефоні)
 export const directionsUrl = (from, to) =>

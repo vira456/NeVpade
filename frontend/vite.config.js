@@ -1,8 +1,36 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
+
+// Спільний <head> (шрифт, тема, мова) зберігається в одному файлі
+// й підставляється в кожну сторінку замість <!-- nevpade:head -->
+const nevpadeHead = () => ({
+  name: 'nevpade-head',
+  // order: 'pre' — вставляємо ДО обробки Vite, щоб він зібрав <link> на SCSS у готовий CSS
+  transformIndexHtml: {
+    order: 'pre',
+    handler(html) {
+      const head = readFileSync(resolve(__dirname, 'src/partials/head.html'), 'utf8');
+      return html.replace(/[ \t]*<!-- nevpade:head -->\r?\n?/, () => head); // \r — якщо git зберіг файли з CRLF
+    },
+  },
+});
+
+const dellaProxy = {
+  target: 'https://della.ua',
+  changeOrigin: true,
+  rewrite: (path) => path.replace(/^\/della/, ''),
+  headers: { 'Accept-Language': 'uk-UA,uk;q=0.9', Referer: 'https://della.ua/' },
+};
 
 // Кілька HTML-сторінок (multi-page app)
 export default defineConfig({
+  plugins: [nevpadeHead()],
+  // Сторінки біржі Della: браузер не може читати чужий сайт напряму (CORS),
+  // тому під час розробки Vite сам запитує della.ua і віддає HTML фронту.
+  // У робочій версії це робить бекенд: GET /api/import/della?path=… (див. docs/api-contract.md)
+  server: { proxy: { '/della': dellaProxy } },
+  preview: { proxy: { '/della': dellaProxy } },
   css: {
     preprocessorOptions: {
       scss: { api: 'modern-compiler' }, // прибирає попередження legacy-js-api

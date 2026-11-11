@@ -3,6 +3,7 @@ import { locale } from '../../i18n/index.js';
 import { getKpi, updateProfile } from '../../api/profile.js';
 import { renderSidebarUser } from '../../utils/layout.js';
 import { getLang, setLang } from '../../utils/prefs.js';
+import { countUp } from '../../utils/motion.js';
 import { showToast } from '../../utils/toast.js';
 import {
   isEmail,
@@ -72,6 +73,7 @@ export async function renderKpi() {
   document.getElementById('kpiRating').innerHTML = `${kpi.rating.toFixed(1)}<small>/${kpi.ratingMax.toFixed(1)}</small>`;
   document.getElementById('kpiRatingBar').style.width = `${(kpi.rating / kpi.ratingMax) * 100}%`;
   document.getElementById('kpiDrivers').textContent = kpi.activeDrivers;
+  ['kpiTrips', 'kpiDrivers'].forEach((id) => countUp(document.getElementById(id)));
 }
 
 /**

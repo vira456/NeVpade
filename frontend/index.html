@@ -4,27 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="NeVpade — вебсистема для менеджера вантажоперевезень: рейси, карта маршрутів, автопарк, завдання, аналітика та повідомлення водіям у Viber." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
-  <meta name="theme-color" content="#1b1c1f" />
-  <script>
-    // Тема, мова й стан бокової панелі — до показу сторінки, щоб не було «спалаху»
-    (function () {
-      var root = document.documentElement;
-      function get(k, d) { try { var v = localStorage.getItem('nevpade.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
-      var theme = get('theme', 'system');
-      var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      root.dataset.theme = dark ? 'dark' : 'light';
-      if (get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
-      if (get('lang', 'uk') === 'en') {
-        root.lang = 'en';
-        root.classList.add('i18n-pending');
-        setTimeout(function () { root.classList.remove('i18n-pending'); }, 1500);
-      }
-    })();
-  </script>
-  <style>.i18n-pending body { visibility: hidden; }</style>
+  <!-- nevpade:head -->
   <title>NeVpade — робоче місце менеджера вантажоперевезень</title>
 </head>
 <body class="lp">
@@ -60,6 +40,9 @@
           </div>
         </div>
 
+        <!-- Дорога, якою проїжджає фура -->
+        <div class="lp-road" aria-hidden="true"><div class="lp-road__truck" id="lpTruck"></div></div>
+
         <!-- Прев'ю інтерфейсу: табло рейсів -->
         <figure class="preview" aria-label="Приклад екрана системи: рейси в роботі">
           <div class="preview__bar">
@@ -69,17 +52,17 @@
           <ul class="preview__list">
               <li class="preview__row">
                 <span class="preview__id"><strong>TR-0041</strong><span>10 лист.</span></span>
-                <div class="route"><span class="route__city">Київ</span><span class="route__line" aria-hidden="true"><span class="route__km">475 км</span></span><span class="route__city">Одеса</span></div>
+                <div class="route route--draw"><span class="route__city">Київ</span><span class="route__line" aria-hidden="true"><span class="route__km">475 км</span></span><span class="route__city">Одеса</span></div>
                 <span class="badge badge--in_progress">В дорозі</span>
               </li>
               <li class="preview__row">
                 <span class="preview__id"><strong>TR-0043</strong><span>9 лист.</span></span>
-                <div class="route"><span class="route__city">Харків</span><span class="route__line" aria-hidden="true"><span class="route__km">480 км</span></span><span class="route__city">Київ</span></div>
+                <div class="route route--draw"><span class="route__city">Харків</span><span class="route__line" aria-hidden="true"><span class="route__km">480 км</span></span><span class="route__city">Київ</span></div>
                 <span class="badge badge--in_progress">В дорозі</span>
               </li>
               <li class="preview__row">
                 <span class="preview__id"><strong>TR-0042</strong><span>15 лист.</span></span>
-                <div class="route"><span class="route__city">Хмельницький</span><span class="route__line" aria-hidden="true"><span class="route__km">240 км</span></span><span class="route__city">Львів</span></div>
+                <div class="route route--draw"><span class="route__city">Хмельницький</span><span class="route__line" aria-hidden="true"><span class="route__km">240 км</span></span><span class="route__city">Львів</span></div>
                 <span class="badge badge--planned">Заплановано</span>
               </li>
           </ul>

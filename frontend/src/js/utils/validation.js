@@ -1,3 +1,4 @@
+import { miniTruck } from './truck.js';
 // ---------- Ім'я та прізвище ----------
 // Дозволено: українські та латинські літери, апостроф (', ’, ʼ) і дефіс усередині слова.
 // Приклади: «Мар'яна Коваль», «Олена Петренко-Сидоренко», «Anna Smith»
@@ -78,16 +79,21 @@ export function showAlert(form, message, type = 'error') {
   alert.hidden = false;
 }
 
-// Блокує кнопку на час запиту
+// Блокує кнопку на час запиту: замість тексту — маленька фура, що їде
 export async function withLoading(button, fn) {
-  const text = button.textContent;
+  const html = button.innerHTML;
+  const width = button.offsetWidth;
   button.disabled = true;
-  button.textContent = 'Зачекайте…';
+  button.classList.add('is-loading');
+  button.style.minWidth = `${width}px`; // кнопка не «стрибає» за шириною
+  button.innerHTML = `${miniTruck}<span>Зачекайте…</span>`;
   try {
     return await fn();
   } finally {
     button.disabled = false;
-    button.textContent = text;
+    button.classList.remove('is-loading');
+    button.style.minWidth = '';
+    button.innerHTML = html;
   }
 }
 

@@ -1,6 +1,7 @@
 // Аналітика: ключові показники за період, графіки доходів і витрат, оперативний стан
 import { locale } from '../i18n/index.js';
-import { Chart } from 'chart.js/auto';
+// Лише потрібні частини Chart.js (замість chart.js/auto — бандл у ~2 рази менший)
+import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
 import { renderLayout } from '../utils/layout.js';
 import { getSummary, getIncome, getExpenses } from '../api/analytics.js';
 import { getTrips, myId } from '../api/trips.js';
@@ -11,9 +12,12 @@ import { money, km, escapeHtml, compactMoney, VEHICLE_STATUS } from '../utils/fo
 import { routeLine, statusBadge, shortDate } from '../utils/components.js';
 import { icons } from '../utils/icons.js';
 import { dueLabel, isOverdue } from './kanban/config.js';
-import { t } from '../i18n/index.js';
+import { t, i18nReady } from '../i18n/index.js';
+import { countUpAll } from '../utils/motion.js';
 
 renderLayout();
+
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip);
 
 const PERIODS = {
   week: { title: 'Цей тиждень', prev: 'минулим тижнем' },
@@ -68,6 +72,7 @@ function renderLedger(s) {
       </div>`
     )
     .join('');
+  countUpAll(document.getElementById('ledger'), '.ledger__value');
   document.getElementById('marginNote').textContent = `Рентабельність ${margin} %`;
   document.getElementById('dashSubtitle').textContent = `${PERIODS[period].title} · зміни порівняно з ${PERIODS[period].prev}`;
 }
@@ -132,7 +137,7 @@ function renderChart(data) {
     chart.data.datasets = datasets;
     chart.update();
   } else {
-    Chart.defaults.font.family = '"Fira Sans", system-ui, sans-serif';
+    Chart.defaults.font.family = "'Manrope', 'Segoe UI', system-ui, sans-serif";
     Chart.defaults.color = COLORS.text;
     chart = new Chart(document.getElementById('incomeChart'), {
       type: 'line',
@@ -194,10 +199,16 @@ function renderExpenses(e) {
       <li class="bars__row" title="${EXPENSE_LABELS[key]}: ${money(value)}">
         <span class="bars__label">${EXPENSE_LABELS[key]}</span>
         <span class="bars__value">${compactMoney(value)} <small>${Math.round((value / total) * 100)} %</small></span>
-        <span class="bars__track"><span class="bars__fill" style="width:${(value / max) * 100}%"></span></span>
+        <span class="bars__track"><span class="bars__fill" data-w="${(value / max) * 100}"></span></span>
       </li>`
     )
     .join('');
+  // смуги «виростають» з нуля
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() =>
+      document.querySelectorAll('.bars__fill').forEach((el) => (el.style.width = `${el.dataset.w}%`))
+    )
+  );
 }
 
 // ---------- Оперативний стан ----------
@@ -210,13 +221,13 @@ function renderActiveTrips(trips, drivers) {
   document.getElementById('activeCount').textContent = list.length;
   document.getElementById('activeTrips').innerHTML = list.length
     ? list
-        .map((t) => {
+        .map((t, i) => {
           const driver = drivers.find((d) => d.id === t.driverId);
           return `
           <li class="trip-row">
-            <a class="trip-row__link" href="/pages/trips.html?trip=${t.id}">
+            <a class="trip-row__link" href="/pages/trips.html?trip=${t.id}" style="--i:${i}">
               <span class="trip-row__id"><strong>${escapeHtml(t.number)}</strong><span>${shortDate(t.loadDate)}</span></span>
-              ${routeLine(t)}
+              ${routeLine(t, { size: 'draw' })}
               <span class="trip-row__driver">${driver ? escapeHtml(driver.name) : '—'}</span>
               ${statusBadge(t.status)}
             </a>
@@ -283,11 +294,13 @@ document.getElementById('chartTableToggle').addEventListener('click', (e) => {
 });
 
 async function init() {
-  const [trips, drivers, vehicles, tasks] = await Promise.all([getTrips(), getDrivers(), getVehicles(), getTasks()]);
-  renderActiveTrips(trips, drivers);
-  renderTasks(tasks);
-  renderFleet(vehicles);
-  await loadPeriod(period);
+  // усі запити — одночасно, а не двома хвилями
+  const operational = Promise.all([getTrips(), getDrivers(), getVehicles(), getTasks()]).then(([trips, drivers, vehicles, tasks]) => {
+    renderActiveTrips(trips, drivers);
+    renderTasks(tasks);
+    renderFleet(vehicles);
+  });
+  await Promise.all([operational, i18nReady.then(() => loadPeriod(period))]);
 }
 
 // Зміна теми — перемальовуємо графік новими кольорами

@@ -42,6 +42,7 @@ export const mockTransferMessage = ({ tripId, toId, text }) =>
 export function subscribe(getLastId, callback, intervalMs = 4000) {
   if (channel) channel.onmessage = (e) => callback([e.data]);
   const timer = setInterval(async () => {
+    if (document.hidden) return; // вкладка у фоні — не смикаємо сервер
     try {
       const fresh = await getMessages(getLastId());
       if (fresh?.length) callback(fresh);

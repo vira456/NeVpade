@@ -37,8 +37,8 @@ export function tripVariables(trip, driver, vehicle) {
     WEIGHT: `${trip.cargo.weightT} т`,
     DRIVER: driver ? `${driver.name}, ${driver.phone}` : '—',
     VEHICLE: vehicle ? `${vehicle.plate} (${vehicle.model})` : '—',
-    CLIENT: trip.client?.name ?? '—',
-    PHONE: trip.client?.phone ?? '—',
+    CLIENT: trip.client?.name || '—',
+    PHONE: trip.client?.phone || '—',
   };
 }
 

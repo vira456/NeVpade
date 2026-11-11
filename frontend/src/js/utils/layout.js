@@ -1,10 +1,11 @@
 // Каркас внутрішніх сторінок: бокова панель (згортається), меню на телефоні,
 // перемикачі теми й мови, захист від неавторизованого доступу.
 import '../i18n/index.js'; // переклад має запуститися раніше за малювання сторінки
-import '../../scss/main.scss';
+import './loader.js';
 import { isMockMode } from '../api/client.js';
 import { isLoggedIn, getCurrentUser, logout, nextPageFor } from '../api/auth.js';
 import { escapeHtml } from './format.js';
+import { withThemeReveal } from './motion.js';
 import { icons, logoMark } from './icons.js';
 import { getTheme, setTheme, getLang, setLang, isSidebarCollapsed, setSidebarCollapsed } from './prefs.js';
 import { countUnread } from '../api/chat.js';
@@ -119,8 +120,8 @@ export function renderLayout() {
   });
 
   sidebar.querySelectorAll('[data-theme-set]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      setTheme(btn.dataset.themeSet);
+    btn.addEventListener('click', (e) => {
+      withThemeReveal(e, () => setTheme(btn.dataset.themeSet));
       sidebar.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
     })
   );

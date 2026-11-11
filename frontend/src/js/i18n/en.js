@@ -164,6 +164,7 @@ export default {
     "Зарплата водія": "Driver's pay",
     "Зарплата водіїв": "Drivers' pay",
     "Зачекайте…": "Please wait…",
+    "Завантаження…": "Loading…",
     "Зберегти": "Save",
     "Зберегти зміни": "Save changes",
     "Зберегти шаблон": "Save template",
@@ -492,7 +493,75 @@ export default {
     "тягач + зерновоз": "tractor + grain trailer",
     "рефрижератор": "reefer",
     "Користувач Google": "Google user",
-    "Користувач Facebook": "Facebook user"
+    "Користувач Facebook": "Facebook user",
+    "Імпорт з Della": "Import from Della",
+    "Новий рейс": "New trip",
+    "Новий рейс з Della": "New trip from Della",
+    "Оголошення з Della": "Della listing",
+    "Виділіть оголошення на della.ua, скопіюйте (Ctrl+C) і вставте сюди (Ctrl+V)": "Select a listing on della.ua, copy it (Ctrl+C) and paste it here (Ctrl+V)",
+    "Розпізнати": "Recognise",
+    "Кнопка в браузері — без копіювання": "Browser button — no copying needed",
+    "Перетягніть кнопку": "Drag the",
+    "на панель закладок браузера (Ctrl+Shift+B, якщо панелі не видно).": "button to your browser's bookmarks bar (Ctrl+Shift+B if the bar is hidden).",
+    "На della.ua виділіть мишкою потрібне оголошення.": "On della.ua, select the listing you need with the mouse.",
+    "Натисніть закладку «→ NeVpade» — тут відкриється ця форма вже з даними.": "Click the “→ NeVpade” bookmark — this form opens here with the data filled in.",
+    "Якщо нічого не виділено, кнопка візьме весь текст сторінки оголошення (зручно на сторінці «Докладніше»).": "If nothing is selected, the button takes the whole listing page (handy on the “Details” page).",
+    "Звідки": "From",
+    "Куди": "To",
+    "Адреса розвантаження": "Unloading address",
+    "Вулиця, склад або область": "Street, warehouse or region",
+    "Дата розвантаження": "Unloading date",
+    "Напр. зерно, палети, будматеріали": "E.g. grain, pallets, building materials",
+    "Вага, т": "Weight, t",
+    "Об'єм, м³": "Volume, m³",
+    "Відстань, км": "Distance, km",
+    "Вартість, грн": "Price, UAH",
+    "Компанія або ПІБ": "Company or full name",
+    "можна пізніше": "can be set later",
+    "Примітка": "Note",
+    "Тип кузова, завантаження, умови оплати": "Body type, loading, payment terms",
+    "Створити рейс": "Create trip",
+    "Не призначено": "Not assigned",
+    "Перетягніть кнопку «→ NeVpade» мишкою на панель закладок браузера.": "Drag the “→ NeVpade” button onto your browser's bookmarks bar.",
+    "Не вдалося розпізнати оголошення. Виділіть на Della весь блок вантажу (маршрут, вагу, ціну) і спробуйте ще раз.": "Couldn't recognise the listing. Select the whole cargo block on Della (route, weight, price) and try again.",
+    "Спершу вставте текст оголошення.": "Paste the listing text first.",
+    "Усі основні поля заповнено. Перевірте дані й створіть рейс.": "All main fields are filled in. Check the data and create the trip.",
+    "маршрут": "route",
+    "дату": "date",
+    "вантаж": "cargo",
+    "вагу": "weight",
+    "відстань": "distance",
+    "ціну": "price",
+    "Вкажіть місто завантаження": "Enter the loading city",
+    "Вкажіть місто розвантаження": "Enter the unloading city",
+    "Вкажіть дату завантаження": "Enter the loading date",
+    "Розвантаження не може бути раніше завантаження": "Unloading can't be earlier than loading",
+    "Вкажіть, що веземо": "Enter what we're carrying",
+    "Вкажіть вагу в тоннах": "Enter the weight in tonnes",
+    "Вкажіть відстань у кілометрах": "Enter the distance in kilometres",
+    "Вкажіть вартість рейсу в гривнях": "Enter the trip price in UAH",
+    "Імпортовано з": "Imported from",
+    "Імпортовано з Della": "Imported from Della",
+    "Вантажі з Della": "Cargo from Della",
+    "Сторінка пошуку на Della": "Della search page",
+    "Завантажити": "Load",
+    "Налаштуйте на della.ua фільтри (звідки, куди, тип кузова), скопіюйте адресу сторінки з результатами й вставте сюди. Посилання запам'ятається.": "Set the filters on della.ua (from, to, body type), copy the results page address and paste it here. The link will be remembered.",
+    "Лише з ціною": "With price only",
+    "Оновити": "Refresh",
+    "Наступна сторінка": "Next page",
+    "Вставити оголошення вручну": "Paste a listing manually",
+    "Додати вибрані": "Add selected",
+    "Завантажуємо вантажі з Della…": "Loading cargo from Della…",
+    "Нова": "New",
+    "Прямий замовник": "Direct shipper",
+    "Ціну не вказано": "No price given",
+    "У формі": "Open in form",
+    "Вказати ціну": "Set price",
+    "Немає вантажів із ціною на цій сторінці.": "No cargo with a price on this page.",
+    "Вантажів не знайдено. Змініть фільтри на Della.": "No cargo found. Change the filters on Della.",
+    "Вставте посилання на сторінку пошуку Della, наприклад https://della.ua/search/….html": "Paste a link to a Della search page, e.g. https://della.ua/search/….html",
+    "Немає зв'язку з Della. Перевірте інтернет і що сайт запущено через npm run dev.": "Can't reach Della. Check your internet connection and that the site runs via npm run dev.",
+    "Della не віддала список вантажів (можливо, тимчасове обмеження). Спробуйте за хвилину.": "Della didn't return the cargo list (possibly a temporary limit). Try again in a minute."
   },
   patterns: [
     [
@@ -790,6 +859,50 @@ export default {
     [
         "Код надіслано на {e}",
         "Code sent to {e}"
+    ],
+    [
+        "Заповнено: {got}. Допишіть: {missing}.",
+        "Filled in: {got}. Please add: {missing}."
+    ],
+    [
+        "Схоже, цей вантаж уже є: рейс {n}. Натисніть «Створити рейс» ще раз, якщо це інший вантаж.",
+        "Looks like this cargo already exists: trip {n}. Click “Create trip” again if it's a different load."
+    ],
+    [
+        "Рейс {n} створено",
+        "Trip {n} created"
+    ],
+    [
+        "На Della знайдено {n}",
+        "{n} found on Della"
+    ],
+    [
+        "тут {n} відкритих",
+        "{n} open here"
+    ],
+    [
+        "оновлено о {time}",
+        "updated at {time}"
+    ],
+    [
+        "Уже в рейсах: {n}",
+        "Already in trips: {n}"
+    ],
+    [
+        "Додати вибрані ({n})",
+        "Add selected ({n})"
+    ],
+    [
+        "Додано рейсів з Della: {n}",
+        "Trips added from Della: {n}"
+    ],
+    [
+        "Допишіть: {missing}.",
+        "Please add: {missing}."
+    ],
+    [
+        "Della не відповідає (код {#n}). Спробуйте пізніше.",
+        "Della isn't responding (code {n}). Try again later."
     ]
   ],
 };

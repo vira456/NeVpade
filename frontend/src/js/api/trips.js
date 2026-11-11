@@ -33,8 +33,26 @@ export const transferTrip = (id, toManagerId, comment = '') =>
       return trip;
     },
   });
+// Новий рейс (вручну або імпорт з Della). Номер, менеджера, статус і дату створення ставить сервер.
 export const createTrip = (data) =>
-  request('/trips', { method: 'POST', body: data, mock: { ...data, id: crypto.randomUUID() } });
+  request('/trips', {
+    method: 'POST',
+    body: data,
+    mock: () => {
+      const all = mockTrips();
+      const last = Math.max(0, ...all.map((t) => Number(String(t.number).replace(/\D/g, '')) || 0));
+      const trip = {
+        ...data,
+        id: `trp_${Date.now().toString(36)}`,
+        number: `TR-${String(last + 1).padStart(4, '0')}`,
+        status: 'planned',
+        managerId: myId(),
+        createdAt: new Date().toISOString(),
+      };
+      save('mock.trips', [...all, trip]);
+      return trip;
+    },
+  });
 export const updateTrip = (id, data) =>
   request(`/trips/${id}`, { method: 'PUT', body: data, mock: { ...data, id } });
 export const deleteTrip = (id) => request(`/trips/${id}`, { method: 'DELETE', mock: null });

@@ -1,4 +1,5 @@
 // Перемикачі теми та мови для сторінок без бокової панелі (вхід, реєстрація, лендинг)
+import { withThemeReveal } from './motion.js';
 import { icons } from './icons.js';
 import { getTheme, setTheme, getLang, setLang } from './prefs.js';
 
@@ -26,8 +27,8 @@ export function renderPrefs(container, { theme = true, lang = true } = {}) {
     }`;
 
   container.querySelectorAll('[data-theme-set]').forEach((btn) =>
-    btn.addEventListener('click', () => {
-      setTheme(btn.dataset.themeSet);
+    btn.addEventListener('click', (e) => {
+      withThemeReveal(e, () => setTheme(btn.dataset.themeSet));
       container.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
     })
   );

@@ -23,6 +23,8 @@ async function init() {
     document.getElementById('mockPassword').textContent = MOCK_PASSWORD;
   }
 
+  // статистика вантажиться паралельно з профілем
+  renderKpi().catch(() => showToast('Не вдалося завантажити статистику', 'error'));
   try {
     const [p, settings] = await Promise.all([getProfile(), getSettings()]);
     profile = p;
@@ -41,7 +43,6 @@ async function init() {
       renderHeader(updated);
     });
     await initNotifications(settings);
-    renderKpi().catch(() => showToast('Не вдалося завантажити статистику', 'error'));
   } catch (err) {
     showToast(`Не вдалося завантажити профіль: ${err.message}`, 'error', 0);
   } finally {

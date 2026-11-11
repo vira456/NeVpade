@@ -96,6 +96,7 @@ function append(fresh) {
   added.forEach((m) => {
     list.querySelector('.empty')?.remove();
     list.insertAdjacentHTML('beforeend', renderMessage(m, messages[messages.length - 1]));
+    list.lastElementChild?.classList.add('is-new');
     messages.push(m);
   });
   if (nearBottom || added.some((m) => m.authorId === myId())) scrollToEnd();

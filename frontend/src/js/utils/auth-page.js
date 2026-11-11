@@ -1,6 +1,5 @@
 // Спільне для сторінок входу/реєстрації
 import '../i18n/index.js';
-import '../../scss/main.scss';
 import { renderPrefs } from './prefs-ui.js';
 import { isMockMode } from '../api/client.js';
 import { isLoggedIn } from '../api/auth.js';

@@ -4,6 +4,8 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export const isMockMode = USE_MOCK;
+// Імітація затримки мережі в режимі моків (мс). Можна змінити в .env: VITE_MOCK_DELAY=0
+const MOCK_DELAY = Number(import.meta.env.VITE_MOCK_DELAY ?? 150);
 
 // Помилка API: message — текст для користувача, status — HTTP-код, code — машинний код (якщо є)
 export class ApiError extends Error {
@@ -19,10 +21,20 @@ export class ApiError extends Error {
  * @param {{ method?: string, body?: any, mock?: any, auth?: boolean }} options
  *   mock — дані для режиму моків; може бути функцією (тоді її викликають і вона може кинути ApiError)
  *   auth — false для публічних запитів (логін, реєстрація), щоб 401 не перекидав на сторінку входу
+ * Події api:start / api:end потрібні індикатору завантаження (utils/loader.js).
  */
-export async function request(path, { method = 'GET', body, mock, auth = true } = {}) {
+export async function request(path, options = {}) {
+  window.dispatchEvent(new Event('api:start'));
+  try {
+    return await doRequest(path, options);
+  } finally {
+    window.dispatchEvent(new Event('api:end'));
+  }
+}
+
+async function doRequest(path, { method = 'GET', body, mock, auth = true } = {}) {
   if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 400)); // імітація затримки мережі
+    if (MOCK_DELAY) await new Promise((r) => setTimeout(r, MOCK_DELAY));
     const data = typeof mock === 'function' ? mock(body) : mock;
     return data === undefined ? null : structuredClone(data);
   }

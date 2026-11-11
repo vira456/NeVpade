@@ -4,9 +4,9 @@
 // й код не треба засмічувати ключами: модуль після завантаження й при
 // кожній зміні DOM замінює відомі українські рядки англійськими.
 // Рядки зі змінними частинами описано шаблонами: '{n} рейсів' → '{n} trips'.
+// Словник (en.js) вантажиться окремим файлом і лише для англійської мови.
 // ============================================================
 import { getLang } from '../utils/prefs.js';
-import dictionary from './en.js';
 
 export const lang = getLang();
 export const isEnglish = lang === 'en';
@@ -15,24 +15,26 @@ export const locale = () => (isEnglish ? 'en-GB' : 'uk-UA');
 const CYRILLIC = /[А-Яа-яІіЇїЄєҐґ]/;
 const ATTRS = ['placeholder', 'title', 'aria-label', 'data-empty', 'alt'];
 
-const exact = new Map(Object.entries(dictionary.exact));
+let exact = new Map();
+let patterns = [];
 
 // '{n} рейсів · {m} в дорозі' → /^(.+?) рейсів · (.+?) в дорозі$/
 // {#n} — лише число (щоб «{#a} з {#b}» не спрацьовувало всередині звичайних речень)
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const NUMBER = '([\\d\\s.,\\u00a0\\u202f–-]+?)';
-const patterns = dictionary.patterns
-  .map(([src, dst]) => {
-    const names = [];
-    const source = escape(src).replace(/\\\{(#?)(\w+)\\\}/g, (_, num, name) => {
-      names.push(name);
-      return num ? NUMBER : '([\\s\\S]+?)';
-    });
-    // точніші шаблони (більше сталого тексту) перевіряємо першими
-    const weight = src.replace(/\{#?\w+\}/g, '').length;
-    return { re: new RegExp(`^${source}$`), names, dst: dst.replace(/\{#(\w+)\}/g, '{$1}'), weight };
-  })
-  .sort((a, b) => b.weight - a.weight);
+const compile = (list) =>
+  list
+    .map(([src, dst]) => {
+      const names = [];
+      const source = escape(src).replace(/\\\{(#?)(\w+)\\\}/g, (_, num, name) => {
+        names.push(name);
+        return num ? NUMBER : '([\\s\\S]+?)';
+      });
+      // точніші шаблони (більше сталого тексту) перевіряємо першими
+      const weight = src.replace(/\{#?\w+\}/g, '').length;
+      return { re: new RegExp(`^${source}$`), names, dst: dst.replace(/\{#(\w+)\}/g, '{$1}'), weight };
+    })
+    .sort((a, b) => b.weight - a.weight);
 
 const missing = new Set();
 
@@ -90,8 +92,7 @@ function translateNode(node) {
   node.childNodes.forEach(translateNode);
 }
 
-if (isEnglish) {
-  document.documentElement.lang = 'en';
+function start() {
   const run = () => {
     translateNode(document.body);
     const title = translateText(document.title);
@@ -115,3 +116,16 @@ if (isEnglish) {
     attributeFilter: ATTRS,
   });
 }
+
+/** Проміс, що виконується, коли словник готовий (важливо для тексту на canvas, напр. графіків). */
+export const i18nReady = isEnglish
+  ? import('./en.js')
+      .then(({ default: dictionary }) => {
+        exact = new Map(Object.entries(dictionary.exact));
+        patterns = compile(dictionary.patterns);
+        start();
+      })
+      .catch(() => document.documentElement.classList.remove('i18n-pending')) // без перекладу, але сторінка видима
+  : Promise.resolve();
+
+if (isEnglish) document.documentElement.lang = 'en';

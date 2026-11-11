@@ -8,6 +8,7 @@ import { confirmDialog } from '../../utils/confirm.js';
 import { COLUMNS, PRIORITIES, isOverdue } from './config.js';
 import { renderCard } from './card.js';
 import { initModal, openModal } from './modal.js';
+import { debounce } from '../../utils/debounce.js';
 
 renderLayout();
 
@@ -170,7 +171,7 @@ board.addEventListener('click', (e) => {
 });
 
 document.getElementById('newTaskBtn').addEventListener('click', () => openModal());
-search.addEventListener('input', renderBoard);
+search.addEventListener('input', debounce(renderBoard));
 priorityFilter.addEventListener('change', renderBoard);
 document.getElementById('clearFilters').addEventListener('click', () => {
   search.value = '';

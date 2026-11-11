@@ -5,8 +5,10 @@ import { getDrivers } from '../api/drivers.js';
 import { getVehicles } from '../api/vehicles.js';
 import { TRIP_STATUS, money, escapeHtml } from '../utils/format.js';
 import { buildTripMessage, sendToViber, copyText } from '../utils/viber.js';
+import { flyAway } from '../utils/motion.js';
 import { showToast } from '../utils/toast.js';
-import { hasApiKey, loadGoogleMaps, onAuthFailure, directionsUrl, embedUrl, formatDuration, estimateDuration } from '../utils/maps.js';
+import { hasApiKey, loadGoogleMaps, onAuthFailure, directionsUrl, embedUrl, formatDuration, estimateDuration, place } from '../utils/maps.js';
+import { debounce } from '../utils/debounce.js';
 
 renderLayout();
 
@@ -123,8 +125,8 @@ function showApiRoute(trip) {
   renderDetails(trip); // поки рахується маршрут — дані з рейсу
   directions.route(
     {
-      origin: { lat: trip.from.lat, lng: trip.from.lng },
-      destination: { lat: trip.to.lat, lng: trip.to.lng },
+      origin: place(trip.from),
+      destination: place(trip.to),
       travelMode: gmaps.TravelMode.DRIVING,
     },
     (result, status) => {
@@ -181,7 +183,7 @@ els.list.addEventListener('click', (e) => {
   if (item) select(item.dataset.id);
 });
 
-els.search.addEventListener('input', renderList);
+els.search.addEventListener('input', debounce(renderList));
 els.status.addEventListener('change', renderList);
 
 els.details.addEventListener('click', async (e) => {
@@ -199,14 +201,15 @@ els.details.addEventListener('click', async (e) => {
     }
   }
   if (action === 'viber') {
+    flyAway(e.target.closest('[data-action]'));
     sendToViber(`${buildTripMessage(trip, driverOf(trip), vehicleOf(trip))}\n🗺 Маршрут: ${link}`);
   }
 });
 
 // ---------- Старт ----------
 async function init() {
-  [trips, drivers, vehicles] = await Promise.all([getTrips(), getDrivers(), getVehicles()]);
-  await initMap();
+  // скрипт Google Maps і дані рейсів вантажимо одночасно
+  [[trips, drivers, vehicles]] = await Promise.all([Promise.all([getTrips(), getDrivers(), getVehicles()]), initMap()]);
 
   const fromUrl = new URLSearchParams(location.search).get('trip');
   const first = trips.find((t) => t.id === fromUrl) ?? trips.find((t) => t.status !== 'done') ?? trips[0];

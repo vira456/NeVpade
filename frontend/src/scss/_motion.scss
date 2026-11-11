@@ -1,0 +1,251 @@
+// ============================================================
+// Анімації NeVpade: фура-завантажувач, «набігання» маршрутів,
+// поява повідомлень, зміна теми колом.
+// Усе вимикається при «зменшити рух» (prefers-reduced-motion).
+// ============================================================
+@use 'variables' as *;
+
+// ---------- Фура ----------
+.truck {
+  display: block;
+  width: 132px;
+  height: auto;
+  overflow: visible;
+
+  &__trailer { fill: $color-surface; stroke: $color-text; stroke-width: 2; }
+  &__stripes { stroke: $color-border-strong; stroke-width: 1.5; stroke-linecap: round; fill: none; }
+  &__cab { fill: $color-accent; }
+  &__window { fill: $color-bg; opacity: .85; }
+  &__pipe, &__chassis { fill: $color-text; }
+  &__light { fill: $color-warning; }
+  &__tyre { fill: $color-text; }
+  &__hub { fill: $color-surface; }
+  &__spokes { stroke: $color-surface; stroke-width: 1.4; stroke-linecap: round; }
+  &__smoke circle { fill: $color-faint; opacity: 0; transform-box: fill-box; transform-origin: center; }
+}
+
+// фура «їде»: крутяться колеса, кузов злегка підстрибує, з труби йде дим
+.truck-loader .truck,
+.lp-road .truck {
+  .truck__wheel { animation: truck-wheel .55s linear infinite; }
+  .truck__body { animation: truck-bump .32s ease-in-out infinite alternate; }
+  .truck__smoke circle {
+    animation: truck-smoke 1.2s ease-out infinite;
+    &:nth-child(2) { animation-delay: .4s; }
+    &:nth-child(3) { animation-delay: .8s; }
+  }
+}
+
+@keyframes truck-wheel { to { transform: rotate(360deg); } }
+@keyframes truck-bump { from { transform: translateY(0); } to { transform: translateY(-1.2px); } }
+@keyframes truck-smoke {
+  0% { opacity: .7; transform: translate(0, 0) scale(.6); }
+  100% { opacity: 0; transform: translate(-14px, -8px) scale(1.6); }
+}
+
+// ---------- Завантажувач: фура на дорозі ----------
+.truck-loader {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+
+  &__scene {
+    position: relative;
+    width: 240px;
+    padding-bottom: 6px;
+    overflow: hidden;
+    display: grid;
+    justify-items: center;
+    // по краях дорога розчиняється
+    mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  }
+
+  // розмітка біжить назустріч — здається, що фура їде
+  &__road {
+    width: 100%;
+    height: 3px;
+    margin-top: 2px;
+    background: linear-gradient(90deg, $color-text 0 18px, transparent 18px 32px) 0 0 / 32px 3px repeat-x;
+    opacity: .45;
+    animation: road-run .45s linear infinite;
+  }
+
+  &__label { margin: 0; font-weight: 700; color: $color-muted; letter-spacing: .02em; }
+}
+
+@keyframes road-run { to { background-position: -32px 0; } }
+
+// Повноекранний шар на час першого завантаження сторінки
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, $color-bg 78%, transparent);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+
+  &.is-visible { opacity: 1; pointer-events: auto; }
+
+  // дані прийшли — фура газує й виїжджає праворуч, шар згасає
+  &.is-leaving {
+    opacity: 0;
+    transition: opacity .35s ease .25s;
+    .truck { animation: truck-leave .55s cubic-bezier(.55, 0, .8, .2) forwards; }
+    .truck-loader__label { opacity: 0; transition: opacity .2s; }
+  }
+}
+
+@keyframes truck-leave { to { transform: translateX(260px); } }
+
+// Маленька «плашка» в куті для подальших запитів
+.loading-chip {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 12px;
+  border-radius: 999px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  box-shadow: var(--shadow-raised);
+  font-size: 13px;
+  font-weight: 700;
+  color: $color-muted;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+
+  &.is-visible { opacity: 1; transform: none; }
+  .mini-truck { color: $color-text; }
+}
+
+// ---------- Міні-фура (кнопки, плашка) ----------
+.mini-truck {
+  width: 24px;
+  height: 16px;
+  flex: none;
+  fill: currentColor;
+  overflow: visible;
+
+  &__body { animation: truck-bump .28s ease-in-out infinite alternate; }
+  &__wheel { stroke: currentColor; stroke-width: 1; stroke-dasharray: 2 1.2; fill: none; animation: mini-wheel .5s linear infinite; transform-box: fill-box; transform-origin: center; }
+}
+
+@keyframes mini-wheel { to { transform: rotate(360deg); } }
+
+.btn.is-loading {
+  justify-content: center;
+  gap: 8px;
+  cursor: progress;
+  .mini-truck { animation: mini-drive 1.4s ease-in-out infinite; }
+}
+
+@keyframes mini-drive {
+  0%, 100% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+}
+
+// ---------- Переходи між сторінками ----------
+// Браузер (Chrome, Edge) тримає стару сторінку, доки нова не готова — без білого «спалаху»
+@view-transition { navigation: auto; }
+
+// ---------- Зміна теми: коло від кнопки ----------
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+// ---------- Маршрут «прокладається» ----------
+.route--draw .route__line::before {
+  transform-origin: left center;
+  animation: route-draw .8s cubic-bezier(.3, .7, .3, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 150ms);
+}
+.route--draw .route__km {
+  animation: fade-in .4s ease both;
+  animation-delay: calc(var(--i, 0) * 90ms + 650ms);
+}
+
+@keyframes route-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes fade-in { from { opacity: 0; } }
+
+// На лендінгу маршрути малюються, коли табло з'являється на екрані
+.preview:not(.is-visible) .route--draw .route__line::before { animation-play-state: paused; }
+.preview:not(.is-visible) .route--draw .route__km { animation-play-state: paused; }
+.preview .preview__row:nth-child(2) { --i: 1; }
+.preview .preview__row:nth-child(3) { --i: 2; }
+
+// ---------- Витрати: смуги виростають ----------
+.bars__fill {
+  width: 0;
+  transition: width .9s cubic-bezier(.25, .8, .25, 1);
+}
+.bars__row:nth-child(2) .bars__fill { transition-delay: .06s; }
+.bars__row:nth-child(3) .bars__fill { transition-delay: .12s; }
+.bars__row:nth-child(4) .bars__fill { transition-delay: .18s; }
+.bars__row:nth-child(5) .bars__fill { transition-delay: .24s; }
+
+// ---------- Чат: нове повідомлення «вискакує» ----------
+.msg.is-new .msg__bubble { animation: msg-pop .35s cubic-bezier(.2, 1.4, .4, 1) both; }
+.msg--mine.is-new .msg__bubble { transform-origin: bottom right; }
+.msg.is-new:not(.msg--mine) .msg__bubble { transform-origin: bottom left; }
+
+@keyframes msg-pop {
+  from { opacity: 0; transform: scale(.85) translateY(6px); }
+}
+
+// ---------- Лендінг: дорога під заголовком ----------
+.lp-road {
+  position: relative;
+  width: min(880px, 100%);
+  height: 64px;
+  margin: -28px 0 -24px;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+
+  // асфальт із розміткою
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 4px;
+    height: 2px;
+    background: linear-gradient(90deg, color-mix(in srgb, $color-text 35%, transparent) 0 22px, transparent 22px 40px) 0 0 / 40px 2px repeat-x;
+  }
+
+  &__truck {
+    position: absolute;
+    left: 0;
+    bottom: 6px;
+    width: 96px;
+    animation: lp-truck 11s linear infinite;
+    .truck { width: 96px; }
+  }
+}
+
+@keyframes lp-truck {
+  from { transform: translateX(-120px); }
+  to { transform: translateX(min(880px, 100vw)); }
+}
+
+// ---------- Зменшений рух: прибираємо все ----------
+@media (prefers-reduced-motion: reduce) {
+  .truck *, .truck-loader__road, .mini-truck, .mini-truck *,
+  .route--draw .route__line::before, .route--draw .route__km,
+  .msg.is-new .msg__bubble, .btn.is-loading .mini-truck {
+    animation: none !important;
+  }
+  .lp-road__truck { animation: none; left: 50%; transform: translateX(-50%); }
+  .bars__fill { transition: none; }
+  .page-loader, .loading-chip { transition: none; }
+}

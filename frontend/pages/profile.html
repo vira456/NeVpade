@@ -3,27 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
-  <meta name="theme-color" content="#1b1c1f" />
-  <script>
-    // Тема, мова й стан бокової панелі — до показу сторінки, щоб не було «спалаху»
-    (function () {
-      var root = document.documentElement;
-      function get(k, d) { try { var v = localStorage.getItem('nevpade.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
-      var theme = get('theme', 'system');
-      var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      root.dataset.theme = dark ? 'dark' : 'light';
-      if (get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
-      if (get('lang', 'uk') === 'en') {
-        root.lang = 'en';
-        root.classList.add('i18n-pending');
-        setTimeout(function () { root.classList.remove('i18n-pending'); }, 1500);
-      }
-    })();
-  </script>
-  <style>.i18n-pending body { visibility: hidden; }</style>
+  <!-- nevpade:head -->
   <title>Профіль · NeVpade</title>
 </head>
 <body>

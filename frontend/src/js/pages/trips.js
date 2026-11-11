@@ -8,10 +8,14 @@ import { t as tr } from '../i18n/index.js';
 import { getDrivers } from '../api/drivers.js';
 import { getVehicles } from '../api/vehicles.js';
 import { money, escapeHtml } from '../utils/format.js';
-import { routeLine, plate, statusBadge, shortDate } from '../utils/components.js';
+import { routeLine, plate, statusBadge, shortDate, cargoSize } from '../utils/components.js';
+import { initTripForm, openTripForm } from './trip-form.js';
+import { initDellaImport, openDellaImport } from './della-import.js';
 import { buildTripMessage, sendToViber, copyText } from '../utils/viber.js';
+import { driveAway, flyAway } from '../utils/motion.js';
 import { showToast } from '../utils/toast.js';
 import { icons } from '../utils/icons.js';
+import { debounce } from '../utils/debounce.js';
 
 renderLayout();
 
@@ -42,6 +46,17 @@ let members = [];
 let scope = new URLSearchParams(location.search).get('scope') === 'all' ? 'all' : 'mine';
 const managerOf = (t) => members.find((m) => m.id === t.managerId);
 
+let justCreated = new Set(); // щойно створені рейси підсвічуються в таблиці
+
+const sourceLabel = (t) => {
+  if (t.importedFrom?.platform === 'della') {
+    return t.importedFrom.url
+      ? `Імпортовано з <a href="${escapeHtml(t.importedFrom.url)}" target="_blank" rel="noopener">Della</a>`
+      : 'Імпортовано з Della';
+  }
+  return t.source === 'import' ? 'Імпортовано з логістичної платформи' : 'Створено вручну';
+};
+
 const driverOf = (t) => drivers.find((d) => d.id === t.driverId);
 const vehicleOf = (t) => vehicles.find((v) => v.id === t.vehicleId);
 const messageFor = (t) => buildTripMessage(t, driverOf(t), vehicleOf(t));
@@ -55,7 +70,7 @@ function filtered() {
     .filter((t) => {
       if (!q) return true;
       const d = driverOf(t);
-      return `${t.number} ${t.from.city} ${t.to.city} ${t.cargo.type} ${t.client.name} ${d?.name ?? ''}`.toLowerCase().includes(q);
+      return `${t.number} ${t.from.city} ${t.to.city} ${t.cargo.type} ${t.client?.name ?? ''} ${d?.name ?? ''}`.toLowerCase().includes(q);
     })
     .sort(byPriority);
 }
@@ -84,10 +99,10 @@ function render() {
           const d = driverOf(t);
           const v = vehicleOf(t);
           return `
-        <tr class="trip-tr" data-id="${t.id}" tabindex="0" aria-label="Рейс ${escapeHtml(t.number)}, відкрити картку">
+        <tr class="trip-tr${justCreated.has(t.id) ? ' is-fresh' : ''}" data-id="${t.id}" tabindex="0" aria-label="Рейс ${escapeHtml(t.number)}, відкрити картку">
           <td data-label="Рейс"><strong class="trip-tr__num">${escapeHtml(t.number)}</strong><span class="sub">${shortDate(t.loadDate)}</span></td>
           <td data-label="Маршрут" class="trip-tr__route">${routeLine(t)}</td>
-          <td data-label="Вантаж">${escapeHtml(t.cargo.type)}<span class="sub">${t.cargo.weightT} т · ${t.cargo.volumeM3} м³</span></td>
+          <td data-label="Вантаж">${escapeHtml(t.cargo.type)}<span class="sub">${cargoSize(t.cargo)}</span></td>
           <td data-label="Водій">${d ? escapeHtml(d.name) : '—'}<span class="sub">${v ? escapeHtml(v.plate) : ''}</span></td>
           <td data-label="Менеджер" class="col-manager">${t.managerId === myId() ? '<span class="sub">Ви</span>' : `<span data-no-i18n>${escapeHtml(shortName(managerOf(t)?.name ?? '—'))}</span>`}</td>
           <td data-label="Вартість" class="num trip-tr__price">${money(t.price)}</td>
@@ -114,7 +129,7 @@ async function openTrip(id) {
     <header class="trip-card__head">
       <div>
         <h2 class="trip-card__title" id="drawerTitle" tabindex="-1" autofocus>${escapeHtml(t.number)}</h2>
-        <p class="trip-card__meta">${t.source === 'import' ? 'Імпортовано з логістичної платформи' : 'Створено вручну'}</p>
+        <p class="trip-card__meta">${sourceLabel(t)}</p>
       </div>
       ${statusBadge(t.status)}
       <button class="icon-btn trip-card__close" type="button" data-close aria-label="Закрити">${icons.close}</button>
@@ -132,9 +147,10 @@ async function openTrip(id) {
       <dl class="facts">
         <div><dt>Завантаження</dt><dd>${shortDate(t.loadDate)}</dd></div>
         <div><dt>Розвантаження</dt><dd>${shortDate(t.unloadDate)}</dd></div>
-        <div><dt>Вантаж</dt><dd>${escapeHtml(t.cargo.type)}<small>${t.cargo.weightT} т · ${t.cargo.volumeM3} м³</small></dd></div>
-        <div><dt>Клієнт</dt><dd>${escapeHtml(t.client.name)}<small><a href="tel:${t.client.phone}">${t.client.phone}</a></small></dd></div>
+        <div><dt>Вантаж</dt><dd>${escapeHtml(t.cargo.type)}<small>${cargoSize(t.cargo)}</small></dd></div>
+        <div><dt>Клієнт</dt><dd>${escapeHtml(t.client?.name || '—')}${t.client?.phone ? `<small><a href="tel:${escapeHtml(t.client.phone)}">${escapeHtml(t.client.phone)}</a></small>` : ''}</dd></div>
       </dl>
+      ${t.notes ? `<p class="trip-card__notes" data-no-i18n>${escapeHtml(t.notes)}</p>` : ''}
 
       <section class="trip-card__section">
         <h3 class="trip-card__h">Виконавці</h3>
@@ -205,6 +221,7 @@ async function handleAction(e) {
   const viber = e.target.closest('[data-viber]');
   const copy = e.target.closest('[data-copy]');
   if (viber) {
+    flyAway(viber);
     sendToViber(messageFor(trips.find((t) => t.id === viber.dataset.viber)));
     return true;
   }
@@ -245,7 +262,7 @@ tabs.addEventListener('click', (e) => {
   render();
 });
 
-search.addEventListener('input', render);
+search.addEventListener('input', debounce(render));
 
 document.getElementById('scopeTabs').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-scope]');
@@ -295,9 +312,11 @@ transferForm.addEventListener('submit', async (e) => {
   btn.disabled = true;
   try {
     const updated = await transferTrip(transferring.id, to, document.getElementById('transferComment').value.trim());
-    trips = trips.map((x) => (x.id === updated.id ? updated : x));
     transferDialog.close();
     drawer.close();
+    // рейс «від'їжджає» з таблиці до колеги
+    if (scope === 'mine') await driveAway(document.querySelector(`.trip-tr[data-id="${updated.id}"]`));
+    trips = trips.map((x) => (x.id === updated.id ? updated : x));
     renderTabs();
     render();
     showToast(tr('Рейс {n} передано: {name}', { n: updated.number, name: shortName(members.find((m) => m.id === to)?.name) }));
@@ -315,6 +334,28 @@ async function init() {
   render();
   const fromUrl = new URLSearchParams(location.search).get('trip');
   if (fromUrl) openTrip(fromUrl);
+
+  initTripForm({ getTrips: () => trips, drivers, vehicles, onCreated: showCreated });
+  initDellaImport({ getTrips: () => trips, onCreated: showCreated });
 }
+
+// Нові рейси (один з форми або кілька з Della) — у таблицю й підсвітити
+function showCreated(created) {
+  const list = [created].flat();
+  trips = [...trips, ...list];
+  justCreated = new Set(list.map((t) => t.id));
+  // нові рейси мають бути видно: «Мої», усі статуси, без пошуку
+  status = '';
+  search.value = '';
+  renderTabs();
+  render();
+  document.querySelector(`.trip-tr[data-id="${list[0].id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  showToast(
+    list.length === 1 ? tr('Рейс {n} створено', { n: list[0].number }) : tr('Додано рейсів з Della: {n}', { n: list.length })
+  );
+}
+
+document.getElementById('newTripBtn').addEventListener('click', () => openTripForm());
+document.getElementById('importDellaBtn').addEventListener('click', openDellaImport);
 
 init();
