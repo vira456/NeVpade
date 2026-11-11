@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import db
 from .config import settings
 from .errors import register_error_handlers
-from .routers import auth
+from .routers import auth, drivers, tasks, trips, vehicles
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
     )
     register_error_handlers(app)
 
-    for router in (auth,):
+    for router in (auth, trips, vehicles, drivers, tasks):
         app.include_router(router.router, prefix="/api")
 
     @app.get("/", include_in_schema=False)
