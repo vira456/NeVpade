@@ -1,0 +1,35 @@
+# Опис сервісу для Render.com (Blueprint). Render → New → Blueprint → вибрати цей репозиторій.
+# Значення з sync: false Render попросить ввести вручну під час створення.
+services:
+  - type: web
+    name: nevpade-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: nevpade
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: EMAIL_PROVIDER
+        value: brevo
+      - key: EMAIL_FROM
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: SMS_PROVIDER
+        value: console
+      - key: DEV_FIXED_CODE
+        sync: false
