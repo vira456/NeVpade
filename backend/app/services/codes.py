@@ -1,6 +1,6 @@
 """Одноразові 6-значні коди (пошта, телефон, відновлення пароля).
 
-Вимоги з контракту: дійсний 10 хвилин, у БД — лише хеш, максимум 5 спроб,
+Вимоги з контракту: код з пошти дійсний 10 хвилин, з SMS — 5, у БД — лише хеш, максимум 5 спроб,
 повторне надсилання не частіше ніж раз на 60 с, після використання код видаляється.
 """
 from datetime import timedelta
@@ -12,6 +12,7 @@ from ..security import codes_equal, generate_code, hash_code
 from ..utils import now
 
 CODE_TTL = timedelta(minutes=10)
+SMS_CODE_TTL = timedelta(minutes=5)
 RESEND_COOLDOWN = timedelta(seconds=60)
 MAX_ATTEMPTS = 5
 
@@ -30,7 +31,7 @@ async def issue(db: AsyncDatabase, email: str, purpose: str, *, enforce_cooldown
     await db.codes.update_one(
         {"email": email, "purpose": purpose},
         {"$set": {"codeHash": hash_code(code, email, purpose), "createdAt": moment,
-                  "expiresAt": moment + CODE_TTL, "attempts": 0}},
+                  "expiresAt": moment + (SMS_CODE_TTL if purpose == "verify_phone" else CODE_TTL), "attempts": 0}},
         upsert=True,
     )
     return code

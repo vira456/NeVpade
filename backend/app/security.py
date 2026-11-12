@@ -43,7 +43,7 @@ def verify_password(password: str, hashed: str | None) -> bool:
 # ---------- JWT ----------
 def create_token(user_id: str) -> str:
     issued = now()
-    payload = {"sub": user_id, "iat": issued, "exp": issued + timedelta(hours=settings.jwt_expire_hours)}
+    payload = {"sub": user_id, "typ": "access", "iat": issued, "exp": issued + timedelta(hours=settings.jwt_expire_hours)}
     return jwt.encode(payload, _secret(), algorithm=ALGORITHM)
 
 
@@ -53,8 +53,28 @@ def decode_token(token: str) -> str | None:
         payload = jwt.decode(token, _secret(), algorithms=[ALGORITHM])
     except jwt.PyJWTError:
         return None
+    if payload.get("typ", "access") != "access":  # посилання на файл не можна використати як вхід
+        return None
     sub = payload.get("sub")
     return sub if isinstance(sub, str) else None
+
+
+# ---------- Підписані посилання на файли ----------
+FILE_LINK_TTL = timedelta(hours=2)
+
+
+def create_file_token(doc_id: str) -> str:
+    """Тимчасовий токен для посилання на файл документа (відкривається в <img> без заголовка Authorization)."""
+    issued = now()
+    return jwt.encode({"sub": doc_id, "typ": "file", "iat": issued, "exp": issued + FILE_LINK_TTL}, _secret(), algorithm=ALGORITHM)
+
+
+def decode_file_token(token: str) -> str | None:
+    try:
+        payload = jwt.decode(token, _secret(), algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    return payload["sub"] if payload.get("typ") == "file" and isinstance(payload.get("sub"), str) else None
 
 
 # ---------- Одноразові коди ----------

@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from .common import CamelModel, Code, Email, Password, Phone
+from .common import CamelModel, Code, Email, FullName2, Password, Phone
 
 
 class CompanyChoice(CamelModel):
@@ -25,7 +25,7 @@ class CompanyChoice(CamelModel):
 
 
 class RegisterIn(CamelModel):
-    name: str = Field(min_length=2, max_length=100)
+    name: FullName2
     email: Email
     phone: Phone
     password: Password
@@ -73,6 +73,12 @@ class FacebookIn(CamelModel):
 class ChangePasswordIn(CamelModel):
     current_password: str = Field(default="", max_length=128)
     new_password: Password
+
+    @model_validator(mode="after")
+    def _differs(self):
+        if self.current_password and self.current_password == self.new_password:
+            raise ValueError("Новий пароль має відрізнятися від поточного")
+        return self
 
 
 class UserOut(CamelModel):

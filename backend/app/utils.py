@@ -61,7 +61,8 @@ def regex_escape(text: str) -> str:
     return re.escape(text.strip())
 
 
-_PHONE_RE = re.compile(r"^\+380\d{9}$")
+# Лише мобільні коди українських операторів (як у контракті й валідації фронтенду)
+_PHONE_RE = re.compile(r"^\+380(39|50|63|66|67|68|73|89|9[1-9])\d{7}$")
 
 
 def normalize_phone(raw: str) -> str:
@@ -73,8 +74,33 @@ def normalize_phone(raw: str) -> str:
         digits = "3" + digits
     phone = "+" + digits
     if not _PHONE_RE.match(phone):
-        raise ValueError("Введіть український номер у форматі +380XXXXXXXXX")
+        raise ValueError("Введіть український мобільний номер у форматі +380XXXXXXXXX")
     return phone
+
+
+def normalize_optional_phone(raw: str | None) -> str | None:
+    """Те саме, але порожнє значення → None (напр. необов'язковий Viber)."""
+    if raw is None or not str(raw).strip():
+        return None
+    return normalize_phone(raw)
+
+
+# Ім'я: слова з українських/латинських літер, апостроф і дефіс лише всередині слова
+_WORD = r"[A-Za-zА-ЩЬЮЯҐЄІЇа-щьюяґєії]+(?:['’ʼ-][A-Za-zА-ЩЬЮЯҐЄІЇа-щьюяґєії]+)*"
+_WORD_RE = re.compile(rf"^{_WORD}$")
+
+
+def normalize_name(raw: str, *, min_words: int, max_words: int, max_len: int) -> str:
+    """«  Олена   Коваль » → «Олена Коваль»; перевіряє кількість слів і символи."""
+    name = " ".join(str(raw or "").split())
+    words = name.split(" ") if name else []
+    if len(name) > max_len:
+        raise ValueError(f"Ім'я занадто довге (максимум {max_len} символів)")
+    if not (min_words <= len(words) <= max_words) or not all(_WORD_RE.match(w) and len(w) >= 2 for w in words):
+        if min_words == max_words == 2:
+            raise ValueError("Вкажіть ім'я та прізвище через пробіл (лише літери, апостроф і дефіс)")
+        raise ValueError("Вкажіть прізвище, ім'я та (за бажанням) по батькові — лише літери, апостроф і дефіс")
+    return name
 
 
 def mask_email(email: str) -> str:

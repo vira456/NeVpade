@@ -37,7 +37,7 @@ def main() -> None:
     company_id, me = user["companyId"], str(user["_id"])
 
     if args.reset:
-        for name in ("vehicles", "drivers", "trips", "messages"):
+        for name in ("vehicles", "drivers", "trips", "messages", "documents", "files"):
             db[name].delete_many({"companyId": company_id})
         db.tasks.delete_many({"ownerId": user["_id"]})
 
@@ -46,7 +46,7 @@ def main() -> None:
 
     for v in DATA["vehicles"]:
         mock_id = v.pop("id")
-        ids[mock_id] = str(db.vehicles.insert_one({**v, "companyId": company_id, "createdAt": now}).inserted_id)
+        ids[mock_id] = str(db.vehicles.insert_one({**v, "companyId": company_id, "createdAt": now, "statusUpdatedAt": now}).inserted_id)
 
     for d in DATA["drivers"]:
         mock_id = d.pop("id")

@@ -15,7 +15,7 @@ from ..utils import iso, now
 
 router = APIRouter(prefix="/company", tags=["Компанія"])
 
-ONLINE_WINDOW = timedelta(minutes=5)
+ONLINE_WINDOW = timedelta(minutes=2)  # «в мережі» — були запити останні ~2 хв
 
 
 class CompanyOut(CamelModel):

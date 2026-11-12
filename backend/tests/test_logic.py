@@ -7,10 +7,11 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.auth import RegisterIn
-from app.schemas.entities import DriverIn, TaskIn, TripIn, TripOut, VehicleIn
+from app.schemas.entities import DriverIn, TaskIn, TripIn, TripOut, VehicleIn, VehicleOut
 from app.services.analytics import Analytics, buckets, period_range, previous_range
 from app.services.calc import calculate, expense_breakdown
-from app.utils import drop_nulls, normalize_phone
+from app.services.documents import sniff_mime
+from app.utils import drop_nulls, normalize_name, normalize_phone
 
 SEED = json.loads((Path(__file__).parent.parent / "app" / "seed_data.json").read_text(encoding="utf-8"))
 VEHICLE = {"fuelConsumption": 32}
@@ -92,7 +93,7 @@ def test_normalize_phone_rejects_foreign():
 
 
 def test_password_policy():
-    base = {"name": "Віра", "email": "V@Example.com", "phone": "0671234567"}
+    base = {"name": "Віра Федорова", "email": "V@Example.com", "phone": "0671234567"}
     with pytest.raises(ValidationError):
         RegisterIn.model_validate({**base, "password": "short1"})
     with pytest.raises(ValidationError):
@@ -102,7 +103,7 @@ def test_password_policy():
 
 
 def test_register_join_requires_code():
-    base = {"name": "Віра", "email": "v@e.ua", "phone": "0671234567", "password": "secret123"}
+    base = {"name": "Віра Федорова", "email": "v@e.ua", "phone": "0671234567", "password": "secret123"}
     with pytest.raises(ValidationError):
         RegisterIn.model_validate({**base, "company": {"mode": "join"}})
     r = RegisterIn.model_validate({**base, "company": {"mode": "join", "code": "nvp-4821"}})
@@ -131,3 +132,50 @@ def test_trip_requires_valid_date():
 def test_drop_nulls_keeps_only_nullable_fields():
     data = {"loadDate": None, "status": None, "vehicleId": None, "price": 0}
     assert drop_nulls(data, frozenset({"vehicleId"})) == {"vehicleId": None, "price": 0}
+
+
+def test_phone_must_be_mobile_operator():
+    with pytest.raises(ValueError):
+        normalize_phone("+380441234567")  # київський стаціонарний
+
+
+@pytest.mark.parametrize("raw,ok", [("Олена Коваль", True), ("олена  коваль-петренко ", True), ("Д'Артаньян Ґудзь", True),
+                                    ("Олена", False), ("Олена Коваль2", False), ("О Коваль", False)])
+def test_register_name_two_words(raw, ok):
+    if ok:
+        assert normalize_name(raw, min_words=2, max_words=2, max_len=60).count(" ") == 1
+    else:
+        with pytest.raises(ValueError):
+            normalize_name(raw, min_words=2, max_words=2, max_len=60)
+
+
+def test_trip_requires_price_weight_distance():
+    base = {"from": {"city": "Київ"}, "to": {"city": "Львів"}, "loadDate": "2026-11-15",
+            "cargo": {"type": "Меблі", "weightT": 5}, "distanceKm": 540, "price": 20000}
+    TripIn.model_validate(base)
+    for broken in ({"price": 0}, {"distanceKm": 0}, {"cargo": {"type": "", "weightT": 5}}, {"cargo": {"type": "Меблі", "weightT": 0}}):
+        with pytest.raises(ValidationError):
+            TripIn.model_validate({**base, **broken})
+    # Della: адреса може прийти null, а клієнт — без імені
+    TripIn.model_validate({**base, "from": {"city": "Київ", "address": None}, "client": {"name": None, "phone": ""},
+                           "notes": "Тент, оплата б/г", "source": "import",
+                           "importedFrom": {"platform": "della", "url": None}})
+
+
+def test_driver_categories_and_empty_viber():
+    d = DriverIn.model_validate({"name": "Петро Іваненко", "phone": "0501112233", "viber": "", "licenseCategories": ["ce", "C"]})
+    assert d.viber is None and d.license_categories == ["CE", "C"]
+    with pytest.raises(ValidationError):
+        DriverIn.model_validate({"name": "Петро Іваненко", "phone": "0501112233", "licenseCategories": ["Z"]})
+
+
+def test_vehicle_out_accepts_new_statuses():
+    v = VehicleOut.model_validate({"id": "1", "plate": "ВХ 1234 АК", "model": "DAF", "status": "unloaded"})
+    assert v.model_dump(by_alias=True)["statusUpdatedAt"] is None
+
+
+def test_sniff_mime_by_content():
+    assert sniff_mime(b"\xff\xd8\xff\xe0rest") == "image/jpeg"
+    assert sniff_mime(b"%PDF-1.7") == "application/pdf"
+    assert sniff_mime(b"RIFF\x00\x00\x00\x00WEBPVP8 ") == "image/webp"
+    assert sniff_mime(b"<html>") is None

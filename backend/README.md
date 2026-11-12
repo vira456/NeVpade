@@ -108,7 +108,10 @@ https://www.brevo.com → *Senders* → підтвердити свій email �
 | Профіль | `GET/PUT /profile`, `PUT/DELETE /profile/avatar`, `GET /profile/kpi`, `GET/PATCH /profile/settings` |
 | Компанія | `GET/PUT /company`, `GET /company/members`, `POST /company/invite`, `GET/POST /company/chat?after=<id>` |
 | Рейси | `GET /trips?status=&search=&mine=`, `GET/PUT/DELETE /trips/{id}`, `POST /trips`, `POST /trips/{id}/calculate`, `POST /trips/{id}/transfer`, `POST /trips/import` |
-| Автопарк, водії | CRUD `/vehicles`, `/drivers` |
+| Автопарк | CRUD `/vehicles`, `PATCH /vehicles/{id}/status` |
+| Водії | CRUD `/drivers`, `PUT /drivers/{id}/vehicle` |
+| Документи | `GET/POST /vehicles/{id}/documents`, `DELETE /vehicles/{id}/documents/{docId}`, `GET /vehicles/documents/summary` (так само для `/drivers`); файл — `GET /files/{docId}?token=` |
+| Імпорт з Della | `GET /import/della?path=/search/….html` → `{ html }` |
 | Завдання | `GET/POST /tasks`, `PUT/PATCH/DELETE /tasks/{id}`, `PUT /tasks/reorder` |
 | Аналітика | `GET /analytics/summary|income|expenses|drivers?period=week|month|year` |
 
@@ -125,4 +128,6 @@ https://www.brevo.com → *Senders* → підтвердити свій email �
 - **ЗП водія** — за км (`ratePerKm` водія). **Ціна пального** — у налаштуваннях менеджера (`/profile/settings`, поле `fuelPrice`, типово 56 грн/л).
 - **Інші витрати** — 3,5 грн/км: дороги/стоянки 1,2 + ремонт/амортизація 1,3 + інше 1,0 (так рахується й структура витрат в аналітиці).
 - **Ролі** — `owner` (створив компанію: міняє код запрошення, назву, будь-які рейси) і `manager`.
-- **Імпорт рейсів** — `POST /trips/import` приймає `{ "trips": [...] }`; парсер конкретної платформи (Della тощо) може надсилати дані сюди.
+- **Імпорт рейсів** — фронт розбирає сторінку Della сам і створює рейси через `POST /trips` (`source: "import"`, `importedFrom`); бекенд лише віддає HTML через `GET /import/della` (лише `/search/…`, кеш 60 с, не частіше раз на 15 с). `POST /trips/import` лишився для пакетного імпорту.
+- **Телефон** — поки він не підтверджений, усі ендпоінти даних повертають 403 `phone_not_verified` (працюють лише `/auth/*` і `/auth/me`).
+- **Документи** — файли до 10 МБ зберігаються в MongoDB (колекції `documents` і `files`); тип визначається за вмістом (JPG/PNG/WEBP/PDF), посилання на файл підписане й діє 2 години.

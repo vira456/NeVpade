@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import db
 from .config import settings
 from .errors import register_error_handlers
-from .routers import analytics, auth, chat, company, drivers, profile, tasks, trips, vehicles
+from .routers import analytics, auth, chat, company, documents, drivers, imports, profile, tasks, trips, vehicles
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
@@ -36,7 +36,8 @@ def create_app() -> FastAPI:
     )
     register_error_handlers(app)
 
-    for router in (auth, profile, company, chat, trips, vehicles, drivers, tasks, analytics):
+    # documents — перед vehicles/drivers, щоб /vehicles/documents/summary не сприймався як /vehicles/{id}
+    for router in (auth, profile, company, chat, trips, documents, vehicles, drivers, tasks, analytics, imports):
         app.include_router(router.router, prefix="/api")
 
     @app.get("/", include_in_schema=False)

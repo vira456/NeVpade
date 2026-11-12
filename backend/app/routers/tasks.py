@@ -1,15 +1,20 @@
 """Розділ 5 контракту: завдання Kanban /tasks. Кожен менеджер бачить лише власну дошку."""
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, Response, status
 from pymongo import ReturnDocument, UpdateOne
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..deps import current_user, db
-from ..errors import not_found
+from ..errors import ApiError, not_found
 from ..schemas.entities import ReorderIn, TaskIn, TaskOut, TaskUpdate
 from ..services.crud import ensure_ref
 from ..utils import drop_nulls, is_oid, now, oid, public
 
 router = APIRouter(prefix="/tasks", tags=["Завдання (Kanban)"])
+
+KYIV = ZoneInfo("Europe/Kyiv")
 
 
 def _mine(user: dict) -> dict:
@@ -29,6 +34,8 @@ async def list_tasks(user: dict = Depends(current_user), database: AsyncDatabase
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 async def create_task(body: TaskIn, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
     data = body.model_dump(by_alias=True)
+    if data.get("dueDate") and data["dueDate"] < datetime.now(KYIV).date().isoformat():
+        raise ApiError(422, "Термін виконання не може бути в минулому", "validation_error")
     await ensure_ref(database, user, "trips", data.get("tripId"), "Рейс")
     if data.get("order") is None:  # нова картка — в кінець колонки
         data["order"] = await database.tasks.count_documents({**_mine(user), "status": data["status"]})

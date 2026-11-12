@@ -60,3 +60,4 @@ async def _create_indexes(db: AsyncDatabase) -> None:
     await db.drivers.create_index("companyId")
     await db.tasks.create_index([("ownerId", ASCENDING), ("status", ASCENDING), ("order", ASCENDING)])
     await db.messages.create_index([("companyId", ASCENDING), ("_id", ASCENDING)])
+    await db.documents.create_index([("companyId", ASCENDING), ("ownerType", ASCENDING), ("ownerId", ASCENDING), ("createdAt", DESCENDING)])

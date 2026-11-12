@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
-from ..deps import current_user, db
+from ..deps import any_user, db, optional_user
 from ..errors import ApiError
 from ..schemas.auth import (
     AuthResponse,
@@ -43,16 +43,18 @@ async def _send_phone_code(database: AsyncDatabase, user: dict, *, cooldown: boo
     await notify.send_code_sms(user["phone"], code)
 
 
-async def _phone_setup_user(database: AsyncDatabase, email: str) -> dict:
-    """Користувач, який зараз має право прив'язати/підтвердити телефон без токена."""
-    user = await database.users.find_one({"email": email})
+async def _phone_setup_user(database: AsyncDatabase, email: str, token_user: dict | None = None) -> dict:
+    """Користувач, який зараз має право прив'язати/підтвердити телефон.
+    Якщо в запиті є дійсний токен — беремо користувача з нього (контракт), інакше за email у «вікні» після входу."""
+    user = token_user or await database.users.find_one({"email": email})
     if user is None or not user.get("emailVerified"):
         raise ApiError(400, "Спершу підтвердіть пошту", "email_not_verified")
     if user.get("phoneVerified"):
         raise ApiError(400, "Телефон уже підтверджено. Увійдіть у систему", "phone_already_verified")
-    until = user.get("phoneSetupUntil")
-    if until is None or until < now():
-        raise ApiError(401, "Час на підтвердження телефону минув. Увійдіть знову", "phone_setup_expired")
+    if token_user is None:
+        until = user.get("phoneSetupUntil")
+        if until is None or until < now():
+            raise ApiError(401, "Час на підтвердження телефону минув. Увійдіть знову", "phone_setup_expired")
     return user
 
 
@@ -110,9 +112,9 @@ async def verify_email(body: EmailCodeIn, database: AsyncDatabase = Depends(db))
 
 
 @router.post("/phone", response_model=PhoneOut)
-async def add_phone(body: PhoneIn, database: AsyncDatabase = Depends(db)):
+async def add_phone(body: PhoneIn, database: AsyncDatabase = Depends(db), token_user: dict | None = Depends(optional_user)):
     """Додати/змінити номер (після входу через соцмережу або на кроці підтвердження) → SMS з кодом."""
-    user = await _phone_setup_user(database, body.email)
+    user = await _phone_setup_user(database, body.email, token_user)
     if await release_phone_from_unverified(database, body.phone, except_id=user["_id"]):
         raise ApiError(409, "Цей номер уже використовується", "phone_taken")
     try:
@@ -125,19 +127,20 @@ async def add_phone(body: PhoneIn, database: AsyncDatabase = Depends(db)):
 
 
 @router.post("/verify-phone", response_model=AuthResponse)
-async def verify_phone(body: EmailCodeIn, database: AsyncDatabase = Depends(db)):
+async def verify_phone(body: EmailCodeIn, database: AsyncDatabase = Depends(db),
+                       token_user: dict | None = Depends(optional_user)):
     """Крок 2: код з SMS → вхід у систему."""
-    user = await _phone_setup_user(database, body.email)
+    user = await _phone_setup_user(database, body.email, token_user)
     if not user.get("phone"):
         raise ApiError(400, "Спершу вкажіть номер телефону", "phone_required")
-    await codes.consume(database, body.email, "verify_phone", body.code)
+    await codes.consume(database, user["email"], "verify_phone", body.code)
     await database.users.update_one({"_id": user["_id"]}, {"$set": {"phoneVerified": True}, "$unset": {"phoneSetupUntil": ""}})
     user["phoneVerified"] = True
     return await auth_response(database, user)
 
 
 @router.post("/resend-code", response_model=Message)
-async def resend_code(body: ResendIn, database: AsyncDatabase = Depends(db)):
+async def resend_code(body: ResendIn, database: AsyncDatabase = Depends(db), token_user: dict | None = Depends(optional_user)):
     user = await database.users.find_one({"email": body.email})
     if body.purpose == "verify":
         if user and not user.get("emailVerified"):
@@ -146,7 +149,7 @@ async def resend_code(body: ResendIn, database: AsyncDatabase = Depends(db)):
         if user and user.get("emailVerified"):
             await _send_email_code(database, body.email, "reset")
     else:  # verify_phone
-        user = await _phone_setup_user(database, body.email)
+        user = await _phone_setup_user(database, body.email, token_user)
         if not user.get("phone"):
             raise ApiError(400, "Спершу вкажіть номер телефону", "phone_required")
         await _send_phone_code(database, user)
@@ -240,12 +243,12 @@ async def facebook_login(body: FacebookIn, database: AsyncDatabase = Depends(db)
 
 # ---------- Поточний користувач ----------
 @router.get("/me", response_model=UserOut)
-async def me(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
+async def me(user: dict = Depends(any_user), database: AsyncDatabase = Depends(db)):
     return await user_out(database, user)
 
 
 @router.post("/change-password", response_model=Message)
-async def change_password(body: ChangePasswordIn, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
+async def change_password(body: ChangePasswordIn, user: dict = Depends(any_user), database: AsyncDatabase = Depends(db)):
     # Користувач, що входив лише через Google/Facebook, пароля не має — дозволяємо задати його без поточного
     if user.get("passwordHash") and not verify_password(body.current_password, user["passwordHash"]):
         raise ApiError(400, "Невірний поточний пароль", "invalid_password")

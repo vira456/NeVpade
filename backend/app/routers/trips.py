@@ -66,16 +66,27 @@ async def next_trip_number(database: AsyncDatabase, company_id) -> str:
 _RESOURCES = (("vehicles", "vehicleId"), ("drivers", "driverId"))
 
 
+# Стани машини, у яких вона зайнята рейсом (менеджер може вручну перемикати їх під час рейсу)
+VEHICLE_BUSY = ["loading", "on_trip", "unloaded"]
+
+
 async def _set_resources(database: AsyncDatabase, user: dict, trip: dict, *, busy: bool) -> None:
-    """busy=True — авто й водій рейсу «у дорозі» (on_trip); False — звільняються (on_trip → available)."""
+    """busy=True — авто й водій рейсу «в дорозі» (on_trip); False — звільняються (→ available).
+    Зламану/ремонтовану машину й водія у вихідний не чіпаємо."""
+    moment = now()
     for collection, key in _RESOURCES:
         ref = trip.get(key)
         if not is_oid(ref):
             continue
         query = {"_id": oid(ref), **company_filter(user)}
-        if not busy:
-            query["status"] = "on_trip"  # авто в ремонті / водія у вихідний не чіпаємо
-        await database[collection].update_one(query, {"$set": {"status": "on_trip" if busy else "available"}})
+        if collection == "vehicles":
+            query["status"] = {"$in": ["available", "loading"] if busy else VEHICLE_BUSY}
+            update = {"status": "on_trip" if busy else "available", "statusUpdatedAt": moment}
+        else:
+            if not busy:
+                query["status"] = "on_trip"
+            update = {"status": "on_trip" if busy else "available"}
+        await database[collection].update_one(query, {"$set": update})
 
 
 async def _sync_resources(database: AsyncDatabase, user: dict, old: dict | None, new: dict | None) -> None:
@@ -187,7 +198,7 @@ async def transfer_trip(trip_id: str, body: TransferIn, user: dict = Depends(cur
         {"_id": oid(body.to_manager_id, "Менеджера"), **company_filter(user), "emailVerified": True}, {"_id": 1}
     ) if is_oid(body.to_manager_id) else None
     if target is None:
-        raise ApiError(404, "Менеджера не знайдено у вашій компанії", "manager_not_found")
+        raise ApiError(422, "Менеджера не знайдено у вашій компанії", "manager_not_found")
 
     moment = now()
     doc = await database.trips.find_one_and_update(
