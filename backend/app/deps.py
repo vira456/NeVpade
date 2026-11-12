@@ -1,9 +1,9 @@
 """Залежності FastAPI: поточний користувач за Bearer-токеном."""
 from datetime import timedelta
 
-from fastapi import Depends
+from fastapi import Depends  # pyright: ignore[reportMissingImports]
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.database import AsyncDatabase  # pyright: ignore[reportMissingImports]
 
 from .db import get_db
 from .errors import ApiError

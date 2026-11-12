@@ -28,10 +28,11 @@ async def connect() -> None:
 
 
 async def close() -> None:
-    global _client
+    global _client, _db
     if _client is not None:
         await _client.close()
-        _client = None
+    _client = None
+    _db = None
 
 
 def get_db() -> AsyncDatabase:

@@ -19,9 +19,11 @@ from ..schemas.entities import (
 )
 from ..services.calc import calculate
 from ..services.crud import ensure_ref
-from ..utils import is_oid, now, oid, public, regex_escape
+from ..utils import drop_nulls, is_oid, now, oid, public, regex_escape
 
 router = APIRouter(prefix="/trips", tags=["Рейси"])
+
+_TRIP_NULLABLE = frozenset({"unloadDate", "vehicleId", "driverId"})
 
 
 def trip_out(doc: dict) -> dict:
@@ -61,23 +63,31 @@ async def next_trip_number(database: AsyncDatabase, company_id) -> str:
     return f"TR-{company['tripCounter']:04d}"
 
 
-async def _sync_resources(database: AsyncDatabase, user: dict, trip: dict) -> None:
-    """Статус рейсу впливає на статус авто й водія: у дорозі → on_trip, завершено → available."""
-    st = trip.get("status")
-    if st == "in_progress":
-        new, only_from = "on_trip", None
-    elif st in ("done", "cancelled"):
-        new, only_from = "available", "on_trip"
-    else:
-        return
-    for collection, key in (("vehicles", "vehicleId"), ("drivers", "driverId")):
+_RESOURCES = (("vehicles", "vehicleId"), ("drivers", "driverId"))
+
+
+async def _set_resources(database: AsyncDatabase, user: dict, trip: dict, *, busy: bool) -> None:
+    """busy=True — авто й водій рейсу «у дорозі» (on_trip); False — звільняються (on_trip → available)."""
+    for collection, key in _RESOURCES:
         ref = trip.get(key)
         if not is_oid(ref):
             continue
         query = {"_id": oid(ref), **company_filter(user)}
-        if only_from:
-            query["status"] = only_from
-        await database[collection].update_one(query, {"$set": {"status": new}})
+        if not busy:
+            query["status"] = "on_trip"  # авто в ремонті / водія у вихідний не чіпаємо
+        await database[collection].update_one(query, {"$set": {"status": "on_trip" if busy else "available"}})
+
+
+async def _sync_resources(database: AsyncDatabase, user: dict, old: dict | None, new: dict | None) -> None:
+    """Статус рейсу впливає на статус авто й водія: поки рейс у дорозі, вони on_trip, після — available.
+    old — рейс до змін (None при створенні), new — після (None при видаленні)."""
+    old_active = bool(old) and old.get("status") == "in_progress"
+    new_active = bool(new) and new.get("status") == "in_progress"
+    refs_changed = bool(old and new) and any(old.get(k) != new.get(k) for _, k in _RESOURCES)
+    if old_active and (not new_active or refs_changed):
+        await _set_resources(database, user, old, busy=False)
+    if new_active and (not old_active or refs_changed):
+        await _set_resources(database, user, new, busy=True)
 
 
 async def _insert_trip(database: AsyncDatabase, user: dict, data: dict) -> dict:
@@ -121,7 +131,7 @@ async def create_trip(body: TripIn, user: dict = Depends(current_user), database
     data = body.model_dump(by_alias=True)
     await _validate_refs(database, user, data)
     doc = await _insert_trip(database, user, data)
-    await _sync_resources(database, user, doc)
+    await _sync_resources(database, user, None, doc)
     return trip_out(doc)
 
 
@@ -130,15 +140,17 @@ async def update_trip(trip_id: str, body: TripUpdate, user: dict = Depends(curre
                       database: AsyncDatabase = Depends(db)):
     trip = await _get_trip(database, user, trip_id)
     _check_can_edit(user, trip)
-    data = body.model_dump(by_alias=True, exclude_unset=True)
+    # null дозволено лише для необов'язкових полів; для решти (from, loadDate, status…) ігноруємо
+    data = drop_nulls(body.model_dump(by_alias=True, exclude_unset=True), _TRIP_NULLABLE)
     if "number" in data and not data["number"]:
         data.pop("number")
     await _validate_refs(database, user, data)
     doc = await database.trips.find_one_and_update(
         {"_id": trip["_id"]}, {"$set": {**data, "updatedAt": now()}}, return_document=ReturnDocument.AFTER
     )
-    if "status" in data and data["status"] != trip.get("status"):
-        await _sync_resources(database, user, doc)
+    if doc is None:
+        raise not_found("Рейс")
+    await _sync_resources(database, user, trip, doc)
     return trip_out(doc)
 
 
@@ -147,7 +159,8 @@ async def delete_trip(trip_id: str, user: dict = Depends(current_user), database
     trip = await _get_trip(database, user, trip_id)
     _check_can_edit(user, trip)
     await database.trips.delete_one({"_id": trip["_id"]})
-    await database.tasks.update_many({"tripId": trip_id}, {"$set": {"tripId": None}})
+    await _sync_resources(database, user, trip, None)
+    await database.tasks.update_many({**company_filter(user), "tripId": str(trip["_id"])}, {"$set": {"tripId": None}})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -171,7 +184,7 @@ async def transfer_trip(trip_id: str, body: TransferIn, user: dict = Depends(cur
     if body.to_manager_id == me:
         raise ApiError(400, "Рейс уже ваш", "same_manager")
     target = await database.users.find_one(
-        {"_id": oid(body.to_manager_id, "Менеджера"), **company_filter(user)}, {"_id": 1}
+        {"_id": oid(body.to_manager_id, "Менеджера"), **company_filter(user), "emailVerified": True}, {"_id": 1}
     ) if is_oid(body.to_manager_id) else None
     if target is None:
         raise ApiError(404, "Менеджера не знайдено у вашій компанії", "manager_not_found")
@@ -194,10 +207,16 @@ async def import_trips(body: TripImportIn, user: dict = Depends(current_user), d
     """Імпорт рейсів, отриманих з логістичної платформи (парсер передає їх списком)."""
     if not body.trips:
         raise ApiError(400, "Немає рейсів для імпорту", "empty_import")
-    created = []
+    # Спершу перевіряємо всі рейси, щоб помилка в одному не лишала в базі половину імпорту
+    prepared = []
     for trip in body.trips:
         data = trip.model_dump(by_alias=True)
         data["source"] = "import"
         await _validate_refs(database, user, data)
-        created.append(trip_out(await _insert_trip(database, user, data)))
+        prepared.append(data)
+    created = []
+    for data in prepared:
+        doc = await _insert_trip(database, user, data)
+        await _sync_resources(database, user, None, doc)
+        created.append(trip_out(doc))
     return {"imported": len(created), "trips": created}

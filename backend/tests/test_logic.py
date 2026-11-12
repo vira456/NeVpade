@@ -10,7 +10,7 @@ from app.schemas.auth import RegisterIn
 from app.schemas.entities import DriverIn, TaskIn, TripIn, TripOut, VehicleIn
 from app.services.analytics import Analytics, buckets, period_range, previous_range
 from app.services.calc import calculate, expense_breakdown
-from app.utils import normalize_phone
+from app.utils import drop_nulls, normalize_phone
 
 SEED = json.loads((Path(__file__).parent.parent / "app" / "seed_data.json").read_text(encoding="utf-8"))
 VEHICLE = {"fuelConsumption": 32}
@@ -126,3 +126,8 @@ def test_trip_requires_valid_date():
     t = {**SEED["trips"][0], "loadDate": "15.11.2026"}
     with pytest.raises(ValidationError):
         TripIn.model_validate(t)
+
+
+def test_drop_nulls_keeps_only_nullable_fields():
+    data = {"loadDate": None, "status": None, "vehicleId": None, "price": 0}
+    assert drop_nulls(data, frozenset({"vehicleId"})) == {"vehicleId": None, "price": 0}

@@ -8,7 +8,9 @@ from ..services.crud import crud_router, ensure_ref
 async def _validate(database: AsyncDatabase, user: dict, data: dict) -> None:
     if "vehicleId" in data:
         await ensure_ref(database, user, "vehicles", data["vehicleId"], "Автомобіль")
-    if not data.get("viber") and data.get("phone"):
+    # Viber за замовчуванням = телефон, але лише коли viber явно передано порожнім (або це створення).
+    # Інакше зміна телефону перезаписувала б уже вказаний окремий номер Viber.
+    if "viber" in data and not data["viber"] and data.get("phone"):
         data["viber"] = data["phone"]
 
 
@@ -21,4 +23,5 @@ router = crud_router(
     out_model=DriverOut,
     what="Водія",
     validate=_validate,
+    nullable=frozenset({"viber", "vehicleId"}),
 )

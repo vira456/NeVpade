@@ -51,6 +51,12 @@ def public(doc: dict | None, *hidden: str) -> dict | None:
     return out
 
 
+def drop_nulls(data: dict, nullable: set[str] | frozenset[str] = frozenset()) -> dict:
+    """Прибирає з оновлення `null` для обов'язкових полів (інакше в базі з'явився б зіпсований запис).
+    Поля з `nullable` можна явно очистити, передавши `null`."""
+    return {k: v for k, v in data.items() if v is not None or k in nullable}
+
+
 def regex_escape(text: str) -> str:
     return re.escape(text.strip())
 

@@ -13,7 +13,7 @@ from pymongo import ReturnDocument
 
 from ..deps import company_filter, current_user, db
 from ..errors import ApiError, not_found
-from ..utils import is_oid, now, oid, public
+from ..utils import drop_nulls, is_oid, now, oid, public
 
 Hook = Callable[[AsyncDatabase, dict, dict], Awaitable[None]]
 
@@ -37,6 +37,7 @@ def crud_router(
     what: str,
     validate: Hook | None = None,
     on_delete: Hook | None = None,
+    nullable: frozenset[str] = frozenset(),
 ) -> APIRouter:
     router = APIRouter(prefix=prefix, tags=[tag])
 
@@ -69,7 +70,7 @@ def crud_router(
     async def update_item(item_id: str, body: update_model, user: dict = Depends(current_user),  # type: ignore[valid-type]
                           database: AsyncDatabase = Depends(db)):
         await _get(database, user, item_id)
-        data = body.model_dump(by_alias=True, exclude_unset=True)
+        data = drop_nulls(body.model_dump(by_alias=True, exclude_unset=True), nullable)
         if validate:
             await validate(database, user, data)
         doc = await database[collection].find_one_and_update(
@@ -77,6 +78,8 @@ def crud_router(
             {"$set": {**data, "updatedAt": now()}},
             return_document=ReturnDocument.AFTER,
         )
+        if doc is None:  # запис видалили паралельним запитом
+            raise not_found(what)
         return public(doc, "createdBy", "updatedAt")
 
     @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

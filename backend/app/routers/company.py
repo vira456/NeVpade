@@ -8,7 +8,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
 from ..deps import current_user, db
-from ..errors import ApiError
+from ..errors import ApiError, not_found
 from ..schemas.common import CamelModel
 from ..services.users import unique_invite_code
 from ..utils import iso, now
@@ -52,18 +52,33 @@ def _owner_only(user: dict) -> None:
         raise ApiError(403, "Це може зробити лише власник компанії", "owner_only")
 
 
+async def _company(database: AsyncDatabase, user: dict) -> dict:
+    company = await database.companies.find_one({"_id": user["companyId"]})
+    if company is None:
+        raise not_found("Компанію")
+    return company
+
+
 @router.get("", response_model=CompanyOut)
 async def get_company(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    return company_out(await database.companies.find_one({"_id": user["companyId"]}))
+    return company_out(await _company(database, user))
 
 
 @router.put("", response_model=CompanyOut)
 async def update_company(body: CompanyUpdate, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
     _owner_only(user)
     data = body.model_dump(exclude_unset=True)
+    if data.get("name") is None:  # назву не можна стерти
+        data.pop("name", None)
+    else:
+        data["name"] = " ".join(data["name"].split())
+    if not data:  # порожній $set Mongo відхиляє з помилкою
+        return company_out(await _company(database, user))
     company = await database.companies.find_one_and_update(
         {"_id": user["companyId"]}, {"$set": data}, return_document=ReturnDocument.AFTER
     )
+    if company is None:
+        raise not_found("Компанію")
     return company_out(company)
 
 

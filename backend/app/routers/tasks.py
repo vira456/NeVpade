@@ -7,7 +7,7 @@ from ..deps import current_user, db
 from ..errors import not_found
 from ..schemas.entities import ReorderIn, TaskIn, TaskOut, TaskUpdate
 from ..services.crud import ensure_ref
-from ..utils import is_oid, now, oid, public
+from ..utils import drop_nulls, is_oid, now, oid, public
 
 router = APIRouter(prefix="/tasks", tags=["Завдання (Kanban)"])
 
@@ -53,11 +53,10 @@ async def reorder_tasks(body: ReorderIn, user: dict = Depends(current_user), dat
 
 
 async def _update(task_id: str, body: TaskUpdate, user: dict, database: AsyncDatabase) -> dict:
-    data = body.model_dump(by_alias=True, exclude_unset=True)
+    # null можна передати лише для дати й прив'язки до рейсу; title/status/priority/order — ігноруємо
+    data = drop_nulls(body.model_dump(by_alias=True, exclude_unset=True), frozenset({"dueDate", "tripId"}))
     if "tripId" in data:
         await ensure_ref(database, user, "trips", data["tripId"], "Рейс")
-    if data.get("order") is None:
-        data.pop("order", None)
     doc = await database.tasks.find_one_and_update(
         {"_id": oid(task_id, "Завдання"), **_mine(user)},
         {"$set": {**data, "updatedAt": now()}},

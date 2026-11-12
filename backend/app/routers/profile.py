@@ -12,7 +12,7 @@ from pymongo.errors import DuplicateKeyError
 from ..deps import company_filter, current_user, db
 from ..errors import ApiError
 from ..schemas.common import CamelModel, Email, Phone
-from ..services.users import default_settings
+from ..services.users import default_settings, release_phone_from_unverified
 
 router = APIRouter(prefix="/profile", tags=["Профіль"])
 
@@ -107,9 +107,11 @@ async def update_profile(body: ProfileUpdate, user: dict = Depends(current_user)
             raise ApiError(409, "Цей email уже використовується", "email_taken")
         fields["email"] = data["email"]
     if "phone" in data and data["phone"] != user.get("phone"):
-        if await database.users.find_one({"phone": data["phone"], "_id": {"$ne": user["_id"]}}, {"_id": 1}):
+        # Номер, який «тримає» лише незавершена реєстрація, звільняємо (як і під час реєстрації)
+        if await release_phone_from_unverified(database, data["phone"], except_id=user["_id"]):
             raise ApiError(409, "Цей номер уже використовується", "phone_taken")
         fields["phone"] = data["phone"]
+        fields["phoneVerified"] = False  # новий номер ще не підтверджено SMS
     if not fields:
         return profile_out(user)
     try:

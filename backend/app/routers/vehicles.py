@@ -21,4 +21,5 @@ router = crud_router(
     out_model=VehicleOut,
     what="Автомобіль",
     on_delete=_on_delete,
+    nullable=frozenset({"nextServiceKm", "insuranceUntil"}),
 )
