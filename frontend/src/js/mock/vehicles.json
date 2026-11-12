@@ -1,5 +1,74 @@
 [
-  { "id": "veh_01", "plate": "ВХ 1234 АК", "model": "DAF XF 480", "type": "тягач + тент", "capacityT": 22, "fuelConsumption": 32, "mileageKm": 412000, "nextServiceKm": 420000, "insuranceUntil": "2027-03-01", "status": "available" },
-  { "id": "veh_02", "plate": "АА 5678 ВВ", "model": "Volvo FH 500", "type": "рефрижератор", "capacityT": 20, "fuelConsumption": 34, "mileageKm": 298000, "nextServiceKm": 300000, "insuranceUntil": "2026-12-20", "status": "on_trip" },
-  { "id": "veh_03", "plate": "АВ 9012 ІК", "model": "MAN TGX 18.470", "type": "тягач + тент", "capacityT": 22, "fuelConsumption": 31, "mileageKm": 515000, "nextServiceKm": 530000, "insuranceUntil": "2027-06-15", "status": "repair" }
+  {
+    "id": "veh_01",
+    "plate": "ВХ 1234 АК",
+    "model": "DAF XF 480",
+    "type": "тягач + тент",
+    "capacityT": 22,
+    "fuelConsumption": 32,
+    "mileageKm": 412000,
+    "nextServiceKm": 420000,
+    "insuranceUntil": "2027-03-01",
+    "status": "available"
+  },
+  {
+    "id": "veh_02",
+    "plate": "АА 5678 ВВ",
+    "model": "Volvo FH 500",
+    "type": "рефрижератор",
+    "capacityT": 20,
+    "fuelConsumption": 34,
+    "mileageKm": 298000,
+    "nextServiceKm": 300000,
+    "insuranceUntil": "2026-12-20",
+    "status": "on_trip"
+  },
+  {
+    "id": "veh_03",
+    "plate": "АВ 9012 ІК",
+    "model": "MAN TGX 18.470",
+    "type": "тягач + тент",
+    "capacityT": 22,
+    "fuelConsumption": 31,
+    "mileageKm": 515000,
+    "nextServiceKm": 530000,
+    "insuranceUntil": "2027-06-15",
+    "status": "repair"
+  },
+  {
+    "id": "veh_04",
+    "plate": "АХ 3344 ЕМ",
+    "model": "Scania R 450",
+    "type": "тягач + платформа",
+    "capacityT": 24,
+    "fuelConsumption": 33,
+    "mileageKm": 365000,
+    "nextServiceKm": 380000,
+    "insuranceUntil": "2027-01-25",
+    "status": "on_trip"
+  },
+  {
+    "id": "veh_05",
+    "plate": "АЕ 7781 КО",
+    "model": "Mercedes-Benz Actros 1845",
+    "type": "тягач + зерновоз",
+    "capacityT": 25,
+    "fuelConsumption": 30,
+    "mileageKm": 221000,
+    "nextServiceKm": 240000,
+    "insuranceUntil": "2026-11-30",
+    "status": "available"
+  },
+  {
+    "id": "veh_06",
+    "plate": "ВО 2210 СН",
+    "model": "Renault T 480",
+    "type": "тягач + тент",
+    "capacityT": 22,
+    "fuelConsumption": 31,
+    "mileageKm": 174000,
+    "nextServiceKm": 180000,
+    "insuranceUntil": "2027-08-10",
+    "status": "on_trip"
+  }
 ]

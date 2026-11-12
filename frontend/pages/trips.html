@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
   <title>Рейси · NeVpade</title>
 </head>
 <body>
@@ -10,17 +11,225 @@
     <aside class="sidebar"></aside>
     <main class="main">
       <header class="main__header">
-        <h1 class="main__title">Рейси</h1>
-        <input class="input" id="search" placeholder="Пошук: номер, місто, вантаж" />
+        <div>
+          <h1 class="main__title">Рейси</h1>
+          <p class="main__subtitle" id="tripsSummary">&nbsp;</p>
+        </div>
+        <div class="main__actions">
+          <button class="btn btn--ghost" type="button" id="importDellaBtn">Імпорт з Della</button>
+          <button class="btn" type="button" id="newTripBtn">Новий рейс</button>
+        </div>
       </header>
-      <div class="card table-wrap">
-        <table class="table">
-          <thead><tr><th>№</th><th>Маршрут</th><th>Дата</th><th>Вантаж</th><th>Відстань</th><th>Ціна</th><th>Статус</th><th></th></tr></thead>
-          <tbody id="tripsBody"></tbody>
-        </table>
+
+      <div class="toolbar">
+        <div class="toolbar__group">
+          <div class="seg" id="scopeTabs" role="group" aria-label="Чиї рейси">
+            <button class="seg__btn" type="button" data-scope="mine" aria-pressed="true">Мої</button>
+            <button class="seg__btn" type="button" data-scope="all" aria-pressed="false">Уся компанія</button>
+          </div>
+          <div class="seg" id="statusTabs" role="group" aria-label="Статус рейсу"></div>
+        </div>
+        <input class="input toolbar__search" id="search" type="search" placeholder="Номер, місто, вантаж, водій" aria-label="Пошук рейсів" />
+      </div>
+
+      <div class="card trips-card">
+        <div class="table-wrap">
+          <table class="table trips-table">
+            <thead>
+              <tr>
+                <th>Рейс</th>
+                <th>Маршрут</th>
+                <th>Вантаж</th>
+                <th>Водій і авто</th>
+                <th class="col-manager">Менеджер</th>
+                <th class="num">Вартість</th>
+                <th>Статус</th>
+                <th><span class="visually-hidden">Дії</span></th>
+              </tr>
+            </thead>
+            <tbody id="tripsBody"></tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>
+
+  <!-- Картка рейсу -->
+  <dialog class="drawer" id="tripDrawer" aria-labelledby="drawerTitle">
+    <div class="trip-card" id="tripCard"></div>
+  </dialog>
+
+  <!-- Передача рейсу колезі -->
+  <dialog class="modal" id="transferDialog" aria-labelledby="transferTitle">
+    <form class="modal__body" id="transferForm" novalidate>
+      <h2 class="modal__title" id="transferTitle">Передати рейс колезі</h2>
+      <p class="modal__text" id="transferText"></p>
+      <fieldset class="field" style="border:0;padding:0;margin:0">
+        <legend class="field__label">Кому</legend>
+        <ul class="transfer-list" id="transferList"></ul>
+        <div class="field__error"></div>
+      </fieldset>
+      <div class="field">
+        <label class="field__label" for="transferComment">Коментар <span class="field__optional">необов'язково</span></label>
+        <textarea class="input textarea textarea--plain" id="transferComment" rows="3" maxlength="500" placeholder="Причина, домовленості з клієнтом, що вже зроблено"></textarea>
+      </div>
+      <p class="field__hint">Колега побачить рейс у своєму списку, а в чаті компанії з'явиться повідомлення про передачу.</p>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" id="transferCancel">Скасувати</button>
+        <button class="btn" type="submit">Передати рейс</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Вантажі з біржі Della (парсинг сторінки пошуку) -->
+  <dialog class="modal modal--wide della-list" id="dellaDialog" aria-labelledby="dellaTitle">
+    <div class="modal__body">
+      <div class="della-list__head">
+        <h2 class="modal__title" id="dellaTitle">Вантажі з Della</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Закрити">×</button>
+      </div>
+
+      <form class="della-list__search" id="dellaSearchForm" novalidate>
+        <div class="field">
+          <label class="field__label" for="dellaUrl">Сторінка пошуку на Della</label>
+          <input class="input" id="dellaUrl" type="url" inputmode="url" placeholder="https://della.ua/search/….html" autocomplete="off" />
+          <div class="field__error"></div>
+        </div>
+        <button class="btn" type="submit">Завантажити</button>
+      </form>
+      <p class="field__hint">Налаштуйте на della.ua фільтри (звідки, куди, тип кузова), скопіюйте адресу сторінки з результатами й вставте сюди. Посилання запам'ятається.</p>
+
+      <div class="della-list__bar" id="dellaBar" hidden>
+        <p class="della-list__meta" id="dellaMeta"></p>
+        <label class="della-list__filter"><input type="checkbox" id="dellaOnlyPrice" /> Лише з ціною</label>
+        <button class="btn btn--text" type="button" id="dellaRefresh">Оновити</button>
+      </div>
+
+      <p class="auth__alert" id="dellaAlert" role="alert" hidden></p>
+      <ul class="della-list__items" id="dellaItems" aria-live="polite"></ul>
+      <button class="btn btn--ghost della-list__more" type="button" id="dellaMore" hidden>Наступна сторінка</button>
+    </div>
+    <footer class="della-list__footer">
+      <button class="btn btn--text" type="button" id="dellaPasteBtn">Вставити оголошення вручну</button>
+      <span class="modal__spacer"></span>
+      <button class="btn" type="button" id="dellaAdd" disabled>Додати вибрані</button>
+    </footer>
+  </dialog>
+
+  <!-- Новий рейс (вручну або з оголошення Della) -->
+  <dialog class="modal modal--wide" id="tripFormDialog" aria-labelledby="tripFormTitle">
+    <form class="modal__body" id="tripForm" novalidate>
+      <h2 class="modal__title" id="tripFormTitle">Новий рейс</h2>
+
+      <section class="della" id="dellaBox" hidden>
+        <div class="field">
+          <label class="field__label" for="dellaText">Оголошення з Della</label>
+          <textarea class="input textarea textarea--plain" id="dellaText" rows="4" placeholder="Виділіть оголошення на della.ua, скопіюйте (Ctrl+C) і вставте сюди (Ctrl+V)"></textarea>
+        </div>
+        <div class="della__bar">
+          <button class="btn btn--ghost" type="button" id="dellaParse">Розпізнати</button>
+          <p class="della__result" id="dellaResult" role="status"></p>
+        </div>
+        <details class="della__help">
+          <summary>Кнопка в браузері — без копіювання</summary>
+          <ol>
+            <li>Перетягніть кнопку <a class="della__bookmarklet" id="dellaBookmarklet" href="#" data-no-i18n>→ NeVpade</a> на панель закладок браузера (Ctrl+Shift+B, якщо панелі не видно).</li>
+            <li>На della.ua виділіть мишкою потрібне оголошення.</li>
+            <li>Натисніть закладку «→ NeVpade» — тут відкриється ця форма вже з даними.</li>
+          </ol>
+          <p class="field__hint">Якщо нічого не виділено, кнопка візьме весь текст сторінки оголошення (зручно на сторінці «Докладніше»).</p>
+        </details>
+      </section>
+
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="tfFromCity">Звідки</label>
+          <input class="input" id="tfFromCity" name="fromCity" maxlength="60" placeholder="Місто" autocomplete="off" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfToCity">Куди</label>
+          <input class="input" id="tfToCity" name="toCity" maxlength="60" placeholder="Місто" autocomplete="off" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfFromAddress">Адреса завантаження <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="tfFromAddress" name="fromAddress" maxlength="120" placeholder="Вулиця, склад або область" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfToAddress">Адреса розвантаження <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="tfToAddress" name="toAddress" maxlength="120" placeholder="Вулиця, склад або область" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfLoadDate">Дата завантаження</label>
+          <input class="input" id="tfLoadDate" name="loadDate" type="date" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfUnloadDate">Дата розвантаження <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="tfUnloadDate" name="unloadDate" type="date" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field form-grid__wide">
+          <label class="field__label" for="tfCargo">Вантаж</label>
+          <input class="input" id="tfCargo" name="cargo" maxlength="60" placeholder="Напр. зерно, палети, будматеріали" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfWeight">Вага, т</label>
+          <input class="input" id="tfWeight" name="weight" type="number" min="0" step="0.1" inputmode="decimal" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfVolume">Об'єм, м³ <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="tfVolume" name="volume" type="number" min="0" step="1" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfDistance">Відстань, км</label>
+          <input class="input" id="tfDistance" name="distance" type="number" min="1" step="1" inputmode="numeric" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfPrice">Вартість, грн</label>
+          <input class="input" id="tfPrice" name="price" type="number" min="1" step="100" inputmode="numeric" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfClient">Клієнт <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="tfClient" name="client" maxlength="80" placeholder="Компанія або ПІБ" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfClientPhone">Телефон клієнта <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="tfClientPhone" name="clientPhone" type="tel" maxlength="20" placeholder="+380…" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfDriver">Водій <span class="field__optional">можна пізніше</span></label>
+          <select class="input" id="tfDriver" name="driver"></select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfVehicle">Авто <span class="field__optional">можна пізніше</span></label>
+          <select class="input" id="tfVehicle" name="vehicle"></select>
+        </div>
+        <div class="field" id="tfStatusField" hidden>
+          <label class="field__label" for="tfStatus">Статус рейсу</label>
+          <select class="input" id="tfStatus" name="status"></select>
+        </div>
+        <div class="field form-grid__wide">
+          <label class="field__label" for="tfNotes">Примітка <span class="field__optional">необов'язково</span></label>
+          <textarea class="input textarea textarea--plain" id="tfNotes" name="notes" rows="2" maxlength="500" placeholder="Тип кузова, завантаження, умови оплати"></textarea>
+        </div>
+      </div>
+
+      <p class="auth__alert" id="tripFormAlert" role="alert" hidden></p>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" id="tripFormCancel">Скасувати</button>
+        <button class="btn" type="submit">Створити рейс</button>
+      </div>
+    </form>
+  </dialog>
+
   <script type="module" src="/src/js/pages/trips.js"></script>
 </body>
 </html>

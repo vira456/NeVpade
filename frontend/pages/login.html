@@ -3,18 +3,69 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
   <title>Вхід · NeVpade</title>
 </head>
 <body>
-  <main style="min-height:100vh;display:grid;place-items:center;padding:16px">
-    <form class="card" id="loginForm" style="width:100%;max-width:360px;display:grid;gap:12px">
-      <h1 style="margin:0">NeVpade</h1>
-      <input class="input" name="email" type="email" placeholder="Email" required />
-      <input class="input" name="password" type="password" placeholder="Пароль" required />
-      <button class="btn" type="submit">Увійти</button>
-      <p id="loginError" style="color:#d33;margin:0"></p>
-    </form>
-  </main>
+  <div class="auth">
+    <aside class="auth__brand">
+      <a class="auth__logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+      <div class="auth__pitch">
+        <h2 class="auth__tagline">Рейси, машини й водії на одному екрані</h2>
+        <p class="auth__lead">Плануйте маршрути, ведіть облік автопарку й відправляйте завдання водіям у Viber.</p>
+      </div>
+      <ul class="auth__board" aria-label="Приклад рейсів">
+        <li>
+          <div class="route"><span class="route__city">Київ</span><span class="route__line"><span class="route__km">475 км</span></span><span class="route__city">Одеса</span></div>
+          <span class="badge badge--in_progress">В дорозі</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Хмельницький</span><span class="route__line"><span class="route__km">240 км</span></span><span class="route__city">Львів</span></div>
+          <span class="badge badge--planned">Заплановано</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Вінниця</span><span class="route__line"><span class="route__km">280 км</span></span><span class="route__city">Рівне</span></div>
+          <span class="badge badge--done">Виконано</span>
+        </li>
+      </ul>
+      <div class="auth__copy">© 2026 NeVpade</div>
+    </aside>
+    <main class="auth__panel">
+      <div class="auth__box">
+        <a class="auth__mobile-logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+        <h1 class="auth__title">Вхід</h1>
+        <p class="auth__subtitle">Раді бачити знову! Увійдіть до свого акаунта.</p>
+        <form class="auth__form" id="loginForm" novalidate>
+          <div class="auth__alert" hidden></div>
+          <div class="field">
+            <label class="field__label" for="email">Email</label>
+            <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="name@company.com" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="password">Пароль</label>
+            <div class="field__wrap">
+              <input class="input" id="password" name="password" type="password" autocomplete="current-password" />
+              <button class="field__toggle" type="button" data-toggle-password="password">Показати</button>
+            </div>
+            <div class="field__error"></div>
+          </div>
+          <div class="auth__row">
+            <span></span>
+            <a href="/pages/forgot-password.html">Забули пароль?</a>
+          </div>
+          <button class="btn btn--block" type="submit">Увійти</button>
+          <div class="auth__divider">або</div>
+          <div class="auth__social">
+            <div id="googleSlot"></div>
+            <button class="btn btn--social" id="googleBtn" type="button">Продовжити з Google</button>
+            <button class="btn btn--social btn--facebook" id="facebookBtn" type="button">Продовжити з Facebook</button>
+          </div>
+        </form>
+        <p class="auth__footer">Немає акаунта? <a href="/pages/register.html">Зареєструватися</a></p>
+      </div>
+    </main>
+  </div>
   <script type="module" src="/src/js/pages/login.js"></script>
 </body>
 </html>

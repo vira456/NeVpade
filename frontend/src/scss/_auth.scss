@@ -1,0 +1,306 @@
+@use 'variables' as *;
+
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  min-height: 100vh;
+  background: $color-bg var(--page-glow);
+
+  @media (max-width: $bp-tablet) { grid-template-columns: 1fr; }
+
+  // ---------- Ліва панель ----------
+  &__brand {
+    background: radial-gradient(ellipse 90% 70% at 40% 35%, $ink-panel-2, $ink-panel 70%);
+    color: #fff;
+    padding: 40px 48px;
+    margin: 12px;
+    border-radius: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+
+    @media (max-width: $bp-tablet) { display: none; }
+  }
+
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: $font-display;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  &__pitch { margin-top: auto; }
+
+  &__tagline { margin: 0 0 14px; font-size: 38px; line-height: 1.1; max-width: 13em; }
+  &__lead { color: rgba(#fff, .72); max-width: 30em; margin: 0; }
+
+  // Табло рейсів — як дошка відправлень
+  &__board {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid rgba(#fff, .12);
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(#fff, .12);
+    }
+
+    .route { flex: 1; --route-bg: #{$ink-panel}; }
+    .route__city { color: #fff; }
+    .route__km { color: rgba(#fff, .6); }
+    .route__line::before { border-top-color: rgba(255, 255, 255, .3); }
+    .route__line::after {
+      background:
+        radial-gradient(circle, #fff 3.5px, transparent 4px) left center / 9px 9px no-repeat,
+        radial-gradient(circle, $ink-panel 2px, #fff 2.5px, #fff 3.5px, transparent 4px) right center / 9px 9px no-repeat;
+    }
+    .badge { --tone: #d9d9d9; }
+    .badge--in_progress { --tone: #8fb4e8; }
+    .badge--done { --tone: #6cc08e; }
+  }
+
+  &__copy { color: rgba(#fff, .45); font-size: 13px; }
+
+  // ---------- Права частина з формою ----------
+  &__panel {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 72px 16px 40px;
+  }
+
+  &__prefs {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 6px;
+    .pref { flex: 0 0 auto; }
+  }
+
+  &__box {
+    width: 100%;
+    max-width: 440px;
+    padding: 32px;
+    background: var(--card-gradient);
+    border: 1px solid $color-border;
+    border-radius: 26px;
+    box-shadow: $shadow-card;
+
+    @media (max-width: $bp-phone) { padding: 24px 18px; }
+  }
+
+  &__mobile-logo {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-family: $font-display;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    @media (max-width: $bp-tablet) { display: flex; }
+  }
+
+  &__title { margin: 0 0 6px; font-size: 32px; }
+  &__subtitle { margin: 0 0 24px; color: $color-muted; }
+
+  &__form { display: grid; gap: 14px; }
+
+  &__alert {
+    padding: 10px 12px;
+    border-radius: $radius-sm;
+    font-size: 14px;
+    line-height: 1.4;
+    border-left: 3px solid currentColor;
+    &--error { background: color-mix(in srgb, $color-error 7%, transparent); color: $color-error; }
+    &--success { background: color-mix(in srgb, $color-success 8%, transparent); color: $color-success; }
+  }
+
+  &__row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
+
+  &__divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: $color-muted;
+    font-size: 13px;
+    margin: 6px 0;
+    &::before, &::after { content: ''; flex: 1; height: 1px; background: $color-border; }
+  }
+
+  &__social { display: grid; gap: 10px; }
+
+  &__footer { text-align: center; margin-top: 24px; color: $color-muted; font-size: 14px; }
+
+  &__mock-hint {
+    margin: 0;
+    font-size: 13px;
+    color: $color-muted;
+    background: $color-surface-2;
+    border: 1px dashed $color-border-strong;
+    border-radius: $radius-sm;
+    padding: 8px 10px;
+  }
+
+  a { color: $color-primary; text-decoration: none; &:hover { text-decoration: underline; } }
+  a.auth__logo { color: #fff; &:hover { text-decoration: none; } }
+  a.auth__mobile-logo { color: $color-text; &:hover { text-decoration: none; } }
+}
+
+// ---------- Поле форми з підписом і помилкою ----------
+.field {
+  display: grid;
+  gap: 6px;
+  align-content: start; // помилка в сусідньому полі не розтягує це
+
+  &__label { font-size: 14px; font-weight: 500; }
+  &__wrap { position: relative; }
+  .input { width: 100%; }
+
+  &__toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: none;
+    color: $color-primary;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px;
+  }
+  &__wrap .input { padding-right: 84px; }
+
+  &__error { color: $color-error; font-size: 13px; &:empty { display: none; } }
+
+  &--error .input { border-color: $color-error; }
+
+  &--check {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    font-size: 14px;
+    color: $color-muted;
+    .field__error { grid-column: 1 / -1; }
+    input { margin-top: 3px; accent-color: $color-primary; }
+  }
+}
+
+.btn--social {
+  width: 100%;
+  padding: 10px 16px;
+  background: $color-surface;
+  color: $color-text;
+  border: 1px solid $color-border-strong;
+  font-family: $font;
+  font-size: 15px;
+  font-weight: 500;
+  &:hover { background: $color-surface-2; }
+}
+
+.btn--facebook { background: #1877f2; color: #fff; border-color: #1877f2; &:hover { background: #166fe5; } }
+
+// ---------- Вимоги до пароля ----------
+.rules {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  color: $color-muted;
+  display: grid;
+  gap: 2px;
+  li::before { content: '○ '; }
+  li.is-ok { color: $color-success; &::before { content: '✓ '; } }
+}
+
+// ---------- 6 полів коду ----------
+.code {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+
+  input {
+    width: 100%;
+    aspect-ratio: 1 / 1.15;
+    text-align: center;
+    font-family: $font-display;
+    font-size: 26px;
+    font-weight: 600;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-sm;
+    &:focus { outline: 2px solid color-mix(in srgb, $color-primary 25%, transparent); border-color: $color-primary; }
+  }
+
+  &--error input { border-color: $color-error; animation: shake .3s; }
+}
+
+@keyframes shake {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+// ---------- Поле телефону з префіксом +380 ----------
+.phone {
+  display: flex;
+  border: 1px solid $color-border-strong;
+  border-radius: $radius-sm;
+  background: $color-surface;
+  overflow: hidden;
+
+  &:focus-within { outline: 2px solid color-mix(in srgb, $color-primary 25%, transparent); border-color: $color-primary; }
+
+  &__prefix {
+    display: flex;
+    align-items: center;
+    padding: 0 10px 0 12px;
+    background: $color-surface-2;
+    border-right: 1px solid $color-border;
+    color: $color-muted;
+    font-weight: 500;
+  }
+
+  &__input.input { border: 0; border-radius: 0; flex: 1; min-width: 0; &:focus { outline: none; } }
+}
+
+.field--error .phone { border-color: $color-error; }
+
+// ---------- Кроки реєстрації ----------
+.steps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-size: 13px;
+
+  &__item {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: $color-surface-2;
+    color: $color-muted;
+    &.is-active { background: $color-accent; color: $color-on-accent; font-weight: 600; }
+    &.is-done { color: $color-success; &::before { content: '✓ '; } }
+  }
+}
+
+// ---------- Компанія при реєстрації ----------
+.company-field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+
+  &__create, &__join { display: grid; gap: 6px; }
+}
+
+.seg--block { display: flex; width: 100%; .seg__btn { flex: 1; justify-content: center; cursor: pointer; } }
+.seg__btn:has(input:focus-visible) { outline: 2px solid $color-text; outline-offset: 2px; }
+
+.field__hint { margin: 0; font-size: 13px; color: $color-muted; }

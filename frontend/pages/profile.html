@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
+  <title>Профіль · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+
+    <main class="main profile is-loading">
+      <!-- ========== Шапка профілю ========== -->
+      <section class="card profile-head">
+        <div class="avatar" id="avatar">
+          <img class="avatar__img" id="avatarImg" alt="Фото профілю" hidden />
+          <span class="avatar__initials" id="avatarInitials" aria-hidden="true"></span>
+          <label class="avatar__upload" for="avatarInput" title="Змінити фото">
+            <span class="avatar__upload-text">Змінити</span>
+            <span class="visually-hidden">Завантажити фото профілю</span>
+          </label>
+          <input class="visually-hidden" id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+        </div>
+
+        <div class="profile-head__info">
+          <div class="status" id="profileStatus">
+            <span class="status__dot" aria-hidden="true"></span>
+            <span class="status__text">В мережі</span>
+          </div>
+          <h1 class="profile-head__name" id="profileName">&nbsp;</h1>
+          <p class="profile-head__position" id="profilePosition">&nbsp;</p>
+          <div class="profile-head__actions">
+            <label class="btn btn--ghost btn--sm" for="avatarInput">Завантажити фото</label>
+            <button class="btn btn--text btn--sm" id="avatarRemove" type="button" hidden>Видалити фото</button>
+          </div>
+          <p class="profile-head__hint">JPG, PNG, WEBP або GIF до 5 МБ. Можна перетягнути файл на фото.</p>
+        </div>
+      </section>
+
+      <!-- ========== Вкладки ========== -->
+      <div class="tabs" id="profileTabs" role="tablist" aria-label="Розділи профілю">
+        <button class="tabs__tab" id="tab-personal" role="tab" data-tab="personal" aria-controls="panel-personal">Особисті дані</button>
+        <button class="tabs__tab" id="tab-security" role="tab" data-tab="security" aria-controls="panel-security">Безпека</button>
+      </div>
+
+      <!-- ========== 1. Особисті дані ========== -->
+      <section class="tab-panel" id="panel-personal" role="tabpanel" aria-labelledby="tab-personal" tabindex="0">
+        <div class="kpi">
+          <article class="card kpi__card">
+            <span class="kpi__label">Кількість рейсів</span>
+            <strong class="kpi__value" id="kpiTrips">—</strong>
+            <span class="kpi__note">за весь час роботи</span>
+          </article>
+          <article class="card kpi__card">
+            <span class="kpi__label">Рейтинг</span>
+            <strong class="kpi__value" id="kpiRating">—</strong>
+            <span class="kpi__bar"><span class="kpi__bar-fill" id="kpiRatingBar"></span></span>
+          </article>
+          <article class="card kpi__card">
+            <span class="kpi__label">Активні водії</span>
+            <strong class="kpi__value" id="kpiDrivers">—</strong>
+            <span class="kpi__note">закріплені за вами</span>
+          </article>
+        </div>
+
+        <form class="card profile-form" id="personalForm" novalidate>
+          <h2 class="profile-form__title">Особисті дані</h2>
+          <div class="form-grid">
+            <div class="field form-grid__wide">
+              <label class="field__label" for="fullName">ПІБ</label>
+              <input class="input" id="fullName" name="fullName" type="text" autocomplete="name" maxlength="80" placeholder="Прізвище Ім'я По батькові" />
+              <div class="field__error"></div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="profileEmail">Email</label>
+              <input class="input" id="profileEmail" name="email" type="email" autocomplete="email" />
+              <div class="field__error"></div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="profilePhone">Телефон</label>
+              <div class="phone">
+                <span class="phone__prefix">+380</span>
+                <input class="input phone__input" id="profilePhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="67 123 45 67" />
+              </div>
+              <div class="field__error"></div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="language">Мова інтерфейсу</label>
+              <select class="input" id="language" name="language">
+                <option value="uk">Українська</option>
+                <option value="en">English</option>
+              </select>
+              <div class="field__error"></div>
+            </div>
+          </div>
+          <div class="profile-form__actions">
+            <button class="btn btn--text" id="personalReset" type="button" hidden>Скасувати</button>
+            <button class="btn" id="personalSave" type="submit" disabled>Зберегти зміни</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ========== 2. Безпека ========== -->
+      <section class="tab-panel" id="panel-security" role="tabpanel" aria-labelledby="tab-security" tabindex="0" hidden>
+        <div class="profile-grid">
+          <form class="card profile-form" id="passwordForm" novalidate>
+            <h2 class="profile-form__title">Зміна пароля</h2>
+            <p class="auth__mock-hint" data-mock-only hidden>Режим моків: поточний пароль — <b id="mockPassword"></b> (або той, що ви вже встановили тут)</p>
+
+            <div class="field">
+              <label class="field__label" for="currentPassword">Поточний пароль</label>
+              <div class="field__wrap">
+                <input class="input" id="currentPassword" name="current" type="password" autocomplete="current-password" />
+                <button class="field__toggle" type="button" data-toggle-password="currentPassword">Показати</button>
+              </div>
+              <div class="field__error"></div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="newPassword">Новий пароль</label>
+              <div class="field__wrap">
+                <input class="input" id="newPassword" name="password" type="password" autocomplete="new-password" />
+                <button class="field__toggle" type="button" data-toggle-password="newPassword">Показати</button>
+              </div>
+              <div class="strength">
+                <div class="strength__meter" id="strengthMeter" data-level="0"><span></span><span></span><span></span><span></span></div>
+                <span class="strength__label" id="strengthLabel"></span>
+              </div>
+              <ul class="rules" id="securityRules">
+                <li data-rule="щонайменше 8 символів">щонайменше 8 символів</li>
+                <li data-rule="хоча б одна літера">хоча б одна літера</li>
+                <li data-rule="хоча б одна цифра">хоча б одна цифра</li>
+              </ul>
+              <div class="field__error"></div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="confirmPassword">Підтвердження пароля</label>
+              <div class="field__wrap">
+                <input class="input" id="confirmPassword" name="confirm" type="password" autocomplete="new-password" />
+                <button class="field__toggle" type="button" data-toggle-password="confirmPassword">Показати</button>
+              </div>
+              <div class="field__error"></div>
+            </div>
+            <div class="profile-form__actions">
+              <button class="btn" type="submit">Змінити пароль</button>
+            </div>
+          </form>
+
+          <section class="card profile-form session">
+            <h2 class="profile-form__title">Активна сесія</h2>
+            <div class="session__device">
+              <span class="session__badge">Цей пристрій</span>
+            </div>
+            <dl class="session__list">
+              <div><dt>Браузер</dt><dd id="sessionBrowser">—</dd></div>
+              <div><dt>Операційна система</dt><dd id="sessionOS">—</dd></div>
+              <div><dt>Час входу</dt><dd id="sessionLogin">—</dd></div>
+              <div><dt>Тривалість сесії</dt><dd id="sessionDuration">—</dd></div>
+            </dl>
+            <button class="btn btn--danger" id="sessionLogout" type="button">Завершити сесію</button>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/profile/index.js"></script>
+</body>
+</html>

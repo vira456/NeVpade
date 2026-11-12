@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
+  <title>Реєстрація · NeVpade</title>
+</head>
+<body>
+  <div class="auth">
+    <aside class="auth__brand">
+      <a class="auth__logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+      <div class="auth__pitch">
+        <h2 class="auth__tagline">Рейси, машини й водії на одному екрані</h2>
+        <p class="auth__lead">Плануйте маршрути, ведіть облік автопарку й відправляйте завдання водіям у Viber.</p>
+      </div>
+      <ul class="auth__board" aria-label="Приклад рейсів">
+        <li>
+          <div class="route"><span class="route__city">Київ</span><span class="route__line"><span class="route__km">475 км</span></span><span class="route__city">Одеса</span></div>
+          <span class="badge badge--in_progress">В дорозі</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Хмельницький</span><span class="route__line"><span class="route__km">240 км</span></span><span class="route__city">Львів</span></div>
+          <span class="badge badge--planned">Заплановано</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Вінниця</span><span class="route__line"><span class="route__km">280 км</span></span><span class="route__city">Рівне</span></div>
+          <span class="badge badge--done">Виконано</span>
+        </li>
+      </ul>
+      <div class="auth__copy">© 2026 NeVpade</div>
+    </aside>
+    <main class="auth__panel">
+      <div class="auth__box">
+        <a class="auth__mobile-logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+        <h1 class="auth__title">Реєстрація</h1>
+        <p class="auth__subtitle">Створіть акаунт. Ми надішлемо коди підтвердження на пошту та в SMS.</p>
+        <form class="auth__form" id="registerForm" novalidate>
+          <div class="auth__alert" hidden></div>
+          <div class="field">
+            <label class="field__label" for="name">Ім'я та прізвище</label>
+            <input class="input" id="name" name="name" type="text" autocomplete="name" placeholder="Олена Коваль" maxlength="60" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="email">Email</label>
+            <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="name@company.com" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="phone">Номер телефону</label>
+            <div class="phone">
+              <span class="phone__prefix">+380</span>
+              <input class="input phone__input" id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="67 123 45 67" />
+            </div>
+            <div class="field__error"></div>
+          </div>
+          <fieldset class="field company-field">
+            <legend class="field__label">Компанія</legend>
+            <div class="seg seg--block" role="radiogroup" aria-label="Компанія">
+              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="create" checked />Створити нову</label>
+              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="join" />Приєднатися за кодом</label>
+            </div>
+            <div class="company-field__create">
+              <input class="input" id="companyName" name="companyName" type="text" maxlength="80" placeholder="Назва компанії, напр. ТОВ «Західтранс»" aria-label="Назва компанії" autocomplete="organization" />
+              <p class="field__hint">Колеги приєднаються до неї за кодом запрошення зі сторінки «Команда».</p>
+            </div>
+            <div class="company-field__join" hidden>
+              <input class="input" id="inviteCode" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код запрошення" autocomplete="off" spellcheck="false" />
+              <p class="field__hint">Код дає колега: «Команда» → «Код запрошення».</p>
+              <p class="auth__mock-hint" data-mock-only hidden>Режим моків: код тестової компанії — <b>NVP-4821</b></p>
+            </div>
+            <div class="field__error"></div>
+          </fieldset>
+          <div class="field">
+            <label class="field__label" for="password">Пароль</label>
+            <div class="field__wrap">
+              <input class="input" id="password" name="password" type="password" autocomplete="new-password" />
+              <button class="field__toggle" type="button" data-toggle-password="password">Показати</button>
+            </div>
+            <div class="field__error"></div>
+          </div>
+          <ul class="rules" id="passwordRules">
+            <li data-rule="щонайменше 8 символів">щонайменше 8 символів</li>
+            <li data-rule="хоча б одна літера">хоча б одна літера</li>
+            <li data-rule="хоча б одна цифра">хоча б одна цифра</li>
+          </ul>
+          <div class="field">
+            <label class="field__label" for="confirm">Повторіть пароль</label>
+            <div class="field__wrap">
+              <input class="input" id="confirm" name="confirm" type="password" autocomplete="new-password" />
+              <button class="field__toggle" type="button" data-toggle-password="confirm">Показати</button>
+            </div>
+            <div class="field__error"></div>
+          </div>
+          <label class="field field--check">
+            <input type="checkbox" name="terms" />
+            <span>Погоджуюсь на обробку персональних даних</span>
+            <span class="field__error"></span>
+          </label>
+          <button class="btn btn--block" type="submit">Зареєструватися</button>
+          <div class="auth__divider">або</div>
+          <div class="auth__social">
+            <div id="googleSlot"></div>
+            <button class="btn btn--social" id="googleBtn" type="button">Продовжити з Google</button>
+            <button class="btn btn--social btn--facebook" id="facebookBtn" type="button">Продовжити з Facebook</button>
+          </div>
+        </form>
+        <p class="auth__footer">Вже є акаунт? <a href="/pages/login.html">Увійти</a></p>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/register.js"></script>
+</body>
+</html>

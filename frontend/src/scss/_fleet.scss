@@ -1,0 +1,396 @@
+@use 'variables' as *;
+
+.toolbar__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-warning;
+  svg { width: 18px; height: 18px; }
+  &:empty { display: none; }
+}
+
+// ---------- Картки машин ----------
+.vehicles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: $gap;
+}
+
+.vehicle {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  background: var(--card-gradient);
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  box-shadow: $shadow-card;
+  padding: 20px 22px;
+  --route-bg: var(--card-mid);
+
+  &__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+  &__model { margin: 0; font-size: 21px; }
+  &__spec { margin: 2px 0 0; font-size: 14px; color: $color-muted; }
+
+  &__facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+
+    dt { font-size: 13px; color: $color-muted; }
+    dd { margin: 2px 0 0; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .is-warn dd { color: $color-warning; }
+    .is-bad dd { color: $color-error; }
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding-top: 14px;
+    border-top: 1px solid $color-border;
+    font-size: 14px;
+    color: $color-muted;
+
+    svg { width: 16px; height: 16px; }
+  }
+
+  &__trip {
+    margin-left: auto;
+    font-family: $font-display;
+    font-weight: 600;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// ---------- Індикатор до ТО ----------
+.meter {
+  display: grid;
+  gap: 6px;
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: $color-muted;
+    strong { font-family: $font-display; font-size: 16px; font-weight: 600; color: $color-text; font-variant-numeric: tabular-nums; }
+  }
+
+  &__track { display: block; height: 6px; background: $color-surface-2; border-radius: 3px; overflow: hidden; box-shadow: inset 0 0 0 1px $color-border; }
+  &__fill { display: block; height: 100%; background: $color-text; border-radius: 3px; }
+
+  &--warn &__fill { background: $color-warning; }
+  &--warn strong { color: $color-warning; }
+  &--bad &__fill { background: $color-error; }
+  &--bad strong { color: $color-error; }
+}
+
+// ---------- Водії ----------
+.drivers-table {
+  &__phone { text-decoration: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 760px) {
+    thead { display: none; }
+    tbody, tr, td { display: block; }
+    tr { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 14px 16px; border-bottom: 1px solid $color-border; }
+    td { padding: 0; border: 0; }
+    td:nth-child(6) { grid-column: 2; grid-row: 1; justify-self: end; }
+    td:nth-child(n + 2):nth-child(-n + 5) { grid-column: 1 / -1; }
+    td.num { text-align: left; }
+    td:last-child { grid-column: 1 / -1; text-align: left; }
+  }
+}
+
+// ---------- Керування автопарком ----------
+.vehicle__updated { margin: 4px 0 0; font-size: 12px; color: $color-faint; }
+
+.vehicle__tools { margin-left: auto; display: inline-flex; gap: 2px; }
+
+.meter--none .meter__fill { width: 0 !important; }
+.meter--none strong { color: $color-faint; font-weight: 500; }
+.vehicle__facts .is-none dd { color: $color-faint; }
+
+// Стан машини: виглядає як бейдж, але це випадне меню
+.status-select {
+  --tone: #{$color-muted};
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  select {
+    appearance: none;
+    padding: 4px 26px 4px 12px;
+    border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tone) 14%, $color-surface);
+    color: $color-text;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    &:hover { border-color: var(--tone); }
+    &:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+    &:disabled { opacity: .6; cursor: progress; }
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    right: 11px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    pointer-events: none;
+    opacity: .6;
+  }
+
+  &--available { --tone: #{$status-done}; }
+  &--loading { --tone: #{$color-warning}; }
+  &--on_trip { --tone: #{$status-progress}; }
+  &--unloaded { --tone: #{$status-planned}; }
+  &--broken { --tone: #{$color-error}; }
+  &--repair { --tone: #{$status-cancelled}; }
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: $color-text;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.icon-btn--danger:hover { color: $color-error; }
+
+.input--compact { padding: 6px 10px; font-size: 13px; min-width: 150px; max-width: 220px; }
+
+.checks {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+
+  legend { padding: 0; margin-bottom: 8px; width: 100%; }
+  label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+  input { width: 17px; height: 17px; accent-color: $color-accent; }
+  .field__error { width: 100%; }
+}
+
+// Вміст картки не розпирає сітку (довгі номери, назви станів)
+.vehicle {
+  grid-template-columns: minmax(0, 1fr);
+  & > * { min-width: 0; }
+  .vehicle__head { flex-wrap: wrap; gap: 8px; }
+}
+
+// Чотири дії водія — в один рядок
+.drivers-table td.trip-tr__actions { white-space: nowrap; }
+.drivers-table td.trip-tr__actions .icon-btn { display: inline-grid; }
+.drivers-table td:first-child strong { white-space: nowrap; }
+
+// ============================================================
+// Документи (копії) машин і водіїв
+// ============================================================
+.docs-btn {
+  position: relative;
+  &__count {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: $color-accent;
+    color: $color-on-accent;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+  }
+  &--warn .docs-btn__count { background: $color-warning; color: #1b1c1f; }
+  &--bad .docs-btn__count { background: $color-error; color: #fff; }
+}
+
+.docs {
+  .modal__body { display: grid; gap: 16px; }
+  &__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  &__head .icon-btn { font-size: 22px; line-height: 1; }
+  &__owner { margin: 2px 0 0; color: $color-muted; font-size: 14px; }
+  &__empty { grid-column: 1 / -1; padding: 24px 12px; text-align: center; color: $color-muted; }
+
+  &__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    gap: 12px;
+  }
+
+  &__pending { display: grid; gap: 12px; }
+  &__pending-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  &__pending-actions { display: flex; justify-content: flex-end; gap: 8px; }
+}
+
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 22px 16px;
+  border: 2px dashed $color-border-strong;
+  border-radius: $radius;
+  background: $color-surface-2;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+
+  &:hover, &.is-over { border-color: $color-accent; background: color-mix(in srgb, $color-accent 6%, $color-surface-2); }
+  &:has(input:focus-visible) { outline: 2px solid $color-accent; outline-offset: 2px; }
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: $color-surface;
+    box-shadow: var(--shadow-raised);
+    // «+» з двох смужок
+    background-image: linear-gradient($color-text, $color-text), linear-gradient($color-text, $color-text);
+    background-size: 16px 2px, 2px 16px;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  &__text { max-width: 46ch; font-size: 14px; color: $color-muted; strong { color: $color-text; } }
+  &__hint { font-size: 12px; color: $color-faint; }
+}
+
+.pending-doc {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
+  &.is-invalid { border-color: $color-error; }
+
+  &__thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: $color-surface-2;
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+  &__fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+  &__name { width: 100%; margin: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__date { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: $color-muted; }
+  .field__error { margin: 0; }
+  select.is-invalid { border-color: $color-error; }
+}
+
+.doc-card {
+  position: relative;
+  display: grid;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface;
+  overflow: hidden;
+
+  &__thumb {
+    aspect-ratio: 4 / 3;
+    padding: 0;
+    border: 0;
+    background: $color-surface-2;
+    cursor: zoom-in;
+    display: grid;
+    place-items: center;
+    img { width: 100%; height: 100%; object-fit: cover; }
+    &:focus-visible { outline: 2px solid $color-accent; outline-offset: -2px; }
+  }
+  &__pdf {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: $color-error;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .04em;
+  }
+  &__info { padding: 10px 12px 12px; display: grid; gap: 2px; }
+  &__type { margin: 0; font-weight: 700; padding-right: 28px; }
+  &__valid { margin: 0; font-size: 13px; color: $color-muted;
+    &.is-warn { color: $color-warning; font-weight: 600; }
+    &.is-bad { color: $color-error; font-weight: 600; }
+  }
+  &__meta { margin: 0; font-size: 12px; color: $color-faint; }
+  &__delete { position: absolute; right: 6px; bottom: 8px; }
+}
+
+// Перегляд на весь екран
+.viewer {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(10, 10, 12, .92);
+  color: #fff;
+
+  &[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  &::backdrop { background: transparent; }
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    .icon-btn { color: #fff; font-size: 22px; &:hover { background: rgba(255, 255, 255, .12); } }
+  }
+  &__caption { flex: 1; margin: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  // flex (а не grid) — щоб max-height: 100% у фото рахувався від висоти області перегляду
+  &__stage { display: flex; align-items: center; justify-content: center; padding: 8px 64px 24px; min-height: 0; overflow: hidden; }
+  &__img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; background: #fff; }
+  &__pdf { width: min(900px, 100%); height: 100%; border: 0; border-radius: 4px; background: #fff; }
+
+  &__nav {
+    position: absolute;
+    top: 50%;
+    width: 44px;
+    height: 64px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+    font-size: 34px;
+    cursor: pointer;
+    transform: translateY(-50%);
+    &:hover { background: rgba(255, 255, 255, .22); }
+    &--prev { left: 10px; }
+    &--next { right: 10px; }
+  }
+
+  @media (max-width: 600px) {
+    &__stage { padding: 8px 8px 72px; }
+    &__nav { top: auto; bottom: 12px; transform: none; height: 48px; }
+  }
+}

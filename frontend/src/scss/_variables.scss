@@ -1,19 +1,61 @@
-$color-bg: #f4f6f9;
-$color-surface: #ffffff;
-$color-text: #1f2933;
-$color-muted: #6b7785;
-$color-border: #e1e5eb;
-$color-primary: #1f5eff;
-$color-sidebar: #14213d;
+// ============================================================
+// NeVpade — токени дизайну.
+// Кольори — це CSS-змінні (див. _theme.scss), тому одна й та сама
+// розмітка працює і в світлій, і в темній темі.
+// Прозорість кольорів робимо через color-mix(), а не rgba($var, …).
+// ============================================================
 
-$status-planned: #1f5eff;
-$status-progress: #f5a524;
-$status-done: #17a34a;
-$status-cancelled: #9aa4b2;
+// ---------- Поверхні ----------
+$color-bg: var(--bg);                 // тло сторінки
+$color-surface: var(--surface);       // картки, панелі
+$color-surface-2: var(--surface-2);   // поля вводу, шапки таблиць, вкладені блоки
+$color-raised: var(--raised);         // піднятий елемент (активний пункт меню, вибрана вкладка)
+$color-border: var(--border);
+$color-border-strong: var(--border-strong);
 
-$radius: 10px;
-$gap: 16px;
-$sidebar-width: 230px;
-$font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+// ---------- Текст ----------
+$color-text: var(--text);
+$color-muted: var(--muted);
+$color-faint: var(--faint);
+
+// ---------- Дії ----------
+$color-sidebar: var(--sidebar);       // тло бокової панелі
+$color-accent: var(--accent);         // головна кнопка (графіт у світлій темі, світла — у темній)
+$color-accent-hover: var(--accent-hover);
+$color-on-accent: var(--on-accent);   // текст на головній кнопці
+$color-primary: var(--primary);       // посилання, маршрути, фокус
+
+// ---------- Стани ----------
+$color-success: var(--success);
+$color-warning: var(--warning);
+$color-error: var(--error);
+
+$status-planned: var(--status-planned);
+$status-progress: var(--status-progress);
+$status-done: var(--success);
+$status-cancelled: var(--faint);
+
+// ---------- Графіки ----------
+$series-income: var(--series-income);
+$series-expense: var(--series-expense);
+
+// ---------- Типографіка ----------
+$font: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+$font-display: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+
+// ---------- Геометрія ----------
+$radius: 18px;      // картки
+$radius-sm: 11px;   // кнопки, поля
+$gap: 18px;
+$sidebar-width: 248px;
+$sidebar-collapsed: 76px;
+
+$shadow-card: var(--shadow-card);
+$shadow-raised: var(--shadow-raised);
 
 $bp-tablet: 900px;
+$bp-phone: 600px;
+
+// Постійна темна панель (лендинг, ліва частина сторінок входу) — однакова в обох темах
+$ink-panel: #1b1c1f;
+$ink-panel-2: #26272b;

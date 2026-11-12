@@ -1,78 +1,288 @@
 @use 'variables' as *;
 
+// ---------- Картка ----------
+// М'яка «піднята» поверхня з відблиском зверху, як на зразку
 .card {
-  background: $color-surface;
+  background: var(--card-gradient);
   border: 1px solid $color-border;
   border-radius: $radius;
-  padding: 20px;
+  box-shadow: $shadow-card;
+  padding: 22px;
+  --route-bg: var(--card-mid);
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: $gap;
-  margin-bottom: 24px;
-
-  &__label { color: $color-muted; font-size: 14px; }
-  &__value { font-size: 26px; font-weight: 700; margin-top: 6px; }
+.card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
+.card__title { margin: 0; font-size: 18px; font-weight: 700; }
+.card__link { font-size: 14px; font-weight: 600; color: $color-muted; text-decoration: none; &:hover { color: $color-text; } }
+
+// ---------- Кнопки ----------
 .btn {
-  border: 0;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  padding: 10px 18px;
+  font-family: $font;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
-  background: $color-primary;
-  color: #fff;
+  background: $color-accent;
+  color: $color-on-accent;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .15), 0 6px 14px rgba(0, 0, 0, .12);
+  text-decoration: none;
+  transition: background .15s, border-color .15s, color .15s;
 
-  &:hover { filter: brightness(1.08); }
-  &--ghost { background: transparent; color: $color-primary; border: 1px solid $color-primary; }
+  svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+  &:hover { background: $color-accent-hover; }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+
+  &--ghost {
+    background: $color-raised;
+    color: $color-text;
+    border-color: $color-border;
+    box-shadow: $shadow-raised;
+    &:hover { background: $color-raised; border-color: $color-border-strong; }
+  }
 }
+
+// Квадратна кнопка з іконкою (дії в таблицях)
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-muted;
+  cursor: pointer;
+  text-decoration: none;
+
+  svg { width: 18px; height: 18px; }
+  &:hover { background: $color-raised; border-color: $color-border; color: $color-text; box-shadow: $shadow-raised; }
+}
+
+// ---------- Поля ----------
+.input {
+  font: inherit;
+  color: $color-text;
+  padding: 9px 12px;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-surface-2;
+  box-shadow: var(--shadow-inset);
+  min-height: 42px;
+
+  &::placeholder { color: $color-faint; }
+  &:hover { border-color: $color-border-strong; }
+  &:focus { outline: 2px solid color-mix(in srgb, $color-text 18%, transparent); outline-offset: 0; border-color: $color-border-strong; }
+}
+
+// ---------- Статус ----------
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 11%, transparent);
+
+  &::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  &--planned { --tone: #{$status-planned}; }
+  &--in_progress, &--on_trip { --tone: #{$status-progress}; }
+  &--done, &--available { --tone: #{$status-done}; }
+  &--cancelled, &--day_off { --tone: #{$status-cancelled}; }
+  &--broken { --tone: #{$color-error}; }
+  &--repair { --tone: #{$status-cancelled}; }
+  &--loading { --tone: #{$color-warning}; }
+  &--unloaded { --tone: #{$status-planned}; }
+}
+
+// ---------- Лінія маршруту — фірмовий елемент ----------
+// Хмельницький ●┄┄┄┄ 240 км ┄┄┄┄● Львів
+.route {
+  display: grid;
+  grid-template-columns: auto minmax(48px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+
+  &__city { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  &__line {
+    position: relative;
+    height: 22px;
+    display: grid;
+    place-items: center;
+
+    // пунктир дороги
+    &::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      top: 50%;
+      border-top: 2px dashed color-mix(in srgb, $color-text 30%, transparent);
+    }
+
+    // точки А і Б
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle, $color-text 3.5px, transparent 4px) left center / 9px 9px no-repeat,
+        radial-gradient(circle, var(--route-bg, #{$color-surface}) 2px, $color-text 2.5px, $color-text 3.5px, transparent 4px) right center / 9px 9px no-repeat;
+    }
+  }
+
+  &__km {
+    position: relative;
+    z-index: 1;
+    background: var(--route-bg, #{$color-surface});
+    border-radius: 6px;
+    padding: 0 6px;
+    font-family: $font-display;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-muted;
+    white-space: nowrap;
+  }
+
+  &--lg {
+    gap: 14px;
+    .route__city { font-family: $font-display; font-size: 22px; font-weight: 600; }
+    .route__km { font-size: 15px; }
+  }
+}
+
+// ---------- Український номерний знак ----------
+.plate {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1.5px solid $color-text;
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+  font-family: $font-display;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+
+  &__country {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 2px;
+    padding: 3px 4px;
+    background: #1b4fa8;
+    color: #fff;
+    font-size: 9px;
+    letter-spacing: .04em;
+
+    // прапор
+    &::before { content: ''; width: 11px; height: 8px; background: linear-gradient(#2f6fd6 50%, #ffd500 50%); border-radius: 1px; }
+  }
+
+  &__number { padding: 5px 8px 4px; font-size: 18px; letter-spacing: .06em; color: #111; }
+
+  &--sm &__number { font-size: 14px; padding: 4px 6px 3px; }
+  &--sm &__country { font-size: 7px; padding: 2px 3px; &::before { width: 9px; height: 6px; } }
+}
+
+// ---------- Таблиця ----------
+.table-wrap { overflow-x: auto; }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 15px;
 
-  th, td { text-align: left; padding: 12px; border-bottom: 1px solid $color-border; }
-  th { color: $color-muted; font-weight: 500; font-size: 14px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid $color-border; vertical-align: middle; }
+
+  th {
+    font-weight: 600;
+    font-size: 13px;
+    color: $color-muted;
+    background: color-mix(in srgb, $color-surface-2 70%, transparent);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: 0; }
+
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sub { display: block; font-size: 13px; color: $color-muted; }
 }
 
-.table-wrap { overflow-x: auto; }
-
-.badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  color: #fff;
-
-  &--planned { background: $status-planned; }
-  &--in_progress { background: $status-progress; }
-  &--done { background: $status-done; }
-  &--cancelled { background: $status-cancelled; }
-}
-
-.input {
-  font: inherit;
-  padding: 10px 12px;
+// ---------- Вкладки-перемикачі (статуси, періоди) ----------
+.seg {
+  display: inline-flex;
+  padding: 4px;
+  gap: 2px;
+  background: $color-surface-2;
   border: 1px solid $color-border;
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 14px;
+  box-shadow: var(--shadow-inset);
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+
+  &__btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    background: none;
+    font-family: $font;
+    font-size: 14px;
+    font-weight: 600;
+    color: $color-muted;
+    padding: 7px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:hover { color: $color-text; }
+    &[aria-pressed='true'], &[aria-selected='true'] { background: $color-raised; color: $color-text; box-shadow: $shadow-raised; }
+  }
+
+  &__count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, $color-text 9%, transparent);
+  }
+
+
+}
+
+// ---------- Порожній стан ----------
+.empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: $color-muted;
+
+  &__title { margin: 0 0 4px; color: $color-text; font-weight: 500; }
+  p { margin: 0; }
 }
 
 .placeholder { color: $color-muted; }
 
-.kanban {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $gap;
-  @media (max-width: $bp-tablet) { grid-template-columns: 1fr; }
-
-  &__col { background: #eaeef3; border-radius: $radius; padding: 12px; }
-  &__title { margin: 4px 4px 12px; font-size: 16px; }
-  &__list { min-height: 80px; display: flex; flex-direction: column; gap: 8px; }
-  &__item { background: #fff; border-radius: 8px; padding: 12px; cursor: grab; border: 1px solid $color-border; }
-}
-
-#map { height: 70vh; border-radius: $radius; }
+.logo-mark { flex-shrink: 0; display: block; }

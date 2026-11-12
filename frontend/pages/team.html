@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
+  <title>Команда · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Команда</h1>
+          <p class="main__subtitle" id="teamSummary">&nbsp;</p>
+        </div>
+        <a class="btn" href="/pages/chat.html">Відкрити чат компанії</a>
+      </header>
+
+      <div class="team">
+        <section class="card team__members">
+          <div class="card__head">
+            <h2 class="card__title">Менеджери компанії</h2>
+            <input class="input team__search" id="memberSearch" type="search" placeholder="Пошук за ім'ям" aria-label="Пошук менеджера" />
+          </div>
+          <ul class="members" id="members"></ul>
+        </section>
+
+        <aside class="team__side">
+          <section class="card invite">
+            <h2 class="card__title">Код запрошення</h2>
+            <p class="invite__text">Дайте цей код колезі — під час реєстрації він обере «Приєднатися за кодом» і потрапить у вашу компанію.</p>
+            <div class="invite__code">
+              <strong id="inviteCode" data-no-i18n>—</strong>
+              <button class="icon-btn" id="copyInvite" type="button" title="Скопіювати код" aria-label="Скопіювати код"></button>
+            </div>
+            <button class="btn--link" id="regenInvite" type="button">Створити новий код</button>
+          </section>
+
+          <section class="card company-card">
+            <h2 class="card__title" id="companyName" data-no-i18n>&nbsp;</h2>
+            <dl class="company-card__facts" id="companyFacts"></dl>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/team.js"></script>
+</body>
+</html>

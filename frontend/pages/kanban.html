@@ -3,20 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
   <title>Завдання · NeVpade</title>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar"></aside>
     <main class="main">
-      <header class="main__header"><h1 class="main__title">Завдання</h1></header>
-      <div class="kanban">
-        <div class="kanban__col"><h3 class="kanban__title">Маю зробити</h3><div class="kanban__list" id="todo"></div></div>
-        <div class="kanban__col"><h3 class="kanban__title">В процесі</h3><div class="kanban__list" id="in_progress"></div></div>
-        <div class="kanban__col"><h3 class="kanban__title">Зроблено</h3><div class="kanban__list" id="done"></div></div>
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Завдання</h1>
+          <p class="board-summary" id="boardSummary">&nbsp;</p>
+        </div>
+        <button class="btn" id="newTaskBtn" type="button" title="Гаряча клавіша: N">+ Нове завдання</button>
+      </header>
+
+      <div class="board-toolbar">
+        <input class="input board-toolbar__search" id="taskSearch" type="search" placeholder="Пошук: назва, опис, номер рейсу" aria-label="Пошук завдань" />
+        <select class="input" id="taskPriorityFilter" aria-label="Фільтр за пріоритетом"></select>
+        <p class="board-toolbar__hint" id="filterHint" hidden>
+          Під час фільтрації перетягування вимкнене.
+          <button class="btn--link" id="clearFilters" type="button">Скинути фільтри</button>
+        </p>
       </div>
+
+      <div class="board is-loading" id="board"></div>
     </main>
   </div>
+
+  <!-- Створення / редагування завдання -->
+  <dialog class="modal" id="taskDialog" aria-labelledby="taskDialogTitle">
+    <form class="modal__body" id="taskForm" novalidate>
+      <h2 class="modal__title" id="taskDialogTitle">Нове завдання</h2>
+
+      <div class="field">
+        <label class="field__label" for="taskTitle">Назва</label>
+        <input class="input" id="taskTitle" name="title" type="text" maxlength="160" placeholder="Що потрібно зробити?" autocomplete="off" />
+        <div class="field__error"></div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="taskDescription">Опис <span class="field__optional">необов'язково</span></label>
+        <textarea class="input textarea textarea--plain" id="taskDescription" name="description" rows="3" placeholder="Деталі, контакти, примітки"></textarea>
+        <div class="textarea-meta"><span class="textarea-meta__counter" id="taskDescCounter"></span></div>
+        <div class="field__error"></div>
+      </div>
+
+      <fieldset class="field segmented-field">
+        <legend class="field__label">Пріоритет</legend>
+        <div class="segmented" id="taskPriority"></div>
+      </fieldset>
+
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="taskStatus">Колонка</label>
+          <select class="input" id="taskStatus" name="status"></select>
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="taskDue">Термін</label>
+          <input class="input" id="taskDue" name="dueDate" type="date" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field form-grid__wide">
+          <label class="field__label" for="taskTrip">Пов'язаний рейс</label>
+          <select class="input" id="taskTrip" name="tripId"></select>
+          <div class="field__error"></div>
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn btn--danger" id="taskDelete" type="button" hidden>Видалити</button>
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" id="taskCancel" type="button">Скасувати</button>
+        <button class="btn" type="submit">Створити</button>
+      </div>
+    </form>
+  </dialog>
+
   <script type="module" src="/src/js/pages/kanban.js"></script>
 </body>
 </html>

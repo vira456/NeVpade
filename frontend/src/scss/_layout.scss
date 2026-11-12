@@ -2,67 +2,358 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+// Атрибут hidden має перемагати display: grid/flex з класів
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   margin: 0;
   font-family: $font;
-  background: $color-bg;
+  font-size: 15px;
+  line-height: 1.55;
+  background: $color-bg var(--page-glow) no-repeat fixed;
   color: $color-text;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .25s, color .25s;
 }
+
+h1, h2, h3 {
+  font-family: $font-display;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+
+a { color: $color-primary; }
+
+:focus-visible { outline: 2px solid $color-text; outline-offset: 2px; }
 
 .app {
   display: grid;
-  grid-template-columns: $sidebar-width 1fr;
+  grid-template-columns: $sidebar-width minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns .25s ease;
+
+  .sidebar-collapsed & { grid-template-columns: $sidebar-collapsed minmax(0, 1fr); }
 
   @media (max-width: $bp-tablet) {
-    grid-template-columns: 1fr;
+    &, .sidebar-collapsed & { grid-template-columns: minmax(0, 1fr); }
   }
 }
 
+// ============ Бокова панель ============
 .sidebar {
+  position: sticky;
+  top: 12px;
+  height: calc(100vh - 24px);
+  margin: 12px 0 12px 12px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
   background: $color-sidebar;
-  color: #fff;
-  padding: 24px 16px;
+  border: 1px solid $color-border;
+  border-radius: 24px;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  z-index: 30;
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 2px 2px 14px 6px;
+  }
 
   &__logo {
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0 8px 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: $color-text;
+    text-decoration: none;
+    font-family: $font-display;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    white-space: nowrap;
   }
 
-  &__nav { display: flex; flex-direction: column; gap: 4px; }
+  &__toggle {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid $color-border;
+    border-radius: 10px;
+    background: $color-surface-2;
+    color: $color-muted;
+    cursor: pointer;
+    svg { width: 18px; height: 18px; transition: transform .25s; }
+    &:hover { color: $color-text; }
+  }
+
+  &__section {
+    margin: 12px 10px 4px;
+    font-size: 12px;
+    color: $color-faint;
+    white-space: nowrap;
+  }
+
+  &__nav { display: flex; flex-direction: column; gap: 3px; }
 
   &__link {
-    color: rgba(#fff, .75);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 42px;
+    padding: 0 12px;
+    color: $color-muted;
     text-decoration: none;
-    padding: 10px 12px;
-    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 13px;
+    border: 1px solid transparent;
+    white-space: nowrap;
 
-    &:hover { background: rgba(#fff, .08); color: #fff; }
-    &.is-active { background: $color-primary; color: #fff; }
+    svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+    &:hover { color: $color-text; background: color-mix(in srgb, $color-raised 55%, transparent); }
+
+    // Активний пункт «піднятий» над панеллю, як на зразку
+    &.is-active {
+      color: $color-text;
+      background: $color-raised;
+      border-color: $color-border;
+      box-shadow: $shadow-raised;
+    }
   }
 
+  &__badge {
+    margin-left: auto;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: $color-accent;
+    color: $color-on-accent;
+    font-size: 12px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+
+  &__bottom { margin-top: auto; display: grid; gap: 10px; }
+
+  // Перемикачі теми й мови
+  &__prefs { display: flex; gap: 6px; }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px 0;
+    border-top: 1px solid $color-border;
+  }
+
+  &__profile {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 6px;
+    color: $color-text;
+    text-decoration: none;
+    border-radius: 12px;
+    &:hover { background: color-mix(in srgb, $color-raised 55%, transparent); }
+    &.is-active { background: $color-raised; box-shadow: $shadow-raised; }
+  }
+
+  &__avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: $color-accent;
+    color: $color-on-accent;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 0 0 3px $color-surface, 0 0 0 4px $color-border;
+  }
+
+  &__who { display: grid; min-width: 0; line-height: 1.3; }
+  &__user-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__company { font-size: 12px; color: $color-muted; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  &__logout {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    background: none;
+    border: 0;
+    color: $color-muted;
+    border-radius: 10px;
+    cursor: pointer;
+    svg { width: 18px; height: 18px; }
+    &:hover { color: $color-text; background: color-mix(in srgb, $color-raised 55%, transparent); }
+  }
+
+  // ---------- Згорнута панель: лише іконки ----------
+  .sidebar-collapsed & {
+    padding-inline: 10px;
+
+    .sidebar__top { flex-direction: column; padding: 2px 0 12px; gap: 12px; }
+    .sidebar__logo span,
+    .sidebar__section,
+    .sidebar__link span:not(.sidebar__badge),
+    .sidebar__who,
+    .sidebar__logout { display: none; }
+    .sidebar__toggle svg { transform: rotate(180deg); }
+    .sidebar__link { justify-content: center; padding: 0; }
+    .sidebar__badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; }
+    .sidebar__prefs { flex-direction: column; }
+    .pref { flex-direction: column; }
+    .sidebar__user { justify-content: center; padding-inline: 0; }
+    .sidebar__profile { flex: 0; padding: 4px; }
+  }
+
+  // ---------- Телефон/планшет: виїзне меню ----------
   @media (max-width: $bp-tablet) {
-    padding: 12px 16px;
-    &__logo { margin-bottom: 8px; }
-    &__nav { flex-direction: row; overflow-x: auto; }
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(300px, 86vw);
+    height: auto;
+    margin: 8px;
+    transform: translateX(calc(-100% - 16px));
+    transition: transform .25s ease;
+
+    &.is-open { transform: none; }
+    .sidebar__toggle { display: none; }
+
+    // на телефоні панель завжди розгорнута
+    .sidebar-collapsed & {
+      padding-inline: 12px;
+      .sidebar__top { flex-direction: row; }
+      .sidebar__logo span, .sidebar__section, .sidebar__link span:not(.sidebar__badge), .sidebar__who, .sidebar__logout { display: revert; }
+      .sidebar__link { justify-content: flex-start; padding: 0 12px; }
+      .sidebar__prefs, .pref { flex-direction: row; }
+      .sidebar__badge { position: static; }
+      .sidebar__profile { flex: 1; }
+    }
   }
 }
 
+.sidebar-backdrop {
+  display: none;
+  @media (max-width: $bp-tablet) {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgba(0, 0, 0, .35);
+    &.is-open { display: block; }
+  }
+}
+
+// Верхня смуга на телефоні з кнопкою меню
+.mobile-bar {
+  display: none;
+
+  @media (max-width: $bp-tablet) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -20px -16px 20px;
+    padding: 10px 16px;
+    background: color-mix(in srgb, $color-bg 85%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid $color-border;
+
+    &__menu {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid $color-border;
+      border-radius: 12px;
+      background: $color-surface;
+      color: $color-text;
+      box-shadow: $shadow-card;
+      cursor: pointer;
+      svg { width: 20px; height: 20px; }
+    }
+
+    &__logo { display: flex; align-items: center; gap: 8px; font-weight: 800; color: $color-text; text-decoration: none; }
+  }
+}
+
+// ============ Основна частина ============
 .main {
-  padding: 28px 32px;
+  padding: 28px 32px 48px;
   min-width: 0;
 
   &__header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     gap: $gap;
-    margin-bottom: 24px;
+    margin-bottom: 26px;
     flex-wrap: wrap;
   }
 
-  &__title { margin: 0; font-size: 26px; }
+  &__title { margin: 0; font-size: 32px; font-weight: 700; }
+  &__subtitle { margin: 4px 0 0; color: $color-muted; }
+  &__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-  @media (max-width: $bp-tablet) { padding: 20px 16px; }
+  @media (max-width: $bp-tablet) { padding: 20px 16px 32px; }
+  @media (max-width: $bp-phone) { &__title { font-size: 27px; } }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .app, .sidebar, .sidebar__toggle svg, body { transition: none !important; }
+}
+
+// Перемикачі теми й мови (бокова панель, вхід, лендинг)
+.pref {
+  display: flex;
+  flex: 1;
+  padding: 3px;
+  gap: 2px;
+  background: $color-surface-2;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  box-shadow: var(--shadow-inset);
+
+  button {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    height: 30px;
+    min-width: 30px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: $color-muted;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    svg { width: 16px; height: 16px; }
+    &:hover { color: $color-text; }
+    &[aria-pressed='true'] { background: $color-raised; color: $color-text; box-shadow: $shadow-raised; }
+  }
+}
+

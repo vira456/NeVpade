@@ -3,21 +3,227 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
   <title>Автопарк · NeVpade</title>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar"></aside>
     <main class="main">
-      <header class="main__header"><h1 class="main__title">Автопарк</h1></header>
-      <div class="card table-wrap">
-        <table class="table">
-          <thead><tr><th>Номер</th><th>Модель</th><th>Тип</th><th>Вантажність</th><th>Витрата</th><th>Пробіг</th><th>Наступне ТО</th><th>Статус</th></tr></thead>
-          <tbody id="fleetBody"></tbody>
-        </table>
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Автопарк</h1>
+          <p class="main__subtitle" id="fleetSummary">&nbsp;</p>
+        </div>
+        <div class="main__actions">
+          <button class="btn" type="button" id="addBtn">Додати машину</button>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="seg" role="tablist" aria-label="Розділи автопарку">
+          <button class="seg__btn" id="tab-vehicles" role="tab" aria-selected="true" aria-controls="panel-vehicles" data-tab="vehicles">Автомобілі<span class="seg__count" id="vehiclesCount"></span></button>
+          <button class="seg__btn" id="tab-drivers" role="tab" aria-selected="false" aria-controls="panel-drivers" data-tab="drivers" tabindex="-1">Водії<span class="seg__count" id="driversCount"></span></button>
+        </div>
+        <p class="toolbar__note" id="fleetAlerts"></p>
       </div>
+
+      <section id="panel-vehicles" role="tabpanel" aria-labelledby="tab-vehicles">
+        <div class="vehicles" id="vehicles"></div>
+      </section>
+
+      <section id="panel-drivers" role="tabpanel" aria-labelledby="tab-drivers" hidden>
+        <div class="card trips-card">
+          <div class="table-wrap">
+            <table class="table drivers-table">
+              <thead>
+                <tr>
+                  <th>Водій</th>
+                  <th>Телефон</th>
+                  <th>Авто</th>
+                  <th class="num">Ставка</th>
+                  <th>Поточний рейс</th>
+                  <th>Статус</th>
+                  <th><span class="visually-hidden">Дії</span></th>
+                </tr>
+              </thead>
+              <tbody id="driversBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
+  <datalist id="vehicleTypes">
+    <option value="тягач + тент"></option>
+    <option value="тягач + рефрижератор"></option>
+    <option value="тягач + ізотерм"></option>
+    <option value="тягач + платформа"></option>
+    <option value="тягач + зерновоз"></option>
+    <option value="вантажівка тент"></option>
+    <option value="вантажівка ізотерм"></option>
+    <option value="бус"></option>
+  </datalist>
+
+  <!-- Машина: додати / редагувати -->
+  <dialog class="modal modal--wide" id="vehicleDialog" aria-labelledby="vehicleTitle">
+    <form class="modal__body" id="vehicleForm" novalidate>
+      <h2 class="modal__title" id="vehicleTitle">Нова машина</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="vfPlate">Номер</label>
+          <input class="input" id="vfPlate" maxlength="12" placeholder="ВХ 1234 АК" autocomplete="off" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfModel">Марка й модель</label>
+          <input class="input" id="vfModel" maxlength="40" placeholder="DAF XF 480" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfType">Тип</label>
+          <input class="input" id="vfType" maxlength="40" list="vehicleTypes" placeholder="тягач + тент" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfCapacity">Вантажопідйомність, т</label>
+          <input class="input" id="vfCapacity" type="number" min="0.5" max="60" step="0.5" inputmode="decimal" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfFuel">Витрата пального, л/100 км</label>
+          <input class="input" id="vfFuel" type="number" min="5" max="80" step="0.5" inputmode="decimal" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfMileage">Пробіг, км</label>
+          <input class="input" id="vfMileage" type="number" min="0" step="1000" inputmode="numeric" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfService">Наступне ТО на пробігу, км <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="vfService" type="number" min="0" step="1000" inputmode="numeric" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfInsurance">Страховка до <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="vfInsurance" type="date" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfStatus">Стан</label>
+          <select class="input" id="vfStatus"></select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vfDriver">Водій</label>
+          <select class="input" id="vfDriver"></select>
+        </div>
+      </div>
+      <p class="auth__alert" role="alert" hidden></p>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" data-cancel>Скасувати</button>
+        <button class="btn" type="submit">Зберегти</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Водій: додати / редагувати -->
+  <dialog class="modal modal--wide" id="driverDialog" aria-labelledby="driverTitle">
+    <form class="modal__body" id="driverForm" novalidate>
+      <h2 class="modal__title" id="driverTitle">Новий водій</h2>
+      <div class="form-grid">
+        <div class="field form-grid__wide">
+          <label class="field__label" for="dfName">Ім'я та прізвище</label>
+          <input class="input" id="dfName" maxlength="60" autocomplete="off" placeholder="Петро Іваненко" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="dfPhone">Телефон</label>
+          <input class="input" id="dfPhone" type="tel" maxlength="20" placeholder="+380 50 111 22 33" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="dfViber">Viber <span class="field__optional">якщо інший номер</span></label>
+          <input class="input" id="dfViber" type="tel" maxlength="20" placeholder="+380…" />
+          <div class="field__error"></div>
+        </div>
+        <fieldset class="field form-grid__wide checks" id="dfCategories">
+          <legend class="field__label">Категорії посвідчення</legend>
+          <label><input type="checkbox" value="B" /> B</label>
+          <label><input type="checkbox" value="C1" /> C1</label>
+          <label><input type="checkbox" value="C" /> C</label>
+          <label><input type="checkbox" value="CE" /> CE</label>
+          <label><input type="checkbox" value="D" /> D</label>
+          <div class="field__error"></div>
+        </fieldset>
+        <div class="field">
+          <label class="field__label" for="dfRate">Ставка, грн/км</label>
+          <input class="input" id="dfRate" type="number" min="1" max="100" step="0.5" inputmode="decimal" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="dfStatus">Статус</label>
+          <select class="input" id="dfStatus"></select>
+        </div>
+        <div class="field form-grid__wide">
+          <label class="field__label" for="dfVehicle">Закріплена машина</label>
+          <select class="input" id="dfVehicle"></select>
+          <p class="field__hint" id="dfVehicleHint" hidden></p>
+        </div>
+      </div>
+      <p class="auth__alert" role="alert" hidden></p>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" data-cancel>Скасувати</button>
+        <button class="btn" type="submit">Зберегти</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Документи машини або водія (копії: фото чи PDF) -->
+  <dialog class="modal modal--wide docs" id="docsDialog" aria-labelledby="docsTitle">
+    <div class="modal__body">
+      <div class="docs__head">
+        <div>
+          <h2 class="modal__title" id="docsTitle">Документи</h2>
+          <p class="docs__owner" id="docsOwner" data-no-i18n></p>
+        </div>
+        <button class="icon-btn" type="button" data-close aria-label="Закрити">×</button>
+      </div>
+
+      <label class="dropzone" id="docsDrop">
+        <input type="file" id="docsInput" accept="image/*,application/pdf" multiple class="visually-hidden" />
+        <span class="dropzone__icon" aria-hidden="true"></span>
+        <span class="dropzone__text"><strong>Додайте фото документів</strong> — перетягніть сюди або натисніть, щоб вибрати. З телефона можна одразу сфотографувати.</span>
+        <span class="dropzone__hint">JPG, PNG або PDF, до 10 МБ. Великі фото стискаються автоматично.</span>
+      </label>
+
+      <form class="docs__pending" id="docsPendingForm" hidden novalidate>
+        <ul class="docs__pending-list" id="docsPending"></ul>
+        <div class="docs__pending-actions">
+          <button class="btn btn--text" type="button" id="docsPendingClear">Скасувати</button>
+          <button class="btn" type="submit" id="docsUpload">Зберегти</button>
+        </div>
+      </form>
+
+      <p class="auth__alert" role="alert" hidden></p>
+      <ul class="docs__grid" id="docsGrid" aria-live="polite"></ul>
+    </div>
+  </dialog>
+
+  <!-- Перегляд копії на весь екран -->
+  <dialog class="viewer" id="viewerDialog" aria-labelledby="viewerCaption">
+    <div class="viewer__bar">
+      <p class="viewer__caption" id="viewerCaption"></p>
+      <a class="icon-btn" id="viewerDownload" download title="Завантажити файл" aria-label="Завантажити файл"></a>
+      <button class="icon-btn" type="button" id="viewerDelete" title="Видалити" aria-label="Видалити документ"></button>
+      <button class="icon-btn" type="button" data-close title="Закрити" aria-label="Закрити перегляд">×</button>
+    </div>
+    <div class="viewer__stage" id="viewerStage"></div>
+    <button class="viewer__nav viewer__nav--prev" type="button" id="viewerPrev" aria-label="Попередній документ">‹</button>
+    <button class="viewer__nav viewer__nav--next" type="button" id="viewerNext" aria-label="Наступний документ">›</button>
+  </dialog>
+
   <script type="module" src="/src/js/pages/fleet.js"></script>
 </body>
 </html>

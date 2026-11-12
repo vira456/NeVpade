@@ -1,0 +1,17 @@
+{
+  "profile": {
+    "id": "usr_01",
+    "fullName": "Федорова Віра Дмитрівна",
+    "position": "Старший менеджер з вантажоперевезень",
+    "email": "v.fedorova@nevpade.ua",
+    "phone": "+380671234567",
+    "language": "uk",
+    "avatarUrl": null
+  },
+  "kpi": {
+    "tripsCount": 142,
+    "rating": 4.9,
+    "ratingMax": 5,
+    "activeDrivers": 8
+  }
+}

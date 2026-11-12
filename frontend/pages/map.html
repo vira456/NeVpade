@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
   <title>Карта · NeVpade</title>
 </head>
 <body>
@@ -11,9 +12,34 @@
     <main class="main">
       <header class="main__header">
         <h1 class="main__title">Карта маршрутів</h1>
-        <div><select class="input" id="tripSelect"></select> <span id="routeInfo"></span></div>
+        <span class="map-mode" id="mapMode"></span>
       </header>
-      <div class="card" id="map"></div>
+
+      <div class="map-layout">
+        <!-- Список рейсів -->
+        <section class="card trip-panel" aria-label="Рейси">
+          <div class="trip-panel__filters">
+            <input class="input" id="mapSearch" type="search" placeholder="Пошук: номер, місто" aria-label="Пошук рейсу" />
+            <select class="input" id="mapStatus" aria-label="Статус">
+              <option value="">Усі статуси</option>
+              <option value="planned">Заплановано</option>
+              <option value="in_progress">В дорозі</option>
+              <option value="done">Виконано</option>
+            </select>
+          </div>
+          <ul class="trip-list" id="tripList"></ul>
+        </section>
+
+        <!-- Карта -->
+        <section class="card map-card">
+          <div class="map-box" id="map">
+            <p class="map-box__loading">Завантаження карти…</p>
+          </div>
+        </section>
+
+        <!-- Деталі маршруту -->
+        <section class="card route-card" id="routeDetails" aria-live="polite"></section>
+      </div>
     </main>
   </div>
   <script type="module" src="/src/js/pages/map.js"></script>
