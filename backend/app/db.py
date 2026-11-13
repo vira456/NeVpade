@@ -4,6 +4,7 @@ import logging
 import certifi
 from pymongo import ASCENDING, DESCENDING, AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.errors import OperationFailure, PyMongoError
 
 from .config import settings
 
@@ -22,7 +23,21 @@ async def connect() -> None:
         kwargs["tlsCAFile"] = certifi.where()  # щоб TLS до Atlas працював на Windows/macOS
     _client = AsyncMongoClient(settings.mongodb_uri, **kwargs)
     _db = _client[settings.mongodb_db]
-    await _client.admin.command("ping")
+    try:
+        await _client.admin.command("ping")
+    except OperationFailure as exc:
+        await close()
+        raise RuntimeError(
+            "MongoDB відхилила логін або пароль з MONGODB_URI (backend/.env). "
+            "Перевірте користувача в Atlas → Database Access."
+        ) from exc
+    except (PyMongoError, OSError) as exc:
+        await close()
+        raise RuntimeError(
+            "Не вдалося підключитися до MongoDB Atlas. Найчастіша причина — ваша IP-адреса не дозволена: "
+            "Atlas → Network Access → Add IP Address → «Add current IP address» "
+            "(або «Allow access from anywhere» 0.0.0.0/0). Також перевірте інтернет і MONGODB_URI у backend/.env."
+        ) from exc
     await _create_indexes(_db)
     log.info("MongoDB: підключено до бази «%s»", settings.mongodb_db)
 
@@ -50,7 +65,6 @@ async def _create_indexes(db: AsyncDatabase) -> None:
 
     await db.companies.create_index("inviteCode", unique=True)
 
-    # Коди підтвердження: Mongo сам видаляє прострочені записи (TTL-індекс)
     await db.codes.create_index([("email", ASCENDING), ("purpose", ASCENDING)], unique=True)
     await db.codes.create_index("expiresAt", expireAfterSeconds=0)
 
