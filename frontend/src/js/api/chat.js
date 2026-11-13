@@ -6,6 +6,7 @@ import { request } from './client.js';
 import { getCurrentUser } from './auth.js';
 import { load, save } from '../utils/storage.js';
 import seed from '../mock/chat.json';
+import './mock-store.js'; // скидання старих демо-даних
 
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel('nevpade-chat') : null;
 const mockMessages = () => load('mock.chat') ?? seed;

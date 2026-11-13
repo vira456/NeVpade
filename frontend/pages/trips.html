@@ -16,6 +16,7 @@
           <p class="main__subtitle" id="tripsSummary">&nbsp;</p>
         </div>
         <div class="main__actions">
+          <button class="btn btn--text" type="button" id="exportBtn" title="Завантажити поточний список у форматі CSV (відкривається в Excel)">Експорт в Excel</button>
           <button class="btn btn--ghost" type="button" id="importDellaBtn">Імпорт з Della</button>
           <button class="btn" type="button" id="newTripBtn">Новий рейс</button>
         </div>
@@ -29,27 +30,50 @@
           </div>
           <div class="seg" id="statusTabs" role="group" aria-label="Статус рейсу"></div>
         </div>
-        <input class="input toolbar__search" id="search" type="search" placeholder="Номер, місто, вантаж, водій" aria-label="Пошук рейсів" />
+        <input class="input toolbar__search" id="search" type="search" placeholder="Номер, місто, вантаж, клієнт, водій" aria-label="Пошук рейсів" />
+      </div>
+
+      <div class="filters" id="filters">
+        <label class="filters__item">Завантаження з
+          <input class="input input--compact" type="date" id="dateFrom" />
+        </label>
+        <label class="filters__item">по
+          <input class="input input--compact" type="date" id="dateTo" />
+        </label>
+        <label class="filters__item">Оплата
+          <select class="input input--compact" id="payFilter">
+            <option value="">Будь-яка</option>
+            <option value="unpaid">Неоплачені</option>
+            <option value="overdue">Прострочені</option>
+            <option value="paid">Оплачені</option>
+          </select>
+        </label>
+        <button class="btn btn--text filters__reset" type="button" id="filtersReset" hidden>Скинути фільтри</button>
       </div>
 
       <div class="card trips-card">
         <div class="table-wrap">
           <table class="table trips-table">
             <thead>
-              <tr>
-                <th>Рейс</th>
+              <tr id="tripsHead">
+                <th aria-sort="none"><button class="th-sort" type="button" data-sort="date">Рейс</button></th>
                 <th>Маршрут</th>
                 <th>Вантаж</th>
                 <th>Водій і авто</th>
                 <th class="col-manager">Менеджер</th>
-                <th class="num">Вартість</th>
-                <th>Статус</th>
+                <th class="num" aria-sort="none"><button class="th-sort" type="button" data-sort="price">Вартість</button></th>
+                <th aria-sort="none" class="th-pair">
+                  <button class="th-sort" type="button" data-sort="status">Статус</button>
+                  <span aria-hidden="true">/</span>
+                  <button class="th-sort" type="button" data-sort="payment">оплата</button>
+                </th>
                 <th><span class="visually-hidden">Дії</span></th>
               </tr>
             </thead>
             <tbody id="tripsBody"></tbody>
           </table>
         </div>
+        <nav class="pager" id="pager" aria-label="Сторінки списку рейсів"></nav>
       </div>
     </main>
   </div>
@@ -197,7 +221,9 @@
         </div>
         <div class="field">
           <label class="field__label" for="tfClient">Клієнт <span class="field__optional">необов'язково</span></label>
-          <input class="input" id="tfClient" name="client" maxlength="80" placeholder="Компанія або ПІБ" />
+          <input class="input" id="tfClient" name="client" maxlength="80" placeholder="Почніть вводити назву" list="clientsList" autocomplete="off" />
+          <datalist id="clientsList"></datalist>
+          <p class="field__hint" id="tfClientHint" hidden></p>
         </div>
         <div class="field">
           <label class="field__label" for="tfClientPhone">Телефон клієнта <span class="field__optional">необов'язково</span></label>
@@ -210,6 +236,15 @@
         <div class="field">
           <label class="field__label" for="tfVehicle">Авто <span class="field__optional">можна пізніше</span></label>
           <select class="input" id="tfVehicle" name="vehicle"></select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfDue">Термін оплати <span class="field__optional">за умовами клієнта</span></label>
+          <input class="input" id="tfDue" name="dueDate" type="date" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="tfPaidAt">Оплачено <span class="field__optional">дата, якщо вже оплатили</span></label>
+          <input class="input" id="tfPaidAt" name="paidAt" type="date" />
         </div>
         <div class="field" id="tfStatusField" hidden>
           <label class="field__label" for="tfStatus">Статус рейсу</label>

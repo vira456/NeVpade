@@ -4,16 +4,18 @@ import { locale } from '../i18n/index.js';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip } from 'chart.js';
 import { renderLayout } from '../utils/layout.js';
 import { getSummary, getIncome, getExpenses } from '../api/analytics.js';
-import { getTrips, myId } from '../api/trips.js';
+import { getTrips, myId, isOwner } from '../api/trips.js';
 import { getDrivers } from '../api/drivers.js';
 import { getVehicles } from '../api/vehicles.js';
 import { getTasks } from '../api/tasks.js';
-import { money, km, escapeHtml, compactMoney, VEHICLE_STATUS } from '../utils/format.js';
+import { money, km, escapeHtml, compactMoney, VEHICLE_STATUS, paymentStatus, plural } from '../utils/format.js';
 import { routeLine, statusBadge, shortDate } from '../utils/components.js';
 import { icons } from '../utils/icons.js';
 import { dueLabel, isOverdue } from './kanban/config.js';
 import { t, i18nReady } from '../i18n/index.js';
 import { countUpAll } from '../utils/motion.js';
+import { showToast } from '../utils/toast.js';
+import { setFieldError } from '../utils/validation.js';
 
 renderLayout();
 
@@ -84,14 +86,22 @@ const endLabels = {
   afterDatasetsDraw(c) {
     const { ctx } = c;
     ctx.save();
-    ctx.font = '600 13px "Fira Sans Condensed", "Fira Sans", sans-serif';
+    ctx.font = "600 13px 'Manrope', 'Segoe UI', sans-serif";
     ctx.textBaseline = 'middle';
+    const placed = [];
     c.data.datasets.forEach((ds, i) => {
       const meta = c.getDatasetMeta(i);
-      const last = meta.data[meta.data.length - 1];
+      // остання точка з даними (майбутні тижні/місяці — порожні)
+      const last = [...meta.data].reverse().find((p, k) => ds.data[meta.data.length - 1 - k] != null);
       if (!last || meta.hidden) return;
+      const width = ctx.measureText(ds.label).width;
+      // підпис не виходить за край полотна й не накладається на сусідній
+      const x = Math.min(last.x + 8, c.width - width - 2);
+      let y = last.y;
+      for (const p of placed) if (Math.abs(p - y) < 16) y = p + (y >= p ? 16 : -16);
+      placed.push(y);
       ctx.fillStyle = COLORS.ink;
-      ctx.fillText(ds.label, last.x + 8, last.y);
+      ctx.fillText(ds.label, x, y);
     });
     ctx.restore();
   },
@@ -179,9 +189,11 @@ function renderChart(data) {
       <tbody>${data.labels
         .map(
           (l, i) =>
-            `<tr><td>${l}</td><td class="num">${money(data.income[i])}</td><td class="num">${money(data.expenses[i])}</td><td class="num">${money(
-              data.income[i] - data.expenses[i]
-            )}</td></tr>`
+            data.income[i] == null
+              ? `<tr><td>${l}</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`
+              : `<tr><td>${l}</td><td class="num">${money(data.income[i])}</td><td class="num">${money(data.expenses[i])}</td><td class="num">${money(
+                  data.income[i] - data.expenses[i]
+                )}</td></tr>`
         )
         .join('')}</tbody>
     </table>`;
@@ -273,6 +285,27 @@ function renderFleet(vehicles) {
     .join('');
 }
 
+// Оплати: керівник бачить усю компанію, менеджер — свої рейси
+function renderPayments(trips) {
+  const mine = trips.filter((tr) => isOwner() || tr.managerId === myId());
+  const sum = (st) => {
+    const list = mine.filter((tr) => paymentStatus(tr) === st);
+    return { n: list.length, total: list.reduce((a, tr) => a + (tr.price || 0), 0) };
+  };
+  const pending = sum('pending');
+  const overdue = sum('overdue');
+  const scope = isOwner() ? '' : '&scope=mine';
+  document.getElementById('paySummary').innerHTML = `
+    <a class="pay-sum__row" href="/pages/trips.html?pay=pending${scope}">
+      <dt><span class="badge badge--pending">Очікує оплати</span></dt>
+      <dd><strong>${money(pending.total)}</strong><span>${t(plural(pending.n, ['{n} рейс', '{n} рейси', '{n} рейсів']), { n: pending.n })}</span></dd>
+    </a>
+    <a class="pay-sum__row ${overdue.n ? 'is-bad' : ''}" href="/pages/trips.html?pay=overdue${scope}">
+      <dt><span class="badge badge--overdue">Прострочено</span></dt>
+      <dd><strong>${money(overdue.total)}</strong><span>${t(plural(overdue.n, ['{n} рейс', '{n} рейси', '{n} рейсів']), { n: overdue.n })}</span></dd>
+    </a>`;
+}
+
 // ---------- Період ----------
 async function loadPeriod(p) {
   period = p;
@@ -288,6 +321,53 @@ document.getElementById('periodSwitch').addEventListener('click', (e) => {
   if (btn && btn.dataset.period !== period) loadPeriod(btn.dataset.period);
 });
 
+// ---------- Звіт в Excel ----------
+const reportDialog = document.getElementById('reportDialog');
+const reportFrom = document.getElementById('reportFrom');
+const reportTo = document.getElementById('reportTo');
+const PERIOD_PRESET = { week: 'week', month: 'month', year: 'year' };
+
+async function setPreset(preset) {
+  const { presetRange } = await import('../utils/finance-report.js');
+  const r = presetRange(preset);
+  reportFrom.value = r.from;
+  reportTo.value = r.to;
+}
+
+document.getElementById('excelReport').addEventListener('click', async () => {
+  const preset = PERIOD_PRESET[period] ?? 'month';
+  reportDialog.querySelector(`[name=preset][value="${preset}"]`).checked = true;
+  await setPreset(preset);
+  setFieldError(reportTo, '');
+  reportDialog.showModal();
+});
+reportDialog.addEventListener('change', (e) => {
+  if (e.target.name === 'preset') setPreset(e.target.value);
+  // дати змінили вручну — жоден готовий період уже не відповідає
+  if (e.target === reportFrom || e.target === reportTo) reportDialog.querySelectorAll('[name=preset]').forEach((r) => (r.checked = false));
+});
+reportDialog.addEventListener('click', (e) => {
+  if (e.target === reportDialog || e.target.closest('[data-cancel]')) reportDialog.close();
+});
+document.getElementById('reportForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setFieldError(reportTo, '');
+  if (!reportFrom.value || !reportTo.value) return setFieldError(reportTo, 'Вкажіть обидві дати');
+  if (reportTo.value < reportFrom.value) return setFieldError(reportTo, 'Кінець періоду раніше за початок');
+  const btn = document.getElementById('reportSubmit');
+  btn.disabled = true;
+  try {
+    const { downloadFinanceReport } = await import('../utils/finance-report.js');
+    const res = await downloadFinanceReport({ from: reportFrom.value, to: reportTo.value });
+    reportDialog.close();
+    showToast(res.trips ? t('Звіт завантажено: {trips}, дохід {sum}', { trips: t(plural(res.trips, ['{n} рейс', '{n} рейси', '{n} рейсів']), { n: res.trips }), sum: money(res.income) }) : t('Звіт завантажено, але за цей період рейсів немає'));
+  } catch (err) {
+    showToast(err.message || t('Не вдалося сформувати звіт'), 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 document.getElementById('chartTableToggle').addEventListener('click', (e) => {
   const table = document.getElementById('chartTable');
   table.hidden = !table.hidden;
@@ -301,6 +381,7 @@ async function init() {
     renderActiveTrips(trips, drivers);
     renderTasks(tasks);
     renderFleet(vehicles);
+    renderPayments(trips);
   });
   await Promise.all([operational, i18nReady.then(() => loadPeriod(period))]);
 }

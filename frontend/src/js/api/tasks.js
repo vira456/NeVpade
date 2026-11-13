@@ -2,6 +2,7 @@
 import { request, ApiError } from './client.js';
 import { load, save } from '../utils/storage.js';
 import seed from '../mock/tasks.json';
+import './mock-store.js'; // скидання старих демо-даних
 
 const mockTasks = () => load('mock.tasks') ?? seed;
 const persist = (tasks) => save('mock.tasks', tasks);

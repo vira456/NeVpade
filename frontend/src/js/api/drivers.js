@@ -1,6 +1,7 @@
 // Водії компанії. Машина закріплюється за водієм полем vehicleId (одна машина — один водій).
 import { request, ApiError } from './client.js';
 import { deleteOwnerDocsMock } from './documents.js';
+import { isOwner } from './trips.js';
 import { mockDrivers, saveDrivers, mockTrips, saveTrips, newId } from './mock-store.js';
 
 // У моках: якщо машину віддали цьому водію — у попереднього її знімаємо (так само робить сервер)
@@ -59,6 +60,7 @@ export const deleteDriver = (id) =>
   request(`/drivers/${id}`, {
     method: 'DELETE',
     mock: async () => {
+      if (!isOwner()) throw new ApiError('Видаляти водіїв може лише керівник', 403, 'owner_only');
       const trips = mockTrips();
       const active = trips.find((t) => t.driverId === id && t.status === 'in_progress');
       if (active) throw new ApiError(`Водій зараз у рейсі ${active.number}. Спершу завершіть або змініть рейс.`, 409, 'driver_busy');

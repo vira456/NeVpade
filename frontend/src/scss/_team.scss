@@ -282,3 +282,31 @@
   input { accent-color: $color-text; }
   label:has(input:checked) { background: $color-raised; border-color: $color-border-strong; box-shadow: $shadow-raised; }
 }
+
+// Роль у компанії
+.role-badge {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: $color-muted;
+  background: $color-surface-2;
+  &--owner { color: $color-accent; background: color-mix(in srgb, $color-accent 14%, transparent); }
+}
+.role-select {
+  justify-self: start;
+  margin-top: 4px;
+  select {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-text;
+    background: $color-surface-2;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+}

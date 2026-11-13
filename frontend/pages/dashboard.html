@@ -15,10 +15,13 @@
           <h1 class="main__title">Аналітика</h1>
           <p class="main__subtitle" id="dashSubtitle">&nbsp;</p>
         </div>
+        <div class="main__actions dash__actions">
+        <button class="btn btn--ghost" id="excelReport" type="button">Експорт в Excel</button>
         <div class="seg" id="periodSwitch" role="group" aria-label="Період">
           <button class="seg__btn" type="button" data-period="week" aria-pressed="false">Тиждень</button>
           <button class="seg__btn" type="button" data-period="month" aria-pressed="true">Місяць</button>
           <button class="seg__btn" type="button" data-period="year" aria-pressed="false">Рік</button>
+        </div>
         </div>
       </header>
 
@@ -59,6 +62,13 @@
         <div class="dash__side">
           <section class="card">
             <div class="card__head">
+              <h2 class="card__title">Оплати клієнтів</h2>
+              <a class="card__link" href="/pages/clients.html?filter=debt">Боржники</a>
+            </div>
+            <dl class="pay-sum" id="paySummary"></dl>
+          </section>
+          <section class="card">
+            <div class="card__head">
               <h2 class="card__title">Найближчі завдання</h2>
               <a class="card__link" href="/pages/kanban.html">Дошка</a>
             </div>
@@ -78,6 +88,38 @@
       </div>
     </main>
   </div>
+  <!-- Фінансовий звіт в Excel -->
+  <dialog class="modal" id="reportDialog" aria-labelledby="reportTitle">
+    <form class="modal__body" id="reportForm" method="dialog" novalidate>
+      <h2 class="modal__title" id="reportTitle">Експорт в Excel</h2>
+      <p class="modal__text">Доходи, витрати й прибуток за період: зведення, динаміка, усі рейси, а також розріз по клієнтах, водіях і машинах.</p>
+      <div class="report-presets" role="radiogroup" aria-label="Період звіту">
+        <label class="chip-radio"><input type="radio" name="preset" value="week" /><span>Цей тиждень</span></label>
+        <label class="chip-radio"><input type="radio" name="preset" value="month" checked /><span>Цей місяць</span></label>
+        <label class="chip-radio"><input type="radio" name="preset" value="last-month" /><span>Минулий місяць</span></label>
+        <label class="chip-radio"><input type="radio" name="preset" value="quarter" /><span>Цей квартал</span></label>
+        <label class="chip-radio"><input type="radio" name="preset" value="year" /><span>Цей рік</span></label>
+        <label class="chip-radio"><input type="radio" name="preset" value="last-year" /><span>Минулий рік</span></label>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="reportFrom">З</label>
+          <input class="input" id="reportFrom" type="date" required />
+        </div>
+        <div class="field">
+          <label class="field__label" for="reportTo">По</label>
+          <input class="input" id="reportTo" type="date" required />
+          <div class="field__error"></div>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" data-cancel>Скасувати</button>
+        <button class="btn" type="submit" id="reportSubmit">Завантажити .xlsx</button>
+      </div>
+    </form>
+  </dialog>
+
   <script type="module" src="/src/js/pages/dashboard.js"></script>
 </body>
 </html>

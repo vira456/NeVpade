@@ -1,9 +1,9 @@
 // Вкладка «Особисті дані»: KPI-картки та форма редагування
-import { locale } from '../../i18n/index.js';
 import { getKpi, updateProfile } from '../../api/profile.js';
 import { renderSidebarUser } from '../../utils/layout.js';
 import { getLang, setLang } from '../../utils/prefs.js';
 import { countUp } from '../../utils/motion.js';
+import { t, locale } from '../../i18n/index.js';
 import { showToast } from '../../utils/toast.js';
 import {
   isEmail,
@@ -70,8 +70,10 @@ function validate() {
 export async function renderKpi() {
   const kpi = await getKpi();
   document.getElementById('kpiTrips').textContent = kpi.tripsCount.toLocaleString(locale());
-  document.getElementById('kpiRating').innerHTML = `${kpi.rating.toFixed(1)}<small>/${kpi.ratingMax.toFixed(1)}</small>`;
-  document.getElementById('kpiRatingBar').style.width = `${(kpi.rating / kpi.ratingMax) * 100}%`;
+  document.getElementById('kpiTripsNote').textContent = t('за весь час · {n} цього місяця', { n: kpi.tripsThisMonth });
+  // частка рейсів, які клієнт оплатив не пізніше терміну
+  document.getElementById('kpiRating').innerHTML = kpi.paidOnTime === null ? '—' : `${kpi.paidOnTime}<small>%</small>`;
+  document.getElementById('kpiRatingBar').style.width = `${kpi.paidOnTime ?? 0}%`;
   document.getElementById('kpiDrivers').textContent = kpi.activeDrivers;
   ['kpiTrips', 'kpiDrivers'].forEach((id) => countUp(document.getElementById(id)));
 }

@@ -234,3 +234,51 @@
   li { display: flex; justify-content: space-between; align-items: center; }
   strong { font-family: $font-display; font-size: 18px; font-weight: 600; }
 }
+
+// ---------- Оплати клієнтів ----------
+.pay-sum {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid $color-border;
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+    &:hover { background: $color-surface-2; }
+    &.is-bad strong { color: $color-error; }
+  }
+
+  dt { margin: 0; }
+  dd { margin: 0; display: grid; justify-items: end; line-height: 1.25; }
+  strong { font-family: $font-display; font-size: 18px; font-variant-numeric: tabular-nums; }
+  dd span { font-size: 13px; color: $color-muted; }
+}
+
+// ---------- Діалог «Звіт в Excel»: готові періоди ----------
+.report-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-radio {
+  position: relative;
+  cursor: pointer;
+
+  input { position: absolute; opacity: 0; pointer-events: none; }
+  span {
+    display: inline-block;
+    padding: 7px 12px;
+    border: 1px solid $color-border;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    color: $color-muted;
+    background: $color-surface;
+  }
+  &:hover span { color: $color-text; }
+  input:checked + span { color: $color-on-accent; background: $color-accent; border-color: $color-accent; }
+  input:focus-visible + span { outline: 2px solid $color-text; outline-offset: 2px; }
+}

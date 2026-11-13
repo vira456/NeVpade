@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
+  <title>Графік машин · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Графік машин</h1>
+          <p class="main__subtitle" id="scheduleRange">&nbsp;</p>
+        </div>
+        <div class="main__actions">
+          <div class="seg" role="group" aria-label="Перемикання тижнів">
+            <button class="seg__btn" type="button" id="prevWeek" aria-label="Попередній тиждень">‹</button>
+            <button class="seg__btn" type="button" id="thisWeek">Сьогодні</button>
+            <button class="seg__btn" type="button" id="nextWeek" aria-label="Наступний тиждень">›</button>
+          </div>
+        </div>
+      </header>
+
+      <p class="schedule-free" id="freeInfo" role="status"></p>
+
+      <div class="card schedule-card">
+        <div class="schedule" id="schedule" role="grid" aria-label="Завантаженість машин по днях"></div>
+      </div>
+
+      <ul class="schedule-legend" aria-label="Позначення">
+        <li><span class="schedule-legend__sw schedule-bar--planned"></span>Заплановано</li>
+        <li><span class="schedule-legend__sw schedule-bar--in_progress"></span>В дорозі</li>
+        <li><span class="schedule-legend__sw schedule-bar--done"></span>Виконано</li>
+        <li><span class="schedule-legend__sw schedule-legend__sw--off"></span>Машина недоступна</li>
+      </ul>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/schedule.js"></script>
+</body>
+</html>

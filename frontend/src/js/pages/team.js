@@ -1,7 +1,7 @@
 // Команда: менеджери компанії, код запрошення
 import { renderLayout } from '../utils/layout.js';
-import { getCompany, getMembers, regenerateInvite } from '../api/company.js';
-import { getTrips, myId } from '../api/trips.js';
+import { getCompany, getMembers, regenerateInvite, setMemberRole } from '../api/company.js';
+import { getTrips, myId, isOwner } from '../api/trips.js';
 import { escapeHtml } from '../utils/format.js';
 import { avatar } from '../utils/people.js';
 import { icons } from '../utils/icons.js';
@@ -18,6 +18,18 @@ let trips = [];
 const lastSeen = (iso) =>
   iso ? new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 
+const ROLES = { owner: 'Керівник', manager: 'Менеджер' };
+
+// Керівник бачить перемикач ролі, решта — лише позначку
+function roleControl(m) {
+  const role = m.role ?? 'manager';
+  if (!isOwner()) return `<span class="role-badge role-badge--${role}">${ROLES[role]}</span>`;
+  return `<label class="role-select"><span class="visually-hidden">Роль</span>
+    <select data-role="${m.id}" aria-label="${t('Роль: {name}', { name: m.name })}">
+      ${Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${k === role ? 'selected' : ''}>${v}</option>`).join('')}
+    </select></label>`;
+}
+
 function render() {
   const q = document.getElementById('memberSearch').value.trim().toLowerCase();
   const list = members.filter((m) => `${m.name} ${m.position}`.toLowerCase().includes(q));
@@ -25,7 +37,7 @@ function render() {
   document.getElementById('members').innerHTML = list.length
     ? list
         .map((m) => {
-          const active = trips.filter((tr) => tr.managerId === m.id && tr.status !== 'done').length;
+          const active = trips.filter((tr) => tr.managerId === m.id && ['planned', 'in_progress'].includes(tr.status)).length;
           const me = m.id === myId();
           return `
         <li class="member">
@@ -33,6 +45,7 @@ function render() {
           <div class="member__main">
             <strong class="member__name" data-no-i18n>${escapeHtml(m.name)}</strong>${me ? ' <span class="member__you">це ви</span>' : ''}
             <span class="member__pos">${escapeHtml(m.position)}</span>
+            ${roleControl(m)}
             <span class="member__status ${m.online ? 'is-online' : ''}">${m.online ? 'В мережі' : `Був(ла) ${lastSeen(m.lastSeen)}`}</span>
           </div>
           <div class="member__contacts">
@@ -65,11 +78,34 @@ async function init() {
   document.getElementById('companyFacts').innerHTML = `
     <div><dt>Місто</dt><dd data-no-i18n>${escapeHtml(company.city ?? '—')}</dd></div>
     <div><dt>У системі з</dt><dd>${new Date(company.createdAt).toLocaleDateString(locale(), { month: 'long', year: 'numeric' })}</dd></div>
-    <div><dt>Рейсів у роботі</dt><dd>${trips.filter((x) => x.status !== 'done').length}</dd></div>`;
+    <div><dt>Рейсів у роботі</dt><dd>${trips.filter((x) => ['planned', 'in_progress'].includes(x.status)).length}</dd></div>`;
   render();
 }
 
 document.getElementById('memberSearch').addEventListener('input', render);
+
+document.getElementById('members').addEventListener('change', async (e) => {
+  const sel = e.target.closest('[data-role]');
+  if (!sel) return;
+  const m = members.find((x) => x.id === sel.dataset.role);
+  const role = sel.value;
+  if (m.id === myId() && role !== 'owner') {
+    const ok = await confirmDialog({
+      title: 'Зняти з себе роль керівника?',
+      text: 'Ви більше не зможете видаляти машини, водіїв і клієнтів, змінювати чужі рейси та ролі колег.',
+      confirmText: 'Зняти роль',
+    });
+    if (!ok) return render();
+  }
+  try {
+    await setMemberRole(m.id, role);
+    m.role = role;
+    showToast(t('{name}: {role}', { name: m.name, role: t(ROLES[role]) }));
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+  render();
+});
 
 document.getElementById('copyInvite').addEventListener('click', async () => {
   try {

@@ -4,7 +4,7 @@ import { locale, t } from '../i18n/index.js';
 import { renderLayout } from '../utils/layout.js';
 import { getVehicles, createVehicle, updateVehicle, setVehicleStatus, deleteVehicle } from '../api/vehicles.js';
 import { getDrivers, createDriver, updateDriver, assignVehicle, deleteDriver } from '../api/drivers.js';
-import { getTrips } from '../api/trips.js';
+import { getTrips, isOwner } from '../api/trips.js';
 import { getDocumentsSummary, VEHICLE_DOC_TYPES, DRIVER_DOC_TYPES } from '../api/documents.js';
 import { openDocuments } from './documents.js';
 import { escapeHtml, VEHICLE_STATUS, VEHICLE_BUSY, DRIVER_STATUS } from '../utils/format.js';
@@ -143,7 +143,7 @@ function renderVehicles() {
           <span class="vehicle__tools">
             ${docsButton('vehicles', v.id, v.plate)}
             <button class="icon-btn" type="button" data-edit-vehicle="${v.id}" title="Редагувати" aria-label="${escapeHtml(t('Редагувати машину {plate}', { plate: v.plate }))}">${icons.edit}</button>
-            <button class="icon-btn icon-btn--danger" type="button" data-delete-vehicle="${v.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити машину {plate}', { plate: v.plate }))}">${icons.trash}</button>
+            ${isOwner() ? `<button class="icon-btn icon-btn--danger" type="button" data-delete-vehicle="${v.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити машину {plate}', { plate: v.plate }))}">${icons.trash}</button>` : ''}
           </span>
         </footer>
       </article>`;
@@ -189,7 +189,7 @@ function renderDrivers() {
           <a class="icon-btn" href="${viber}" title="Написати у Viber" aria-label="Написати у Viber: ${escapeHtml(d.name)}">${icons.send}</a>
           ${docsButton('drivers', d.id, d.name)}
           <button class="icon-btn" type="button" data-edit-driver="${d.id}" title="Редагувати" aria-label="${escapeHtml(t('Редагувати водія {name}', { name: d.name }))}">${icons.edit}</button>
-          <button class="icon-btn icon-btn--danger" type="button" data-delete-driver="${d.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити водія {name}', { name: d.name }))}">${icons.trash}</button>
+          ${isOwner() ? `<button class="icon-btn icon-btn--danger" type="button" data-delete-driver="${d.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити водія {name}', { name: d.name }))}">${icons.trash}</button>` : ''}
         </td>
       </tr>`;
         })

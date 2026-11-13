@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- nevpade:head -->
+  <title>Клієнти · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Клієнти</h1>
+          <p class="main__subtitle" id="clientsSummary">&nbsp;</p>
+        </div>
+        <div class="main__actions">
+          <button class="btn btn--text" type="button" id="exportClients">Експорт в Excel</button>
+          <button class="btn" type="button" id="addClient">Додати клієнта</button>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="seg" id="debtTabs" role="group" aria-label="Фільтр за оплатою">
+          <button class="seg__btn" type="button" data-filter="" aria-pressed="true">Усі</button>
+          <button class="seg__btn" type="button" data-filter="debt" aria-pressed="false">З боргом</button>
+          <button class="seg__btn" type="button" data-filter="overdue" aria-pressed="false">Прострочена оплата</button>
+        </div>
+        <input class="input toolbar__search" id="clientSearch" type="search" placeholder="Назва, ЄДРПОУ, контакт, місто" aria-label="Пошук клієнтів" />
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="table clients-table">
+            <thead>
+              <tr>
+                <th>Клієнт</th>
+                <th>Контакт</th>
+                <th class="num">Рейсів</th>
+                <th class="num">Виручка</th>
+                <th class="num">Борг</th>
+                <th>Останній рейс</th>
+              </tr>
+            </thead>
+            <tbody id="clientsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Картка клієнта -->
+  <dialog class="drawer" id="clientDrawer" aria-labelledby="clientTitle">
+    <div class="trip-card" id="clientCard"></div>
+  </dialog>
+
+  <!-- Додати / редагувати клієнта -->
+  <dialog class="modal modal--wide" id="clientDialog" aria-labelledby="clientFormTitle">
+    <form class="modal__body" id="clientForm" novalidate>
+      <h2 class="modal__title" id="clientFormTitle">Новий клієнт</h2>
+      <div class="form-grid">
+        <div class="field form-grid__wide">
+          <label class="field__label" for="cfName">Назва</label>
+          <input class="input" id="cfName" maxlength="80" placeholder="ТОВ «Назва» або ФОП Прізвище" autocomplete="off" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cfEdrpou">ЄДРПОУ / ІПН <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="cfEdrpou" inputmode="numeric" maxlength="10" placeholder="8 цифр для ТОВ, 10 — для ФОП" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cfCity">Місто <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="cfCity" maxlength="40" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="cfContact">Контактна особа <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="cfContact" maxlength="60" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="cfPhone">Телефон <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="cfPhone" type="tel" maxlength="20" placeholder="+380…" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cfEmail">Email <span class="field__optional">необов'язково</span></label>
+          <input class="input" id="cfEmail" type="email" maxlength="80" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cfDays">Відстрочка оплати, днів</label>
+          <input class="input" id="cfDays" type="number" min="0" max="120" step="1" inputmode="numeric" />
+          <div class="field__error"></div>
+        </div>
+        <div class="field form-grid__wide">
+          <label class="field__label" for="cfNotes">Примітка <span class="field__optional">необов'язково</span></label>
+          <textarea class="input textarea textarea--plain" id="cfNotes" rows="2" maxlength="500" placeholder="Умови, особливості завантаження, з ким домовлятись"></textarea>
+        </div>
+      </div>
+      <p class="auth__alert" role="alert" hidden></p>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" data-cancel>Скасувати</button>
+        <button class="btn" type="submit">Зберегти</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/src/js/pages/clients.js"></script>
+</body>
+</html>

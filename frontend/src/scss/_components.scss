@@ -112,6 +112,9 @@
   &--repair { --tone: #{$status-cancelled}; }
   &--loading { --tone: #{$color-warning}; }
   &--unloaded { --tone: #{$status-planned}; }
+  &--paid { --tone: #{$status-done}; }
+  &--pending { --tone: #{$color-muted}; }
+  &--overdue { --tone: #{$color-error}; }
 }
 
 // ---------- Лінія маршруту — фірмовий елемент ----------

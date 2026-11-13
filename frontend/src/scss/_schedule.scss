@@ -1,0 +1,140 @@
+// ============================================================
+// Графік машин (дні × машини)
+// ============================================================
+@use 'variables' as *;
+
+.schedule-card { padding: 0; overflow-x: auto; }
+
+.schedule {
+  --days: 7;
+  --label: 220px;
+  min-width: calc(var(--label) + var(--days) * 72px);
+
+  @media (max-width: $bp-phone) {
+    --label: 132px;
+    .schedule__vehicle { padding: 8px 10px; }
+    .schedule__driver { display: none; }
+  }
+}
+
+.schedule__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--label) repeat(var(--days), minmax(72px, 1fr));
+  // кожна «доріжка» — окремий рядок сітки; мінімум 76px, щоб рядок з однією машиною не був пласким
+  grid-template-rows: repeat(var(--lanes, 1), minmax(calc(76px / var(--lanes, 1)), auto));
+  padding-block: 4px;
+  border-bottom: 1px solid $color-border;
+  &:last-child { border-bottom: 0; }
+
+  &--head { grid-template-rows: auto; padding-block: 0; position: sticky; top: 0; z-index: 2; background: $color-surface; }
+  &--head .schedule__vehicle { margin-block: 0; }
+  &.is-off .schedule__cell { background: repeating-linear-gradient(-45deg, transparent 0 6px, color-mix(in srgb, $color-faint 14%, transparent) 6px 8px); }
+  &.is-warn .schedule__vehicle { color: $color-warning; }
+}
+
+.schedule__vehicle {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  grid-row: 1 / -1;
+  grid-column: 1;
+  margin-block: -4px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 3px;
+  padding: 10px 14px;
+  background: $color-surface;
+  border-right: 1px solid $color-border;
+  font-size: 13px;
+  .badge { font-size: 11px; }
+}
+.schedule__model { color: $color-muted; font-size: 12px; }
+.schedule__driver { font-size: 12px; }
+
+.schedule__cell {
+  grid-row: 1 / -1;
+  margin-block: -4px;
+  border-right: 1px solid color-mix(in srgb, $color-border 60%, transparent);
+  &.is-weekend { background: color-mix(in srgb, $color-surface-2 70%, transparent); }
+  &.is-today { background: color-mix(in srgb, $color-accent 7%, transparent); }
+}
+
+.schedule__day {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 8px 2px;
+  border: 0;
+  border-right: 1px solid color-mix(in srgb, $color-border 60%, transparent);
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: $color-muted;
+  cursor: pointer;
+  strong { font-size: 16px; color: $color-text; }
+  &.is-weekend { background: color-mix(in srgb, $color-surface-2 70%, transparent); }
+  &.is-today strong { color: $color-on-accent; background: $color-accent; border-radius: 8px; padding: 0 7px; }
+  &.is-selected { box-shadow: inset 0 -3px 0 $color-accent; color: $color-text; }
+  &:hover { background: $color-surface-2; }
+  &:focus-visible { outline: 2px solid $color-accent; outline-offset: -2px; }
+}
+
+.schedule-bar {
+  align-self: center;
+  z-index: 1;
+  margin: 2px 4px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border-left: 4px solid var(--tone);
+  background: color-mix(in srgb, var(--tone) 16%, $color-surface);
+  color: $color-text;
+  text-decoration: none;
+  font-size: 12px;
+  line-height: 1.25;
+  display: grid;
+  overflow: hidden;
+  strong, span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  &:hover { background: color-mix(in srgb, var(--tone) 26%, $color-surface); }
+  &:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+  // рейс почався до цього тижня / триває після нього
+  &.is-cut-start { border-left-style: dashed; margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  &.is-cut-end { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+  &--planned { --tone: #{$status-planned}; }
+  &--in_progress { --tone: #{$status-progress}; }
+  &--done { --tone: #{$status-done}; }
+}
+
+.schedule-free {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: $color-muted;
+  &__item { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; background: $color-surface; color: $color-text; }
+}
+
+.schedule-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 14px 0 0;
+  padding: 0;
+  font-size: 13px;
+  color: $color-muted;
+  li { display: inline-flex; align-items: center; gap: 6px; }
+  &__sw {
+    width: 18px;
+    height: 12px;
+    border-radius: 4px;
+    border-left: 4px solid var(--tone);
+    background: color-mix(in srgb, var(--tone) 30%, $color-surface);
+    &--off { --tone: transparent; border: 1px solid $color-border; background: repeating-linear-gradient(-45deg, transparent 0 3px, $color-faint 3px 4px); }
+  }
+}

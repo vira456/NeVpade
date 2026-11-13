@@ -4,6 +4,7 @@ import { request, ApiError } from './client.js';
 import { getCurrentUser } from './auth.js';
 import { load, save } from '../utils/storage.js';
 import defaults from '../mock/profile.json';
+import { mockTrips } from './mock-store.js';
 
 // Пароль для перевірки «поточного пароля» в режимі моків
 export const MOCK_PASSWORD = 'Manager2026';
@@ -53,7 +54,25 @@ export async function updateAvatar(image) {
   return profile;
 }
 
-export const getKpi = () => request('/profile/kpi', { mock: defaults.kpi });
+// Показники менеджера — з його рейсів
+export const getKpi = () =>
+  request('/profile/kpi', {
+    mock: () => {
+      const me = getCurrentUser()?.id ?? 'usr_01';
+      const mine = mockTrips().filter((t) => t.managerId === me);
+      const done = mine.filter((t) => t.status === 'done');
+      const month = new Date().toISOString().slice(0, 7);
+      const withPayment = done.filter((t) => t.payment?.dueDate);
+      const onTime = withPayment.filter((t) => t.payment.paidAt && t.payment.paidAt <= t.payment.dueDate).length;
+      const drivers = new Set(mine.filter((t) => ['planned', 'in_progress'].includes(t.status) && t.driverId).map((t) => t.driverId));
+      return {
+        tripsCount: done.length,
+        tripsThisMonth: done.filter((t) => t.loadDate.startsWith(month)).length,
+        paidOnTime: withPayment.length ? Math.round((onTime / withPayment.length) * 100) : null,
+        activeDrivers: drivers.size,
+      };
+    },
+  });
 
 // ---------- Безпека ----------
 export const changePassword = (currentPassword, newPassword) =>

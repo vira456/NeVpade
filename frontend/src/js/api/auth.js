@@ -13,7 +13,7 @@ const mockUser = (email, name = 'Федорова Віра Дмитрівна', 
   email,
   phone,
   phoneVerified,
-  role: 'manager',
+  role: sessionStorage.getItem('mockRole') || getCurrentUser()?.role || 'owner', // owner — керівник (створив компанію)
   companyId: 'cmp_01',
   companyName: sessionStorage.getItem('mockCompany') || getCurrentUser()?.companyName || MOCK_COMPANY,
 });
@@ -75,6 +75,7 @@ export const register = ({ name, email, phone, password, company }) =>
       sessionStorage.setItem('mockName', name);
       sessionStorage.setItem('mockPhone', phone);
       sessionStorage.setItem('mockCompany', company?.mode === 'create' ? company.name : MOCK_COMPANY);
+      sessionStorage.setItem('mockRole', company?.mode === 'create' ? 'owner' : 'manager'); // хто створив компанію — керівник
       return { email, message: 'Код підтвердження надіслано на пошту' };
     },
   });
