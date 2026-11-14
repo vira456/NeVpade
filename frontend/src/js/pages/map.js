@@ -39,10 +39,22 @@ const vehicleOf = (t) => vehicles.find((v) => v.id === t.vehicleId);
 function filtered() {
   const q = els.search.value.trim().toLowerCase();
   const status = els.status.value;
-  return trips.filter(
-    (t) =>
-      (!status || t.status === status) &&
-      `${t.number} ${t.from.city} ${t.to.city} ${t.cargo.type}`.toLowerCase().includes(q)
+  return trips
+    .filter(
+      (t) =>
+        (!status || t.status === status || (status === 'active' && ACTIVE.includes(t.status))) &&
+        `${t.number} ${t.from.city} ${t.to.city} ${t.cargo.type}`.toLowerCase().includes(q)
+    )
+    .sort(byRelevance);
+}
+
+// Спершу ті, що в дорозі, потім заплановані (найближчі — вище), далі історія від найновіших
+const ACTIVE = ['in_progress', 'planned'];
+const RANK = { in_progress: 0, planned: 1, done: 2, cancelled: 3 };
+function byRelevance(a, b) {
+  return (
+    RANK[a.status] - RANK[b.status] ||
+    (ACTIVE.includes(a.status) ? a.loadDate.localeCompare(b.loadDate) : b.loadDate.localeCompare(a.loadDate))
   );
 }
 
@@ -212,7 +224,10 @@ async function init() {
   [[trips, drivers, vehicles]] = await Promise.all([Promise.all([getTrips(), getDrivers(), getVehicles()]), initMap()]);
 
   const fromUrl = new URLSearchParams(location.search).get('trip');
-  const first = trips.find((t) => t.id === fromUrl) ?? trips.find((t) => t.status !== 'done') ?? trips[0];
+  const linked = trips.find((t) => t.id === fromUrl);
+  // рейс за посиланням може бути завершеним — тоді показуємо всі статуси, щоб він був у списку
+  if (linked && !ACTIVE.includes(linked.status)) els.status.value = '';
+  const first = linked ?? [...trips].sort(byRelevance)[0];
   if (first) select(first.id);
   else renderList();
 }

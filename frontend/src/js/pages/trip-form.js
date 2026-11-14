@@ -4,7 +4,7 @@ import { createClient } from '../api/clients.js';
 import { parseDellaListing, dellaBookmarklet, dellaNotes, sameCargo } from '../utils/della.js';
 import { setFieldError, clearErrors, showAlert, withLoading } from '../utils/validation.js';
 import { escapeHtml, TRIP_STATUS } from '../utils/format.js';
-import { t as tr } from '../i18n/index.js';
+import { t as tr, locale } from '../i18n/index.js';
 
 const dialog = document.getElementById('tripFormDialog');
 const form = document.getElementById('tripForm');
@@ -147,11 +147,13 @@ export function openTripForm({ della = false, text = '', listing = null, trip = 
   box.hidden = !della || Boolean(trip);
   if (trip) {
     fillFromTrip(trip);
+    updateCrewHint();
     if (!dialog.open) dialog.showModal();
     $('tfFromCity').focus();
     return;
   }
   result.textContent = '';
+  $('tfCrewHint').hidden = true;
   pasteArea.value = text;
   if (!dialog.open) dialog.showModal();
   if (listing) {
@@ -229,7 +231,31 @@ $('tripFormCancel').addEventListener('click', () => dialog.close());
 $('tfDriver').addEventListener('change', () => {
   const driver = ctx.drivers.find((d) => d.id === $('tfDriver').value);
   if (driver?.vehicleId && ctx.vehicles.some((v) => v.id === driver.vehicleId)) $('tfVehicle').value = driver.vehicleId;
+  updateCrewHint();
 });
+
+// Попередження, якщо машина чи водій уже зайняті іншим рейсом у ці дні (не блокує збереження)
+const shortDay = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+function updateCrewHint() {
+  const hint = $('tfCrewHint');
+  const from = $('tfLoadDate').value;
+  const to = $('tfUnloadDate').value || from;
+  const busy = (key, id) =>
+    id &&
+    from &&
+    ctx.getTrips().find(
+      (x) => x.id !== editing?.id && x[key] === id && ['planned', 'in_progress'].includes(x.status) && x.loadDate <= to && (x.unloadDate || x.loadDate) >= from
+    );
+  const lines = [];
+  const v = busy('vehicleId', $('tfVehicle').value);
+  const d = busy('driverId', $('tfDriver').value);
+  const when = (x) => `${shortDay(x.loadDate)}${x.unloadDate && x.unloadDate !== x.loadDate ? `–${shortDay(x.unloadDate)}` : ''}`;
+  if (v) lines.push(tr('Машина вже в рейсі {n} ({when})', { n: v.number, when: when(v) }));
+  if (d && d.id !== v?.id) lines.push(tr('Водій уже в рейсі {n} ({when})', { n: d.number, when: when(d) }));
+  hint.hidden = !lines.length;
+  hint.textContent = lines.join(' · ');
+}
+['tfVehicle', 'tfLoadDate', 'tfUnloadDate'].forEach((id) => $(id).addEventListener('change', updateCrewHint));
 
 // ---------- Збереження ----------
 const value = (id) => $(id).value.trim();

@@ -123,21 +123,58 @@
 - 200 `{ "message": "Пароль змінено" }`
 - 400 `invalid_code` / `code_expired` — як у verify-email
 
+### Вхід і реєстрація через Google / Facebook — загальна схема
+
+Одна кнопка «Продовжити з Google» і для входу, і для реєстрації: що саме відбулось, вирішує бекенд.
+
+```
+Кнопка Google ──► POST /auth/google ──┬─ користувач уже є (за googleId або email) ──► AuthResponse ──► /pages/dashboard.html
+                                      │
+                                      └─ новий ──► створити без компанії, isNew: true ──► /pages/onboarding.html
+                                                   «Завершіть реєстрацію»: ім'я, компанія (створити / код), телефон
+                                                       │
+                                                       ▼
+                                            POST /auth/complete-signup ──► SMS ──► /pages/verify-phone.html?mode=social
+                                                       │
+                                                       ▼
+                                            POST /auth/verify-phone ──► /pages/dashboard.html
+```
+
+Куди вести користувача, фронт вирішує лише за полями `user` (`nextPageFor` у `frontend/src/js/api/auth.js`):
+1. `companyId: null` → `/pages/onboarding.html`
+2. `phoneVerified: false` → `/pages/verify-phone.html` (якщо `phone` уже є — одразу поле для коду)
+3. інакше → `/pages/dashboard.html`
+
+Те саме перевіряє кожна сторінка застосунку, тож якщо людина закрила вкладку посеред реєстрації, наступного разу вона повернеться на потрібний крок.
+
 ### POST `/auth/google` — вхід через Google
 ```json
 { "credential": "<ID-токен від Google Identity Services>" }
 ```
-- Бекенд перевіряє підпис токена (Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`), бере `email`, `name`, `sub`
-- Якщо користувача з таким email нема — створює (пошта вважається підтвердженою, `phoneVerified: false`), якщо є — прив'язує `googleId`
-- 200 → **AuthResponse**; 401 — токен недійсний
-- Якщо у відповіді `user.phoneVerified: false`, фронт відкриває сторінку «Вкажіть номер телефону» (`/auth/phone` → `/auth/verify-phone`). Інші ендпоінти (рейси тощо) для такого користувача мають повертати 403
+- Бекенд перевіряє підпис токена (Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`): `aud` = наш `GOOGLE_CLIENT_ID`, `iss` = `accounts.google.com`, `email_verified: true`. Бере `sub`, `email`, `name`, `picture`
+- Шукає користувача спершу за `googleId` (= `sub`), потім за `email`:
+  - знайшов за email (раніше реєструвався паролем) → прив'язує `googleId`, далі звичайний вхід
+  - не знайшов → створює: `emailVerified: true` (пошту підтвердив Google), `password: null`, `phone: null`, `phoneVerified: false`, `companyId: null`, `role: null`
+- 200 → **AuthResponse** + `"isNew": true` для щойно створеного; 401 — токен недійсний
+- Поки `companyId` або `phoneVerified` не заповнено, токен дає доступ лише до `/auth/me`, `/auth/complete-signup`, `/auth/phone`, `/auth/verify-phone`, `/auth/resend-code`; решта → `403 { "code": "signup_incomplete" }`
+
+### POST `/auth/complete-signup` — «Завершіть реєстрацію» (з токеном)
+```json
+{ "name": "Олена Коваль", "phone": "+380671234567", "company": { "mode": "create", "name": "ТОВ «Нова логістика»" } }
+```
+`company` — як у `/auth/register`: `create` → нова компанія, роль `owner`; `join` + `code` → роль `manager`.
+- Зберігає ім'я (Google може дати псевдонім — користувач його виправив), компанію, роль і телефон, надсилає SMS з кодом
+- 200 `{ "user": { ...companyId, companyName, role, phone, "phoneVerified": false }, "message": "Код надіслано в SMS" }`
+- 404 `company_not_found`, 409 `phone_taken`, 422 — ті самі правила, що в `/auth/register`
+- 409 `already_completed` — у користувача вже є компанія
+- Далі фронт відкриває введення коду → `POST /auth/verify-phone` → **AuthResponse** з `phoneVerified: true`
 
 ### POST `/auth/facebook` — вхід через Facebook
 ```json
 { "accessToken": "<токен від Facebook SDK>" }
 ```
 - Бекенд перевіряє токен запитом `GET https://graph.facebook.com/me?fields=id,name,email&access_token=...`
-- Далі логіка як у Google (поле `facebookId`). Якщо Facebook не віддав email — 400 з поясненням
+- Далі логіка як у Google (поле `facebookId`, той самий крок `/auth/complete-signup`). Якщо Facebook не віддав email — 400 з поясненням
 - 200 → **AuthResponse**
 
 ### GET `/auth/me`
@@ -150,7 +187,14 @@
 - SMS надсилати через SMS-шлюз з API (наприклад, TurboSMS чи Twilio). Для розробки й захисту можна мати режим, коли код SMS не відправляється, а пишеться в лог сервера
 
 ### Спільні ключі
-`GOOGLE_CLIENT_ID` (Google Cloud Console → OAuth client ID, тип Web, Authorized JavaScript origins: `http://localhost:5173`) і `FACEBOOK_APP_ID` однакові для фронту й бекенду. Фронт тримає їх у `frontend/.env`, бекенд — у своєму `.env`.
+`GOOGLE_CLIENT_ID` і `FACEBOOK_APP_ID` однакові для фронту й бекенду. Фронт тримає їх у `frontend/.env` (`VITE_GOOGLE_CLIENT_ID`), бекенд — у своєму `.env`. Секрет клієнта (`client_secret`) для цієї схеми не потрібен і на фронт не потрапляє.
+
+Як отримати `GOOGLE_CLIENT_ID`:
+1. [console.cloud.google.com](https://console.cloud.google.com) → створити проєкт «NeVpade»
+2. **APIs & Services → OAuth consent screen**: тип External, назва застосунку, пошта підтримки; scopes лише `email`, `profile`, `openid`; у **Test users** додати пошти, з яких будете входити (поки застосунок у режимі Testing, інші не зможуть)
+3. **Credentials → Create credentials → OAuth client ID**, тип **Web application**
+4. **Authorized JavaScript origins**: `http://localhost:5173` (і `http://localhost` — Google іноді вимагає обидва), пізніше — адреса сайту на хостингу. **Redirect URIs** не потрібні: кнопка працює через спливаюче вікно й повертає ID-токен у JavaScript
+5. Скопіювати Client ID (`…apps.googleusercontent.com`) у `frontend/.env` → `VITE_GOOGLE_CLIENT_ID=…`, `VITE_USE_MOCK=false`, і Ірі в бекенд
 
 ---
 

@@ -30,8 +30,8 @@
   .trip-tr__price { font-family: $font-display; font-size: 17px; font-weight: 600; }
   .trip-tr__actions { white-space: nowrap; text-align: right; padding-right: 10px; }
 
-  // Телефон: рядки таблиці стають картками
-  @media (max-width: 760px) {
+  // Планшет і телефон: рядки таблиці стають картками (7 колонок на 820px не вміщаються)
+  @media (max-width: $bp-tablet) {
     thead { display: none; }
 
     tbody, tr, td { display: block; }
@@ -162,7 +162,7 @@
 // Стовпець «Менеджер» видно лише в режимі «Уся компанія»
 .trips-table .col-manager { display: none; }
 .trips-table.show-manager .col-manager { display: table-cell; white-space: nowrap; }
-@media (max-width: 760px) { .trips-table.show-manager .col-manager { display: block; grid-column: 1 / -1; font-size: 14px; } }
+@media (max-width: $bp-tablet) { .trips-table.show-manager .col-manager { display: block; grid-column: 1 / -1; font-size: 14px; } }
 
 .trip-card__owner {
   display: flex;
@@ -493,6 +493,32 @@ th.num .th-sort { justify-content: flex-end; }
 
 // ---------- Клієнти ----------
 .clients-table td:first-child { min-width: 220px; }
+
+// Телефон: таблиця клієнтів стає картками — назва зверху, цифри рядком нижче
+@media (max-width: 760px) {
+  .clients-table {
+    thead { display: none; }
+    tbody, tr, td { display: block; }
+    .trip-tr {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid $color-border;
+    }
+    td { padding: 0; border: 0; min-width: 0 !important; text-align: left !important; }
+    td:nth-child(1), td:nth-child(2) { grid-column: 1 / -1; }
+    td:nth-child(2) { font-size: 14px; .sub { display: inline; margin-left: 6px; } }
+    td:nth-child(n + 3)::before { content: attr(data-label); display: block; font-size: 12px; color: $color-muted; }
+    td:nth-child(6) { display: none; }
+    td[colspan] { grid-column: 1 / -1; }
+  }
+}
+
+// Телефон: вкладки статусів переносяться, а не ховаються за край екрана
+@media (max-width: $bp-phone) {
+  #statusTabs { flex-wrap: wrap; }
+}
 .is-bad { color: $color-error; }
 .main__subtitle .is-bad { font-weight: 600; }
 
@@ -518,3 +544,6 @@ th.num .th-sort { justify-content: flex-end; }
   .pay-line { grid-column: 1 / -1; }
   &__sum { font-weight: 700; font-variant-numeric: tabular-nums; }
 }
+
+// Попередження «машина / водій уже в рейсі» у формі рейсу
+.field__hint--warn { margin: -6px 0 0; font-size: 13px; font-weight: 600; color: $color-warning; }

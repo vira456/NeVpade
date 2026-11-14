@@ -877,7 +877,17 @@ export default {
     "Завантажити .xlsx": "Download .xlsx",
     "Період звіту": "Report period",
     "Вкажіть обидві дати": "Enter both dates",
-    "Кінець періоду раніше за початок": "The end date is before the start date"
+    "Кінець періоду раніше за початок": "The end date is before the start date",
+    "Завершіть реєстрацію · NeVpade": "Finish sign-up · NeVpade",
+    "1. Компанія": "1. Company",
+    "Завершіть реєстрацію": "Finish sign-up",
+    "Ви увійшли як": "You signed in as",
+    ". Залишилось вказати компанію й номер телефону — на нього прийде SMS з кодом.": ". All that's left is your company and phone number — we'll text a code to it.",
+    "Продовжити": "Continue",
+    "Не ваш акаунт?": "Not your account?",
+    "В роботі": "In progress",
+    "Машина вже в рейсі {n} ({when})": "The vehicle is already on trip {n} ({when})",
+    "Водій уже в рейсі {n} ({when})": "The driver is already on trip {n} ({when})"
   },
   patterns: [
     [

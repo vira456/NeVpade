@@ -6,10 +6,10 @@ import { request } from './client.js';
 import { getCurrentUser } from './auth.js';
 import { load, save } from '../utils/storage.js';
 import seed from '../mock/chat.json';
-import './mock-store.js'; // скидання старих демо-даних
+import { freshSeed } from './mock-store.js'; // скидання старих демо-даних
 
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel('nevpade-chat') : null;
-const mockMessages = () => load('mock.chat') ?? seed;
+const mockMessages = () => load('mock.chat') ?? freshSeed(seed);
 
 function persist(message) {
   save('mock.chat', [...mockMessages(), message]);

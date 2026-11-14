@@ -43,6 +43,7 @@ export default defineConfig({
         dashboard: resolve(__dirname, 'pages/dashboard.html'),
         login: resolve(__dirname, 'pages/login.html'),
         register: resolve(__dirname, 'pages/register.html'),
+        onboarding: resolve(__dirname, 'pages/onboarding.html'),
         verifyEmail: resolve(__dirname, 'pages/verify-email.html'),
         verifyPhone: resolve(__dirname, 'pages/verify-phone.html'),
         forgotPassword: resolve(__dirname, 'pages/forgot-password.html'),

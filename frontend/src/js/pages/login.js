@@ -41,4 +41,4 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-initSocialButtons({ onSuccess: goHome, onError: (msg) => showAlert(form, msg) });
+initSocialButtons({ onSuccess: goHome, onError: (msg) => showAlert(form, msg), text: 'signin_with' });

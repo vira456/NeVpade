@@ -1,5 +1,5 @@
 // Стартова сторінка: для гостя — «Почати роботу» й «Увійти», для того, хто вже увійшов, — «Відкрити кабінет»
-import '../i18n/index.js';
+import { locale } from '../i18n/index.js';
 import { isLoggedIn, getCurrentUser, nextPageFor } from '../api/auth.js';
 import { renderPrefs } from '../utils/prefs-ui.js';
 import { truckSvg } from '../utils/truck.js';
@@ -7,6 +7,13 @@ import { countUp } from '../utils/motion.js';
 import '../utils/loader.js';
 
 document.getElementById('lpTruck').innerHTML = truckSvg;
+
+// Дати в табло «Рейси в роботі» — відносно сьогодні, щоб приклад не виглядав застарілим
+document.querySelectorAll('.preview__id span').forEach((el, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() + [-1, -2, 2][i]);
+  el.textContent = d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+});
 
 // Цифри в табло «набігають», коли воно з'являється на екрані
 const preview = document.querySelector('.preview');

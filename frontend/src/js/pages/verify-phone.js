@@ -7,8 +7,9 @@ initAuthPage({ redirectIfLoggedIn: false });
 
 const params = new URLSearchParams(location.search);
 const addMode = params.get('mode') === 'add'; // вхід через соцмережу: номер ще не вказано
+const socialMode = params.get('mode') === 'social'; // номер уже вказано на кроці «Завершіть реєстрацію»
 const email = recallEmail() || getCurrentUser()?.email;
-let phone = sessionStorage.getItem('pendingPhone');
+let phone = sessionStorage.getItem('pendingPhone') || (socialMode ? getCurrentUser()?.phone : null);
 
 const phoneForm = document.getElementById('phoneForm');
 const codeForm = document.getElementById('codeForm');
@@ -17,6 +18,7 @@ const resendBtn = document.getElementById('resendBtn');
 
 if (!email) location.replace('/pages/register.html');
 if (addMode) document.getElementById('steps').hidden = true;
+if (socialMode) document.getElementById('steps').innerHTML = '<span class="steps__item is-done">1. Компанія</span><span class="steps__item is-active">2. Телефон</span>';
 
 const code = initCodeInputs(document.getElementById('codeInputs'), () => codeForm.requestSubmit());
 
@@ -99,7 +101,7 @@ if (addMode || !phone) showPhoneStep();
 else showCodeStep();
 
 // Для соцмереж даємо можливість вийти, якщо користувач передумав
-if (addMode) {
+if (addMode || socialMode) {
   const row = document.createElement('p');
   row.className = 'auth__footer';
   row.innerHTML = '<button class="btn--link" type="button">Вийти з акаунта</button>';

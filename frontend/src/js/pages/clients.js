@@ -70,16 +70,16 @@ function render() {
         .map(
           ({ c, s }) => `
       <tr class="trip-tr" data-id="${c.id}" tabindex="0" aria-label="${escapeHtml(t('Клієнт {name}, відкрити картку', { name: c.name }))}">
-        <td data-label="Клієнт"><strong data-no-i18n>${escapeHtml(c.name)}</strong><span class="sub">${c.edrpou ? `${t('ЄДРПОУ')} ${escapeHtml(c.edrpou)}` : ''}${c.city ? `${c.edrpou ? ' · ' : ''}<span data-no-i18n>${escapeHtml(c.city)}</span>` : ''}</span></td>
-        <td data-label="Контакт"><span data-no-i18n>${escapeHtml(c.contactName || '—')}</span>${c.phone ? `<span class="sub">${escapeHtml(c.phone)}</span>` : ''}</td>
-        <td data-label="Рейсів" class="num">${s.count}</td>
-        <td data-label="Виручка" class="num">${money(s.revenue)}</td>
-        <td data-label="Борг" class="num">${
+        <td data-label="${t('Клієнт')}"><strong data-no-i18n>${escapeHtml(c.name)}</strong><span class="sub">${c.edrpou ? `${t('ЄДРПОУ')} ${escapeHtml(c.edrpou)}` : ''}${c.city ? `${c.edrpou ? ' · ' : ''}<span data-no-i18n>${escapeHtml(c.city)}</span>` : ''}</span></td>
+        <td data-label="${t('Контакт')}"><span data-no-i18n>${escapeHtml(c.contactName || '—')}</span>${c.phone ? `<span class="sub">${escapeHtml(c.phone)}</span>` : ''}</td>
+        <td data-label="${t('Рейсів')}" class="num">${s.count}</td>
+        <td data-label="${t('Виручка')}" class="num">${money(s.revenue)}</td>
+        <td data-label="${t('Борг')}" class="num">${
           s.debt
             ? `<strong class="${s.overdueSum ? 'is-bad' : ''}">${money(s.debt)}</strong>${s.overdueSum ? `<span class="sub is-bad">${t('прострочено {n}', { n: s.overdueCount })}</span>` : ''}`
             : '<span class="sub">—</span>'
         }</td>
-        <td data-label="Останній рейс">${s.last ? `${shortDate(s.last.loadDate)}<span class="sub">${escapeHtml(s.last.number)}</span>` : '<span class="sub">—</span>'}</td>
+        <td data-label="${t('Останній рейс')}">${s.last ? `${shortDate(s.last.loadDate)}<span class="sub">${escapeHtml(s.last.number)}</span>` : '<span class="sub">—</span>'}</td>
       </tr>`
         )
         .join('')

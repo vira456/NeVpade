@@ -2,10 +2,10 @@
 import '../i18n/index.js';
 import { renderPrefs } from './prefs-ui.js';
 import { isMockMode } from '../api/client.js';
-import { isLoggedIn } from '../api/auth.js';
+import { isLoggedIn, getCurrentUser, nextPageFor } from '../api/auth.js';
 
 export function initAuthPage({ redirectIfLoggedIn = true } = {}) {
-  if (redirectIfLoggedIn && isLoggedIn()) location.replace('/pages/dashboard.html');
+  if (redirectIfLoggedIn && isLoggedIn()) location.replace(nextPageFor(getCurrentUser()));
 
   // Показати/сховати пароль
   document.querySelectorAll('[data-toggle-password]').forEach((btn) => {

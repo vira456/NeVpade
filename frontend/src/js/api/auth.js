@@ -103,6 +103,7 @@ export async function verifyPhone(email, code) {
       checkMockCode(code);
       const phone = sessionStorage.getItem('mockPhone') || undefined;
       const name = sessionStorage.getItem('mockName') || getCurrentUser()?.name || undefined;
+      if (getCurrentUser()?.companyId) localStorage.setItem('nevpade.mock.socialDone', '1'); // соцмережа: реєстрацію завершено
       return { token: 'mock-token', user: mockUser(email, name, phone) };
     },
   });
@@ -123,11 +124,43 @@ export const addPhone = (email, phone) =>
     },
   });
 
-// Куди вести користувача після успішної авторизації
-export const nextPageFor = (user) =>
-  user && user.phoneVerified === false
-    ? `/pages/verify-phone.html?mode=add&email=${encodeURIComponent(user.email)}`
-    : '/pages/dashboard.html';
+// Куди вести користувача після успішної авторизації.
+// Новий користувач з Google/Facebook ще без компанії → «Завершіть реєстрацію» (компанія + телефон),
+// компанія є, але телефон не підтверджено → SMS-код, усе є → робочий простір
+export function nextPageFor(user) {
+  if (!user) return '/pages/login.html';
+  if (!user.companyId) return '/pages/onboarding.html';
+  // номер уже вказано (на кроці «Завершіть реєстрацію») → одразу поле для коду, інакше — спершу номер
+  if (user.phoneVerified === false) return `/pages/verify-phone.html?mode=${user.phone ? 'social' : 'add'}&email=${encodeURIComponent(user.email)}`;
+  return '/pages/dashboard.html';
+}
+
+/**
+ * Завершити реєстрацію після входу через Google/Facebook (користувач уже має токен).
+ * Сервер прив'язує компанію (create → роль owner, join → manager), зберігає телефон і шле SMS-код.
+ * Відповідь: { user, message } — user уже з companyId, але phoneVerified: false
+ */
+export async function completeSignup({ name, phone, company }) {
+  const data = await request('/auth/complete-signup', {
+    method: 'POST',
+    body: { name, phone, company },
+    mock: () => {
+      if (company?.mode === 'join' && company.code.toUpperCase() !== MOCK_INVITE) {
+        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у колеги', 404, 'company_not_found');
+      }
+      const role = company.mode === 'create' ? 'owner' : 'manager';
+      const companyName = company.mode === 'create' ? company.name : MOCK_COMPANY;
+      sessionStorage.setItem('mockName', name);
+      sessionStorage.setItem('mockPhone', phone);
+      sessionStorage.setItem('mockCompany', companyName);
+      sessionStorage.setItem('mockRole', role);
+      const user = { ...getCurrentUser(), name, phone, phoneVerified: false, role, companyId: 'cmp_01', companyName };
+      return { user, message: 'Код надіслано в SMS' };
+    },
+  });
+  localStorage.setItem('user', JSON.stringify(data.user));
+  return data.user;
+}
 
 // purpose: verify (пошта) | verify_phone (SMS) | reset (відновлення пароля)
 export const resendCode = (email, purpose = 'verify') =>
@@ -165,7 +198,11 @@ export async function loginWithGoogle(credential) {
     method: 'POST',
     auth: false,
     body: { credential },
-    mock: () => ({ token: 'mock-token', user: mockUser('google.user@gmail.com', 'Користувач Google', null, false) }),
+    // У моках перший вхід — новий користувач без компанії; після завершення реєстрації — звичайний вхід
+    mock: () =>
+      localStorage.getItem('nevpade.mock.socialDone')
+        ? { token: 'mock-token', user: mockUser('olena.koval@gmail.com', 'Олена Коваль') }
+        : { token: 'mock-token', isNew: true, user: { ...mockUser('olena.koval@gmail.com', 'Олена Коваль', null, false), role: null, companyId: null, companyName: null } },
   });
   saveSession(data);
   return data.user;
@@ -177,7 +214,10 @@ export async function loginWithFacebook(accessToken) {
     method: 'POST',
     auth: false,
     body: { accessToken },
-    mock: () => ({ token: 'mock-token', user: mockUser('fb.user@example.com', 'Користувач Facebook', null, false) }),
+    mock: () =>
+      localStorage.getItem('nevpade.mock.socialDone')
+        ? { token: 'mock-token', user: mockUser('olena.koval@gmail.com', 'Олена Коваль') }
+        : { token: 'mock-token', isNew: true, user: { ...mockUser('olena.koval@gmail.com', 'Олена Коваль', null, false), role: null, companyId: null, companyName: null } },
   });
   saveSession(data);
   return data.user;

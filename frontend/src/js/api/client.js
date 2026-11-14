@@ -64,6 +64,11 @@ async function doRequest(path, { method = 'GET', body, mock, auth = true } = {})
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const detail = Array.isArray(err.detail) ? err.detail[0]?.msg : err.detail;
+    // Вхід через Google є, але реєстрацію не завершено (немає компанії чи телефону) → повертаємо на потрібний крок
+    if (res.status === 403 && err.code === 'signup_incomplete' && !location.pathname.includes('/onboarding') && !location.pathname.includes('/verify-phone')) {
+      location.replace('/pages/onboarding.html'); // сторінка сама переведе далі, якщо компанія вже є
+      return null;
+    }
     throw new ApiError(detail || `Помилка ${res.status}`, res.status, err.code);
   }
   return res.status === 204 ? null : res.json();
