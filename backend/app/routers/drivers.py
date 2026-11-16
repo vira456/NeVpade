@@ -8,12 +8,12 @@ from ..errors import ApiError, not_found
 from ..schemas.entities import AssignVehicleIn, DriverIn, DriverOut, DriverUpdate
 from ..services.crud import crud_router, ensure_ref, get_company_doc
 from ..services.documents import delete_owner_documents
-from ..utils import now, public
+from ..utils import now, public, squash
 
 
 async def _validate(database: AsyncDatabase, user: dict, data: dict, existing: dict | None) -> None:
     if "name" in data:
-        data["name"] = " ".join(data["name"].split())
+        data["name"] = squash(data["name"])
     if "vehicleId" in data:
         await ensure_ref(database, user, "vehicles", data["vehicleId"], "Автомобіль")
     # Viber за замовчуванням = телефон, але лише коли viber явно передано порожнім (або це створення).

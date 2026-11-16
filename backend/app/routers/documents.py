@@ -5,27 +5,25 @@
 /{owner}/documents/summary   — лічильники для списку
 /files/{docId}?token=…       — сам файл за тимчасовим підписаним посиланням (для <img> без Authorization)
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Literal
 from urllib.parse import quote
-from zoneinfo import ZoneInfo
 
 from bson import Binary
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile, status
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..deps import company_filter, current_user, db
-from ..errors import ApiError, not_found
+from ..errors import ApiError, invalid, not_found
 from ..schemas.common import _date
 from ..schemas.entities import DRIVER_DOC_TYPES, VEHICLE_DOC_TYPES, DocumentOut, DocumentsSummaryItem
 from ..security import create_file_token, decode_file_token
 from ..services.crud import get_company_doc
 from ..services.documents import EXPIRING_DAYS, MAX_FILE_BYTES, clean_filename, sniff_mime
-from ..utils import iso, is_oid, now, oid
+from ..utils import iso, is_oid, now, oid, today_kyiv
 
 router = APIRouter(tags=["Документи"])
 
-KYIV = ZoneInfo("Europe/Kyiv")
 Owner = Literal["vehicles", "drivers"]
 _OWNERS: dict[str, tuple[tuple[str, ...], str]] = {
     "vehicles": (VEHICLE_DOC_TYPES, "Машину"),
@@ -50,7 +48,7 @@ def _register(owner: Owner) -> None:
                 name=f"{owner}_documents_summary")
     async def summary(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
         """{ "<id>": { count, expiring, expired } } — expiring: validUntil протягом 30 днів, expired — уже минув."""
-        today = datetime.now(KYIV).date()
+        today = today_kyiv()
         soon = (today + timedelta(days=EXPIRING_DAYS)).isoformat()
         out: dict[str, dict] = {}
         cursor = database.documents.find({**company_filter(user), "ownerType": owner}, {"ownerId": 1, "validUntil": 1})
@@ -86,17 +84,17 @@ def _register(owner: Owner) -> None:
     ):
         await get_company_doc(database, user, owner, owner_id, what)
         if type not in doc_types:
-            raise ApiError(422, f"Невідомий тип документа. Можливі: {', '.join(doc_types)}", "validation_error")
+            raise invalid(f"Невідомий тип документа. Можливі: {', '.join(doc_types)}")
         try:
             valid_until = _date(valid_until.strip() if valid_until else None)
         except ValueError as exc:
-            raise ApiError(422, str(exc), "validation_error") from None
+            raise invalid(str(exc)) from None
 
         data = await file.read(MAX_FILE_BYTES + 1)
         if len(data) > MAX_FILE_BYTES:
             raise ApiError(413, "Файл завеликий (максимум 10 МБ)", "file_too_large")
         if not data:
-            raise ApiError(422, "Файл порожній", "validation_error")
+            raise invalid("Файл порожній")
         mime = sniff_mime(data)
         if mime is None:
             raise ApiError(415, "Підтримуються лише фото (JPG, PNG, WEBP) та PDF", "unsupported_file")

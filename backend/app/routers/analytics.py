@@ -1,52 +1,58 @@
 """Розділ 6 контракту: аналітика /analytics (рахується з рейсів компанії «на льоту»)."""
-from datetime import datetime
-from typing import Literal
-from zoneinfo import ZoneInfo
-
 from fastapi import APIRouter, Depends, Query
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..deps import company_filter, current_user, db
-from ..services.analytics import Analytics
+from ..services.analytics import Analytics, Period, period_range, previous_range
+from ..utils import today_kyiv
 from .trips import fuel_price_for
 
 router = APIRouter(prefix="/analytics", tags=["Аналітика"])
 
-KYIV = ZoneInfo("Europe/Kyiv")
-PeriodQuery = Query("month", description="week | month | year")
+_TRIP_FIELDS = {"loadDate": 1, "price": 1, "distanceKm": 1, "status": 1, "vehicleId": 1, "driverId": 1}
 
 
-async def _analytics(user: dict, database: AsyncDatabase) -> Analytics:
+async def _analytics(
+    period: Period = Query("month", description="week | month | year"),
+    user: dict = Depends(current_user),
+    database: AsyncDatabase = Depends(db),
+) -> tuple[Analytics, Period]:
+    """Рейси компанії за поточний і попередній період (не всю історію) + довідники авто й водіїв."""
+    today = today_kyiv()
+    since = previous_range(period, today)[0].isoformat()
+    until = period_range(period, today)[1].isoformat()
     flt = company_filter(user)
-    trips = await database.trips.find(flt, {"loadDate": 1, "price": 1, "distanceKm": 1, "status": 1, "vehicleId": 1, "driverId": 1}).to_list(None)
+    trips = await database.trips.find(
+        {**flt, "loadDate": {"$gte": since, "$lte": until}, "status": {"$ne": "cancelled"}}, _TRIP_FIELDS
+    ).to_list(None)
     vehicles = {str(v["_id"]): v async for v in database.vehicles.find(flt, {"fuelConsumption": 1})}
     drivers = {str(d["_id"]): d async for d in database.drivers.find(flt, {"name": 1, "ratePerKm": 1})}
-    return Analytics(trips, vehicles, drivers, fuel_price_for(user), datetime.now(KYIV).date())
+    return Analytics(trips, vehicles, drivers, fuel_price_for(user), today), period
 
 
 @router.get("/summary")
-async def summary(period: Literal["week", "month", "year"] = PeriodQuery, user: dict = Depends(current_user),
-                  database: AsyncDatabase = Depends(db)):
+async def summary(ctx: tuple[Analytics, Period] = Depends(_analytics)):
     """{ income, expenses, profit, tripsCount, distanceKm, previous: {...} } — previous для порівняння з минулим періодом."""
-    return (await _analytics(user, database)).summary(period)
+    analytics, period = ctx
+    return analytics.summary(period)
 
 
 @router.get("/income")
-async def income(period: Literal["week", "month", "year"] = PeriodQuery, user: dict = Depends(current_user),
-                 database: AsyncDatabase = Depends(db)):
+async def income(ctx: tuple[Analytics, Period] = Depends(_analytics)):
     """{ labels: [...], income: [...], expenses: [...] } для графіка."""
-    return (await _analytics(user, database)).income(period)
+    analytics, period = ctx
+    return analytics.income(period)
 
 
 @router.get("/expenses")
-async def expenses(period: Literal["week", "month", "year"] = PeriodQuery, user: dict = Depends(current_user),
-                   database: AsyncDatabase = Depends(db)):
+async def expenses(ctx: tuple[Analytics, Period] = Depends(_analytics)):
     """{ fuel, salary, repair, tolls, other } — структура витрат."""
-    return (await _analytics(user, database)).expenses(period)
+    analytics, period = ctx
+    return analytics.expenses(period)
 
 
 @router.get("/drivers")
-async def drivers(period: Literal["week", "month", "year"] = PeriodQuery, user: dict = Depends(current_user),
-                  database: AsyncDatabase = Depends(db)):
+async def drivers(ctx: tuple[Analytics, Period] = Depends(_analytics)):
     """[ { driverId, name, trips, income } ] — рейтинг водіїв за доходом."""
-    return (await _analytics(user, database)).drivers_stats(period)
+    analytics, period = ctx
+    return analytics.drivers_stats(period)

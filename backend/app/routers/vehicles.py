@@ -10,7 +10,7 @@ from ..errors import ApiError, not_found
 from ..schemas.entities import VehicleIn, VehicleOut, VehicleStatusIn, VehicleUpdate
 from ..services.crud import crud_router, get_company_doc
 from ..services.documents import delete_owner_documents
-from ..utils import now, public
+from ..utils import now, public, squash
 
 
 def plate_key(plate: str) -> str:
@@ -20,7 +20,7 @@ def plate_key(plate: str) -> str:
 
 async def _validate(database: AsyncDatabase, user: dict, data: dict, existing: dict | None) -> None:
     if "plate" in data:
-        data["plate"] = " ".join(data["plate"].split()).upper()
+        data["plate"] = squash(data["plate"]).upper()
         key = plate_key(data["plate"])
         query = company_filter(user)
         if existing is not None:

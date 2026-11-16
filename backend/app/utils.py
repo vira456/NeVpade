@@ -1,7 +1,8 @@
 """Допоміжні функції: ObjectId ↔ рядковий id, час, номери телефонів."""
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -9,8 +10,21 @@ from bson.errors import InvalidId
 from .errors import not_found
 
 
+KYIV = ZoneInfo("Europe/Kyiv")
+
+
 def now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def today_kyiv() -> date:
+    """Сьогоднішня дата за Києвом (терміни, періоди аналітики, строки дії документів)."""
+    return datetime.now(KYIV).date()
+
+
+def squash(text: str | None) -> str:
+    """«  ТОВ   Західтранс » → «ТОВ Західтранс»."""
+    return " ".join(str(text or "").split())
 
 
 def iso(dt: datetime | None) -> str | None:
@@ -92,7 +106,7 @@ _WORD_RE = re.compile(rf"^{_WORD}$")
 
 def normalize_name(raw: str, *, min_words: int, max_words: int, max_len: int) -> str:
     """«  Олена   Коваль » → «Олена Коваль»; перевіряє кількість слів і символи."""
-    name = " ".join(str(raw or "").split())
+    name = squash(raw)
     words = name.split(" ") if name else []
     if len(name) > max_len:
         raise ValueError(f"Ім'я занадто довге (максимум {max_len} символів)")

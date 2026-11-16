@@ -11,7 +11,7 @@ from ..deps import current_user, db
 from ..errors import ApiError, not_found
 from ..schemas.common import CamelModel
 from ..services.users import unique_invite_code
-from ..utils import iso, now
+from ..utils import iso, now, squash
 
 router = APIRouter(prefix="/company", tags=["Компанія"])
 
@@ -71,7 +71,7 @@ async def update_company(body: CompanyUpdate, user: dict = Depends(current_user)
     if data.get("name") is None:  # назву не можна стерти
         data.pop("name", None)
     else:
-        data["name"] = " ".join(data["name"].split())
+        data["name"] = squash(data["name"])
     if not data:  # порожній $set Mongo відхиляє з помилкою
         return company_out(await _company(database, user))
     company = await database.companies.find_one_and_update(

@@ -86,6 +86,13 @@ async def attach_company(db: AsyncDatabase, user: dict, choice: dict | None) -> 
     return company
 
 
+async def ensure_company(db: AsyncDatabase, user: dict) -> None:
+    """У користувача з підтвердженою поштою завжди має бути компанія: якщо її немає — створюємо/приєднуємо
+    за збереженим під час реєстрації вибором (pendingCompany)."""
+    if user.get("emailVerified") and user.get("companyId") is None:
+        await attach_company(db, user, user.get("pendingCompany"))
+
+
 # ---------- Відповіді ----------
 async def user_out(db: AsyncDatabase, user: dict) -> UserOut:
     company = await db.companies.find_one({"_id": user.get("companyId")}, {"name": 1}) if user.get("companyId") else None
@@ -105,6 +112,7 @@ async def user_out(db: AsyncDatabase, user: dict) -> UserOut:
 
 async def auth_response(db: AsyncDatabase, user: dict) -> AuthResponse:
     """Видає токен. Якщо телефон ще не підтверджено — відкриває «вікно» для його прив'язки."""
+    await ensure_company(db, user)
     update = {"lastSeenAt": now()}
     if not user.get("phoneVerified"):
         update["phoneSetupUntil"] = now() + PHONE_SETUP_WINDOW

@@ -1,4 +1,6 @@
 """Розділ 1 контракту: реєстрація, підтвердження пошти й телефону, вхід (email, Google, Facebook)."""
+from contextlib import suppress
+
 from fastapi import APIRouter, Depends, status
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
@@ -26,7 +28,7 @@ from ..schemas.common import Message
 from ..security import hash_password, verify_password
 from ..services import codes, notify, social
 from ..services.users import PHONE_SETUP_WINDOW, attach_company, auth_response, new_user_doc, release_phone_from_unverified, user_out
-from ..utils import now
+from ..utils import now, squash
 
 router = APIRouter(prefix="/auth", tags=["Авторизація"])
 
@@ -76,7 +78,7 @@ async def register(body: RegisterIn, database: AsyncDatabase = Depends(db)):
                 raise ApiError(404, "Компанію з таким кодом не знайдено. Перевірте код у колеги", "company_not_found")
             pending = {"mode": "join", "companyId": company["_id"]}
         else:
-            pending = {"mode": "create", "name": " ".join(body.company.name.split())}
+            pending = {"mode": "create", "name": squash(body.company.name)}
 
     fields = {"name": body.name, "phone": body.phone, "passwordHash": hash_password(body.password), "pendingCompany": pending}
     if existing:  # незавершена реєстрація з тим самим email — перезаписуємо дані
@@ -101,10 +103,12 @@ async def verify_email(body: EmailCodeIn, database: AsyncDatabase = Depends(db))
         raise ApiError(400, "Пошту вже підтверджено. Увійдіть у систему", "email_already_verified")
 
     await codes.consume(database, body.email, "verify", body.code)
-    await database.users.update_one({"_id": user["_id"]}, {"$set": {"emailVerified": True, "phoneSetupUntil": now() + PHONE_SETUP_WINDOW}})
-    user["emailVerified"] = True
+    # Спершу компанія, потім позначка «пошту підтверджено»: якщо запит обірветься посередині,
+    # користувач не лишиться «підтвердженим без компанії»
     if user.get("companyId") is None:
         await attach_company(database, user, user.get("pendingCompany"))
+    await database.users.update_one({"_id": user["_id"]}, {"$set": {"emailVerified": True, "phoneSetupUntil": now() + PHONE_SETUP_WINDOW}})
+    user["emailVerified"] = True
 
     if user.get("phone"):
         await _send_phone_code(database, user, cooldown=False)
@@ -163,10 +167,8 @@ async def login(body: LoginIn, database: AsyncDatabase = Depends(db)):
     if user is None or not verify_password(body.password, user.get("passwordHash")):
         raise BAD_CREDENTIALS
     if not user.get("emailVerified"):
-        try:  # заодно надсилаємо свіжий код, фронт перекине на сторінку його введення
+        with suppress(ApiError):  # заодно надсилаємо свіжий код, фронт перекине на сторінку його введення
             await _send_email_code(database, body.email, "verify")
-        except ApiError:
-            pass
         raise ApiError(403, "Пошту не підтверджено", "email_not_verified")
     return await auth_response(database, user)
 

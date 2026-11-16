@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import db
 from .config import settings
-from .errors import register_error_handlers
+from .errors import not_found, register_error_handlers
 from .routers import analytics, auth, chat, company, documents, drivers, imports, profile, tasks, trips, vehicles
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -56,6 +56,11 @@ def create_app() -> FastAPI:
     async def health():
         await db.get_db().command("ping")
         return {"status": "ok"}
+
+    # Неіснуючий ендпоінт API — JSON-помилка, а не HTML-сторінка 404 сайту
+    @app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
+    async def api_not_found(rest: str):
+        raise not_found("Ресурс")
 
     if (FRONTEND_DIST / "index.html").is_file():
         # Монтуємо останнім, щоб маршрути /api і /docs мали пріоритет

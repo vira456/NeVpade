@@ -17,6 +17,11 @@ def not_found(what: str = "Запис") -> ApiError:
     return ApiError(404, f"{what} не знайдено", "not_found")
 
 
+def invalid(detail: str, code: str = "validation_error") -> ApiError:
+    """422 — дані не пройшли бізнес-перевірку (той самий формат, що й помилки валідації Pydantic)."""
+    return ApiError(422, detail, code)
+
+
 def _body(detail: str, code: str | None = None) -> dict:
     return {"detail": detail, "code": code} if code else {"detail": detail}
 

@@ -19,19 +19,27 @@ from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..deps import company_filter, current_user, db
-from ..errors import ApiError, not_found
+from ..errors import invalid, not_found
 from ..utils import drop_nulls, is_oid, now, oid, public
 
 ValidateHook = Callable[[AsyncDatabase, dict, dict, dict | None], Awaitable[None]]
 DocHook = Callable[[AsyncDatabase, dict, dict], Awaitable[None]]
 
 
+async def find_ref(database: AsyncDatabase, user: dict, collection: str, ref_id: Any,
+                   projection: dict | None = None) -> dict | None:
+    """Пов'язаний запис (авто, водій, рейс) компанії користувача за рядковим id або None."""
+    if not is_oid(ref_id):
+        return None
+    return await database[collection].find_one({"_id": oid(ref_id), **company_filter(user)}, projection)
+
+
 async def ensure_ref(database: AsyncDatabase, user: dict, collection: str, ref_id: Any, what: str) -> None:
-    """Перевіряє, що пов'язаний запис (авто, водій, рейс) існує в компанії користувача."""
+    """Перевіряє, що пов'язаний запис існує в компанії користувача (порожнє значення — «не прив'язано»)."""
     if ref_id in (None, ""):
         return
-    if not is_oid(ref_id) or not await database[collection].find_one({"_id": oid(ref_id), **company_filter(user)}, {"_id": 1}):
-        raise ApiError(422, f"{what} не знайдено у вашій компанії", "invalid_reference")
+    if not await find_ref(database, user, collection, ref_id, {"_id": 1}):
+        raise invalid(f"{what} не знайдено у вашій компанії", "invalid_reference")
 
 
 async def get_company_doc(database: AsyncDatabase, user: dict, collection: str, item_id: str, what: str) -> dict:

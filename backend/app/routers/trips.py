@@ -7,7 +7,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from ..config import settings
 from ..deps import company_filter, current_user, db
-from ..errors import ApiError, not_found
+from ..errors import ApiError, invalid, not_found
 from ..schemas.entities import (
     CalculationOut,
     TransferIn,
@@ -18,7 +18,7 @@ from ..schemas.entities import (
     TripUpdate,
 )
 from ..services.calc import calculate
-from ..services.crud import ensure_ref
+from ..services.crud import ensure_ref, find_ref, get_company_doc
 from ..utils import drop_nulls, is_oid, now, oid, public, regex_escape
 
 router = APIRouter(prefix="/trips", tags=["Рейси"])
@@ -37,10 +37,7 @@ def fuel_price_for(user: dict) -> float:
 
 
 async def _get_trip(database: AsyncDatabase, user: dict, trip_id: str) -> dict:
-    doc = await database.trips.find_one({"_id": oid(trip_id, "Рейс"), **company_filter(user)})
-    if doc is None:
-        raise not_found("Рейс")
-    return doc
+    return await get_company_doc(database, user, "trips", trip_id, "Рейс")
 
 
 def _check_can_edit(user: dict, trip: dict) -> None:
@@ -179,8 +176,8 @@ async def delete_trip(trip_id: str, user: dict = Depends(current_user), database
 @router.post("/{trip_id}/calculate", response_model=CalculationOut)
 async def calculate_trip(trip_id: str, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
     trip = await _get_trip(database, user, trip_id)
-    vehicle = await database.vehicles.find_one({"_id": oid(trip["vehicleId"]), **company_filter(user)}) if is_oid(trip.get("vehicleId")) else None
-    driver = await database.drivers.find_one({"_id": oid(trip["driverId"]), **company_filter(user)}) if is_oid(trip.get("driverId")) else None
+    vehicle = await find_ref(database, user, "vehicles", trip.get("vehicleId"))
+    driver = await find_ref(database, user, "drivers", trip.get("driverId"))
     return calculate(trip, vehicle, driver, fuel_price_for(user))
 
 
@@ -198,7 +195,7 @@ async def transfer_trip(trip_id: str, body: TransferIn, user: dict = Depends(cur
         {"_id": oid(body.to_manager_id, "Менеджера"), **company_filter(user), "emailVerified": True}, {"_id": 1}
     ) if is_oid(body.to_manager_id) else None
     if target is None:
-        raise ApiError(422, "Менеджера не знайдено у вашій компанії", "manager_not_found")
+        raise invalid("Менеджера не знайдено у вашій компанії", "manager_not_found")
 
     moment = now()
     doc = await database.trips.find_one_and_update(

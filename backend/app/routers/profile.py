@@ -134,10 +134,13 @@ async def delete_avatar(user: dict = Depends(current_user), database: AsyncDatab
 
 @router.get("/kpi", response_model=KpiOut)
 async def kpi(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    me = str(user["_id"])
-    trips_count = await database.trips.count_documents({**company_filter(user), "managerId": me})
-    done = await database.trips.count_documents({**company_filter(user), "managerId": me, "status": "done"})
-    cancelled = await database.trips.count_documents({**company_filter(user), "managerId": me, "status": "cancelled"})
+    pipeline = [
+        {"$match": {**company_filter(user), "managerId": str(user["_id"])}},
+        {"$group": {"_id": "$status", "n": {"$sum": 1}}},
+    ]
+    by_status = {row["_id"]: row["n"] async for row in await database.trips.aggregate(pipeline)}
+    trips_count = sum(by_status.values())
+    done, cancelled = by_status.get("done", 0), by_status.get("cancelled", 0)
     # Рейтинг: частка успішно завершених рейсів серед закритих (завершені + скасовані), у шкалі 0–5
     rating = round(5 * done / (done + cancelled), 1) if done + cancelled else 5.0
     active_drivers = await database.drivers.count_documents({**company_filter(user), "status": {"$ne": "day_off"}})
