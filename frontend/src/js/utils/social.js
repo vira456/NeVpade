@@ -21,7 +21,7 @@ function loadScript(src) {
 /**
  * @param {{ onSuccess: (user) => void, onError: (message: string) => void }} handlers
  */
-export async function initSocialButtons({ onSuccess, onError }) {
+export async function initSocialButtons({ onSuccess, onError, text = 'continue_with' }) {
   const googleBtn = document.getElementById('googleBtn');
   const googleSlot = document.getElementById('googleSlot');
   const facebookBtn = document.getElementById('facebookBtn');
@@ -48,8 +48,8 @@ export async function initSocialButtons({ onSuccess, onError }) {
         theme: 'outline',
         size: 'large',
         width: googleSlot.offsetWidth || 320,
-        text: 'continue_with',
-        locale: 'uk',
+        text, // signin_with на вході, signup_with на реєстрації
+        locale: document.documentElement.lang === 'en' ? 'en' : 'uk',
       });
     } catch (err) {
       onError(err.message);

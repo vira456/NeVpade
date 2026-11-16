@@ -1,9 +1,10 @@
 // Форма «Новий рейс»: вручну або з оголошення Della (вставлений текст / кнопка-закладка в браузері)
-import { createTrip, updateTrip } from '../api/trips.js';
+import { createTrip, updateTrip, defaultDueDate } from '../api/trips.js';
+import { createClient } from '../api/clients.js';
 import { parseDellaListing, dellaBookmarklet, dellaNotes, sameCargo } from '../utils/della.js';
 import { setFieldError, clearErrors, showAlert, withLoading } from '../utils/validation.js';
 import { escapeHtml, TRIP_STATUS } from '../utils/format.js';
-import { t as tr } from '../i18n/index.js';
+import { t as tr, locale } from '../i18n/index.js';
 
 const dialog = document.getElementById('tripFormDialog');
 const form = document.getElementById('tripForm');
@@ -15,7 +16,8 @@ const $ = (id) => document.getElementById(id);
 
 const FIELD_LABELS = { route: 'маршрут', date: 'дату', cargo: 'вантаж', weight: 'вагу', distance: 'відстань', price: 'ціну' };
 
-let ctx = { getTrips: () => [], drivers: [], vehicles: [], onCreated: () => {}, onUpdated: () => {} };
+let ctx = { getTrips: () => [], drivers: [], vehicles: [], clients: [], onCreated: () => {}, onUpdated: () => {} };
+let dueAuto = true; // термін оплати ще не змінювали вручну — перераховуємо від дат і клієнта
 let editing = null; // рейс, який редагуємо (null — новий)
 let imported = null; // дані, розпізнані з Della (для source/importedFrom)
 let duplicateWarned = false;
@@ -64,6 +66,10 @@ function fillFromTrip(t) {
   set('tfVehicle', t.vehicleId);
   set('tfNotes', t.notes);
   set('tfStatus', t.status);
+  set('tfDue', t.payment?.dueDate);
+  set('tfPaidAt', t.payment?.paidAt);
+  dueAuto = !t.payment?.dueDate;
+  updateClientHint();
 }
 
 function fillOptions() {
@@ -74,10 +80,50 @@ function fillOptions() {
       .filter((d) => d.status !== 'fired')
       .map((d) => `<option value="${d.id}">${escapeHtml(d.name)}</option>`)
       .join('');
+  // зламані й ті, що на ремонті, вибрати не можна
+  const unavailable = { broken: 'зламалась', repair: 'на ремонті' };
   $('tfVehicle').innerHTML =
     `<option value="">Не призначено</option>` +
-    ctx.vehicles.map((v) => `<option value="${v.id}">${escapeHtml(v.plate)} · ${escapeHtml(v.model)}</option>`).join('');
+    ctx.vehicles
+      .map((v) => {
+        const why = unavailable[v.status];
+        return `<option value="${v.id}" ${why ? 'disabled' : ''}>${escapeHtml(v.plate)} · ${escapeHtml(v.model)}${why ? ` — ${why}` : ''}</option>`;
+      })
+      .join('');
+  $('clientsList').innerHTML = ctx.clients.map((c) => `<option value="${escapeHtml(c.name)}"></option>`).join('');
 }
+
+// ---------- Клієнт і термін оплати ----------
+const findClient = (name) => ctx.clients.find((c) => c.name.toLowerCase() === name.trim().toLowerCase());
+
+function updateClientHint() {
+  const name = $('tfClient').value.trim();
+  const hint = $('tfClientHint');
+  const client = name && findClient(name);
+  hint.hidden = !name;
+  hint.textContent = client
+    ? tr('З довідника · відстрочка оплати {n} дн.', { n: client.paymentDays })
+    : name
+      ? tr('Нового клієнта буде додано в довідник')
+      : '';
+}
+
+function updateDue() {
+  if (!dueAuto) return;
+  const base = value('tfUnloadDate') || value('tfLoadDate');
+  if (!base) return;
+  const client = findClient(value('tfClient'));
+  $('tfDue').value = defaultDueDate({ unloadDate: base, clientId: client?.id }, ctx.clients);
+}
+
+$('tfClient').addEventListener('input', () => {
+  const client = findClient($('tfClient').value);
+  if (client && !value('tfClientPhone')) $('tfClientPhone').value = client.phone;
+  updateClientHint();
+  updateDue();
+});
+['tfLoadDate', 'tfUnloadDate'].forEach((id) => $(id).addEventListener('change', updateDue));
+$('tfDue').addEventListener('input', () => (dueAuto = false));
 
 /**
  * Відкрити форму.
@@ -91,6 +137,8 @@ export function openTripForm({ della = false, text = '', listing = null, trip = 
   imported = null;
   editing = trip;
   duplicateWarned = false;
+  dueAuto = true;
+  $('tfClientHint').hidden = true;
   form.querySelectorAll('.is-autofilled').forEach((el) => el.classList.remove('is-autofilled'));
   fillOptions();
   $('tripFormTitle').textContent = trip ? tr('Рейс {n}', { n: trip.number }) : della ? 'Новий рейс з Della' : 'Новий рейс';
@@ -99,11 +147,13 @@ export function openTripForm({ della = false, text = '', listing = null, trip = 
   box.hidden = !della || Boolean(trip);
   if (trip) {
     fillFromTrip(trip);
+    updateCrewHint();
     if (!dialog.open) dialog.showModal();
     $('tfFromCity').focus();
     return;
   }
   result.textContent = '';
+  $('tfCrewHint').hidden = true;
   pasteArea.value = text;
   if (!dialog.open) dialog.showModal();
   if (listing) {
@@ -140,6 +190,8 @@ function applyParsed(d) {
   fill('tfDistance', d.distanceKm);
   if (d.currency === 'UAH') fill('tfPrice', d.price);
   fill('tfClient', d.clientName);
+  updateClientHint();
+  updateDue();
   fill('tfClientPhone', d.clientPhone);
 
   // Примітка — це дані рейсу (їх бачать колеги), тому завжди українською, як на Della
@@ -179,7 +231,31 @@ $('tripFormCancel').addEventListener('click', () => dialog.close());
 $('tfDriver').addEventListener('change', () => {
   const driver = ctx.drivers.find((d) => d.id === $('tfDriver').value);
   if (driver?.vehicleId && ctx.vehicles.some((v) => v.id === driver.vehicleId)) $('tfVehicle').value = driver.vehicleId;
+  updateCrewHint();
 });
+
+// Попередження, якщо машина чи водій уже зайняті іншим рейсом у ці дні (не блокує збереження)
+const shortDay = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+function updateCrewHint() {
+  const hint = $('tfCrewHint');
+  const from = $('tfLoadDate').value;
+  const to = $('tfUnloadDate').value || from;
+  const busy = (key, id) =>
+    id &&
+    from &&
+    ctx.getTrips().find(
+      (x) => x.id !== editing?.id && x[key] === id && ['planned', 'in_progress'].includes(x.status) && x.loadDate <= to && (x.unloadDate || x.loadDate) >= from
+    );
+  const lines = [];
+  const v = busy('vehicleId', $('tfVehicle').value);
+  const d = busy('driverId', $('tfDriver').value);
+  const when = (x) => `${shortDay(x.loadDate)}${x.unloadDate && x.unloadDate !== x.loadDate ? `–${shortDay(x.unloadDate)}` : ''}`;
+  if (v) lines.push(tr('Машина вже в рейсі {n} ({when})', { n: v.number, when: when(v) }));
+  if (d && d.id !== v?.id) lines.push(tr('Водій уже в рейсі {n} ({when})', { n: d.number, when: when(d) }));
+  hint.hidden = !lines.length;
+  hint.textContent = lines.join(' · ');
+}
+['tfVehicle', 'tfLoadDate', 'tfUnloadDate'].forEach((id) => $(id).addEventListener('change', updateCrewHint));
 
 // ---------- Збереження ----------
 const value = (id) => $(id).value.trim();
@@ -196,6 +272,7 @@ function validate() {
     ['tfWeight', !(number('tfWeight') > 0) && 'Вкажіть вагу в тоннах'],
     ['tfDistance', !(number('tfDistance') > 0) && 'Вкажіть відстань у кілометрах'],
     ['tfPrice', !(number('tfPrice') > 0) && 'Вкажіть вартість рейсу в гривнях'],
+    ['tfDue', value('tfDue') && value('tfDue') < value('tfLoadDate') && 'Термін оплати не може бути раніше завантаження'],
   ].filter(([, error]) => error);
   checks.forEach(([id, error]) => setFieldError($(id), error));
   if (checks.length) $(checks[0][0]).focus();
@@ -219,12 +296,25 @@ form.addEventListener('submit', async (e) => {
     distanceKm: Math.round(number('tfDistance')),
     price: Math.round(number('tfPrice')),
     client: { name: value('tfClient'), phone: value('tfClientPhone') },
+    clientId: findClient(value('tfClient'))?.id ?? null,
+    payment: { dueDate: value('tfDue') || null, paidAt: value('tfPaidAt') || null },
     driverId: value('tfDriver') || null,
     vehicleId: value('tfVehicle') || null,
     notes: value('tfNotes'),
     source: imported ? 'import' : 'manual',
     importedFrom: imported ? { platform: 'della', url: imported.url || null } : null,
   };
+
+  // новий клієнт — одразу в довідник (щоб наступного разу вибрати зі списку)
+  if (data.client.name && !data.clientId) {
+    try {
+      const created = await createClient({ name: data.client.name, phone: data.client.phone, edrpou: '', contactName: '', email: '', city: data.from.city });
+      ctx.clients.push(created);
+      data.clientId = created.id;
+    } catch {
+      // не страшно: рейс збережеться і без посилання на довідник
+    }
+  }
 
   if (editing) {
     // місто чи адресу змінили — старі координати вже не підходять

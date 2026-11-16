@@ -1,6 +1,7 @@
 // Автомобілі компанії
 import { request, ApiError } from './client.js';
 import { deleteOwnerDocsMock } from './documents.js';
+import { isOwner } from './trips.js';
 import { mockVehicles, saveVehicles, mockDrivers, saveDrivers, mockTrips, saveTrips, newId } from './mock-store.js';
 
 const samePlate = (a, b) => a.replace(/\s/g, '').toUpperCase() === b.replace(/\s/g, '').toUpperCase();
@@ -62,6 +63,7 @@ export const deleteVehicle = (id) =>
   request(`/vehicles/${id}`, {
     method: 'DELETE',
     mock: async () => {
+      if (!isOwner()) throw new ApiError('Видаляти машини може лише керівник', 403, 'owner_only');
       const trips = mockTrips();
       const active = trips.find((t) => t.vehicleId === id && t.status === 'in_progress');
       if (active) throw new ApiError(`Машина зараз у рейсі ${active.number}. Спершу завершіть або змініть рейс.`, 409, 'vehicle_busy');

@@ -3,7 +3,7 @@ import { renderLayout, setChatBadge } from '../utils/layout.js';
 import { getMessages, sendMessage, subscribe, markRead } from '../api/chat.js';
 import { getMembers, getCompany } from '../api/company.js';
 import { getTrips, myId } from '../api/trips.js';
-import { escapeHtml } from '../utils/format.js';
+import { escapeHtml, plural } from '../utils/format.js';
 import { avatar, shortName } from '../utils/people.js';
 import { icons } from '../utils/icons.js';
 import { showToast } from '../utils/toast.js';
@@ -73,7 +73,7 @@ function renderMessage(m, prev) {
     <li class="msg ${mine ? 'msg--mine' : ''} ${grouped ? 'msg--grouped' : ''}" data-id="${m.id}">
       ${mine || grouped ? '<span class="msg__spacer"></span>' : avatar(author, { size: 34, dot: false })}
       <div class="msg__body">
-        ${mine || grouped ? '' : `<span class="msg__author" data-no-i18n>${escapeHtml(shortName(author.name))}</span>`}
+        ${mine || grouped ? '' : `<a class="msg__author" href="/pages/member.html?id=${encodeURIComponent(author.id)}" data-no-i18n>${escapeHtml(shortName(author.name))}</a>`}
         <div class="msg__bubble" data-no-i18n>${formatText(m.text)}</div>
         <time class="msg__time" datetime="${m.createdAt}">${timeOf(m.createdAt)}</time>
       </div>
@@ -153,7 +153,7 @@ async function init() {
   members = m;
   trips = tr;
   messages = history;
-  document.getElementById('chatSub').textContent = t('{company} · {n} учасників', { company: company.name, n: members.length });
+  document.getElementById('chatSub').textContent = t(plural(members.length, ['{company} · {n} учасник', '{company} · {n} учасники', '{company} · {n} учасників']), { company: company.name, n: members.length });
   renderPeople();
   renderAll();
   if (messages.length) markRead(messages[messages.length - 1].id);

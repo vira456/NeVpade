@@ -47,11 +47,14 @@
     .is-bad dd { color: $color-error; }
   }
 
+  // Водій і кнопки в один рядок, поточний рейс — окремим рядком нижче (раніше все переносилось як попало)
   &__foot {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    flex-wrap: wrap;
     gap: 6px 8px;
+
+    > span[data-no-i18n], > .link-btn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; justify-self: start; max-width: 100%; }
     padding-top: 14px;
     border-top: 1px solid $color-border;
     font-size: 14px;
@@ -61,7 +64,11 @@
   }
 
   &__trip {
-    margin-left: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-family: $font-display;
     font-weight: 600;
     text-decoration: none;

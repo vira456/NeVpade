@@ -41,3 +41,34 @@ export function compactMoney(n) {
 // Захист від XSS при вставці тексту користувача в innerHTML
 export const escapeHtml = (s = '') =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+// ---------- Оплата рейсу ----------
+export const PAYMENT_STATUS = {
+  paid: 'Оплачено',
+  pending: 'Очікує оплати',
+  overdue: 'Прострочено',
+};
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+/** paid | pending | overdue | null (для скасованих і запланованих без терміну) */
+export function paymentStatus(trip) {
+  if (trip.status === 'cancelled') return null;
+  if (trip.payment?.paidAt) return 'paid';
+  if (!trip.payment?.dueDate) return null;
+  return trip.payment.dueDate < todayIso() ? 'overdue' : 'pending';
+}
+
+/** Скільки днів прострочено (додатне) або лишилось до терміну (від'ємне) */
+export const daysPastDue = (trip) =>
+  trip.payment?.dueDate ? Math.round((new Date(todayIso()) - new Date(trip.payment.dueDate)) / 864e5) : 0;
+
+/** Українська множина: plural(2, ['рейс', 'рейси', 'рейсів']) → 'рейси' */
+export function plural(n, [one, few, many]) {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
+}

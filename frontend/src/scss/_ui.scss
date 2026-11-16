@@ -189,3 +189,22 @@
 }
 
 .field__optional { font-weight: 400; color: $color-muted; font-size: 13px; }
+
+// ---------- Нагадування ----------
+.reminders__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.reminders__done { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: $color-muted; svg { width: 16px; height: 16px; } }
+.reminder {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid $color-border;
+  border-radius: 14px;
+  background: $color-surface;
+
+  &__dot { width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: $color-warning; }
+  &--bad &__dot { background: $color-error; }
+  &__title { margin: 0; font-weight: 700; }
+  &__text { margin: 2px 0 0; color: $color-muted; font-size: 14px; overflow-wrap: anywhere; }
+  &__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+}

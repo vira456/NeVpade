@@ -148,7 +148,29 @@ a { color: $color-primary; }
     place-items: center;
   }
 
-  &__bottom { margin-top: auto; display: grid; gap: 10px; }
+  &__badge--alert { background: $color-error; color: #fff; }
+
+  // Кнопка «Нагадування» — це <button>, тож скидаємо стилі браузера
+  &__reminders { width: 100%; background: none; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; margin-top: 6px; }
+
+  // Пункти меню прокручуються, якщо не вміщаються; тема, мова й профіль завжди видно внизу
+  &__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0 -6px;
+    padding: 0 6px 8px;
+    scrollbar-width: thin;
+  }
+
+  &__bottom { margin-top: auto; flex-shrink: 0; display: grid; gap: 10px; padding-top: 8px; }
+
+  // На низьких екранах меню щільніше
+  @media (max-height: 760px) {
+    &__link { min-height: 36px; }
+    &__section { margin-top: 8px; }
+  }
 
   // Перемикачі теми й мови
   &__prefs { display: flex; gap: 6px; }
@@ -225,7 +247,8 @@ a { color: $color-primary; }
     .sidebar__prefs { flex-direction: column; }
     .pref { flex-direction: column; }
     .sidebar__user { justify-content: center; padding-inline: 0; }
-    .sidebar__profile { flex: 0; padding: 4px; }
+    .sidebar__profile { flex: none; padding: 0; }
+    .sidebar__scroll { padding-top: 4px; }
   }
 
   // ---------- Телефон/планшет: виїзне меню ----------
@@ -297,6 +320,9 @@ a { color: $color-primary; }
     }
 
     &__logo { display: flex; align-items: center; gap: 8px; font-weight: 800; color: $color-text; text-decoration: none; }
+
+    &__bell { position: relative; margin-left: auto; }
+    &__bell .sidebar__badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
   }
 }
 
@@ -357,3 +383,16 @@ a { color: $color-primary; }
   }
 }
 
+
+// ============ Друк ============
+// Друкуємо лише вміст сторінки: без меню, кнопок і анімацій, на білому тлі
+@media print {
+  :root { color-scheme: light; }
+  body { background: #fff !important; }
+  .sidebar, .mobile-bar, .main__actions button, .seg, .dash__table-toggle, .page-loader, .loading-chip, .toast, dialog { display: none !important; }
+  .app { display: block !important; }
+  .main { padding: 0 !important; }
+  .card { box-shadow: none !important; break-inside: avoid; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  a { text-decoration: none; }
+}

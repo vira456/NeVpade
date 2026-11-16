@@ -1,38 +1,14 @@
 import { initAuthPage, rememberEmail } from '../utils/auth-page.js';
 import { register, nextPageFor } from '../api/auth.js';
 import { initSocialButtons } from '../utils/social.js';
+import { initCompanyField } from '../utils/company-field.js';
 import { isEmail, fullNameError, capitalizeName, phoneDigits, formatPhoneInput, phoneError, toE164, passwordProblems, setFieldError, validateOnBlur, clearErrors, showAlert, withLoading } from '../utils/validation.js';
 
 initAuthPage();
 
 const form = document.getElementById('registerForm');
-const { name, email, phone, password, confirm, terms, companyName, inviteCode } = form.elements;
-const companyField = form.querySelector('.company-field');
-const companyMode = () => form.elements.companyMode.value;
-
-// Компанія: створити нову або приєднатися до наявної за кодом запрошення
-function syncCompanyMode() {
-  const join = companyMode() === 'join';
-  companyField.querySelector('.company-field__create').hidden = join;
-  companyField.querySelector('.company-field__join').hidden = !join;
-  companyField.querySelectorAll('.seg__btn').forEach((l) => l.setAttribute('aria-pressed', String(l.querySelector('input').checked)));
-  setFieldError(companyName, '');
-}
-form.querySelectorAll('[name=companyMode]').forEach((r) => r.addEventListener('change', syncCompanyMode));
-syncCompanyMode();
-
-// Код у форматі NVP-1234: великі літери й дефіс підставляються самі
-inviteCode.addEventListener('input', () => {
-  const raw = inviteCode.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  inviteCode.value = raw.length > 3 ? `${raw.slice(0, 3)}-${raw.slice(3, 7)}` : raw;
-});
-
-function companyError() {
-  if (companyMode() === 'join') return /^[A-Z]{3}-\d{4}$/.test(inviteCode.value) ? '' : 'Введіть код запрошення у форматі NVP-1234';
-  const n = companyName.value.trim();
-  if (n.length < 2) return 'Вкажіть назву компанії (мінімум 2 символи)';
-  return '';
-}
+const { name, email, phone, password, confirm, terms } = form.elements;
+const company = initCompanyField(form);
 const rules = document.getElementById('passwordRules');
 
 // Ім'я: не даємо вводити цифри та символи, перевіряємо при виході з поля
@@ -76,8 +52,8 @@ form.addEventListener('submit', async (e) => {
   if (!isEmail(email.value)) fail(email, 'Введіть коректний email');
   const phoneErr = phoneError(phone.value);
   if (phoneErr) fail(phone, phoneErr);
-  const compErr = companyError();
-  if (compErr) fail(companyName, compErr);
+  const compErr = company.error();
+  if (compErr) fail(company.input, compErr);
   const problems = passwordProblems(password.value);
   if (problems.length) fail(password, `Пароль має містити: ${problems.join(', ')}`);
   if (confirm.value !== password.value) fail(confirm, 'Паролі не збігаються');
@@ -92,20 +68,17 @@ form.addEventListener('submit', async (e) => {
         email: cleanEmail,
         phone: toE164(phoneDigits(phone.value)),
         password: password.value,
-        company:
-          companyMode() === 'join'
-            ? { mode: 'join', code: inviteCode.value }
-            : { mode: 'create', name: companyName.value.trim().replace(/\s+/g, ' ') },
+        company: company.value(),
       })
     );
     rememberEmail(cleanEmail);
     location.href = `/pages/verify-email.html?email=${encodeURIComponent(cleanEmail)}`;
   } catch (err) {
-    if (err.code === 'company_not_found') setFieldError(companyName, err.message);
+    if (err.code === 'company_not_found') setFieldError(company.input, err.message);
     else if (err.code === 'phone_taken') setFieldError(phone, 'Цей номер уже використовується');
     else if (err.status === 409) setFieldError(email, 'Користувач з таким email вже існує');
     else showAlert(form, err.message);
   }
 });
 
-initSocialButtons({ onSuccess: (user) => location.replace(nextPageFor(user)), onError: (msg) => showAlert(form, msg) });
+initSocialButtons({ onSuccess: (user) => location.replace(nextPageFor(user)), onError: (msg) => showAlert(form, msg), text: 'signup_with' });

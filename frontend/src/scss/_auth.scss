@@ -18,6 +18,13 @@
     display: flex;
     flex-direction: column;
     gap: 40px;
+    // На довгій формі реєстрації панель не тягнеться вниз, а лишається на екрані
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    height: calc(100vh - 24px);
+    height: calc(100dvh - 24px);
+    overflow: hidden;
 
     @media (max-width: $bp-tablet) { display: none; }
   }
@@ -40,6 +47,7 @@
 
   // Табло рейсів — як дошка відправлень
   &__board {
+    @media (max-height: 760px) { display: none; }
     list-style: none;
     margin: 0;
     padding: 0;

@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=1280" />
   <!-- nevpade:head -->
   <title>Команда · NeVpade</title>
 </head>
@@ -41,10 +41,43 @@
           <section class="card company-card">
             <h2 class="card__title" id="companyName" data-no-i18n>&nbsp;</h2>
             <dl class="company-card__facts" id="companyFacts"></dl>
+            <button class="btn btn--ghost btn--sm company-card__switch" id="switchCompanyBtn" type="button">Змінити компанію</button>
           </section>
         </aside>
       </div>
     </main>
+
+    <!-- Перехід в іншу компанію -->
+    <dialog class="modal" id="switchDialog" aria-labelledby="switchTitle">
+      <form class="modal__body" id="switchForm" method="dialog" novalidate>
+        <h2 class="modal__title" id="switchTitle">Змінити компанію</h2>
+        <p class="modal__text">Ви перейдете в іншу компанію: побачите її рейси, автопарк і команду, а ця компанія зникне з вашого доступу.</p>
+        <div class="switch-note" id="switchNote" hidden></div>
+        <div class="auth__alert" hidden></div>
+          <fieldset class="field company-field">
+            <legend class="field__label">Нова компанія</legend>
+            <div class="seg seg--block" role="radiogroup" aria-label="Нова компанія">
+              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="join" checked />Приєднатися за кодом</label>
+              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="create" />Створити нову</label>
+            </div>
+            <div class="company-field__create" hidden>
+              <input class="input" id="companyNameInput" name="companyName" type="text" maxlength="80" placeholder="Назва компанії, напр. ТОВ «Західтранс»" aria-label="Назва компанії" autocomplete="organization" />
+              <p class="field__hint">Ви станете її керівником, колег запросите кодом зі сторінки «Команда».</p>
+            </div>
+            <div class="company-field__join">
+              <input class="input" id="inviteCodeInput" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код запрошення" autocomplete="off" spellcheck="false" />
+              <p class="field__hint">Код дає керівник нової компанії: «Команда» → «Код запрошення».</p>
+              <p class="auth__mock-hint" id="switchMockHint" hidden>Режим моків: <b>NVP-4821</b> — повернутися в демо-компанію «Західтранс»</p>
+            </div>
+            <div class="field__error"></div>
+          </fieldset>
+        <div class="modal__actions">
+          <span class="modal__spacer"></span>
+          <button class="btn btn--text" type="button" data-cancel>Скасувати</button>
+          <button class="btn" type="submit" id="switchSubmit">Перейти</button>
+        </div>
+      </form>
+    </dialog>
   </div>
   <script type="module" src="/src/js/pages/team.js"></script>
 </body>

@@ -1,4 +1,4 @@
-// Копії документів машини або водія: завантаження фото/PDF, список, перегляд на весь екран.
+// Копії документів машини, водія або рейсу: завантаження фото/PDF, список, перегляд на весь екран.
 import { getDocuments, uploadDocument, deleteDocument, MAX_FILE_MB, EXPIRING_DAYS } from '../api/documents.js';
 import { compressImage } from '../utils/image.js';
 import { escapeHtml } from '../utils/format.js';
@@ -7,6 +7,55 @@ import { showToast } from '../utils/toast.js';
 import { confirmDialog } from '../utils/confirm.js';
 import { showAlert, withLoading } from '../utils/validation.js';
 import { t, locale } from '../i18n/index.js';
+
+
+// Вікно документів і перегляд додаються на сторінку при першому підключенні модуля
+// (ними користуються «Автопарк» і «Рейси»)
+const MARKUP = `
+  <dialog class="modal modal--wide docs" id="docsDialog" aria-labelledby="docsTitle">
+    <div class="modal__body">
+      <div class="docs__head">
+        <div>
+          <h2 class="modal__title" id="docsTitle">Документи</h2>
+          <p class="docs__owner" id="docsOwner" data-no-i18n></p>
+        </div>
+        <button class="icon-btn" type="button" data-close aria-label="Закрити">×</button>
+      </div>
+
+      <label class="dropzone" id="docsDrop">
+        <input type="file" id="docsInput" accept="image/*,application/pdf" multiple class="visually-hidden" />
+        <span class="dropzone__icon" aria-hidden="true"></span>
+        <span class="dropzone__text"><strong>Додайте фото документів</strong> — перетягніть сюди або натисніть, щоб вибрати. З телефона можна одразу сфотографувати.</span>
+        <span class="dropzone__hint">JPG, PNG або PDF, до 10 МБ. Великі фото стискаються автоматично.</span>
+      </label>
+
+      <form class="docs__pending" id="docsPendingForm" hidden novalidate>
+        <ul class="docs__pending-list" id="docsPending"></ul>
+        <div class="docs__pending-actions">
+          <button class="btn btn--text" type="button" id="docsPendingClear">Скасувати</button>
+          <button class="btn" type="submit" id="docsUpload">Зберегти</button>
+        </div>
+      </form>
+
+      <p class="auth__alert" role="alert" hidden></p>
+      <ul class="docs__grid" id="docsGrid" aria-live="polite"></ul>
+    </div>
+  </dialog>
+
+  <!-- Перегляд копії на весь екран -->
+  <dialog class="viewer" id="viewerDialog" aria-labelledby="viewerCaption">
+    <div class="viewer__bar">
+      <p class="viewer__caption" id="viewerCaption"></p>
+      <a class="icon-btn" id="viewerDownload" download title="Завантажити файл" aria-label="Завантажити файл"></a>
+      <button class="icon-btn" type="button" id="viewerDelete" title="Видалити" aria-label="Видалити документ"></button>
+      <button class="icon-btn" type="button" data-close title="Закрити" aria-label="Закрити перегляд">×</button>
+    </div>
+    <div class="viewer__stage" id="viewerStage"></div>
+    <button class="viewer__nav viewer__nav--prev" type="button" id="viewerPrev" aria-label="Попередній документ">‹</button>
+    <button class="viewer__nav viewer__nav--next" type="button" id="viewerNext" aria-label="Наступний документ">›</button>
+  </dialog>
+`;
+if (!document.getElementById('docsDialog')) document.body.insertAdjacentHTML('beforeend', MARKUP);
 
 const $ = (id) => document.getElementById(id);
 const dialog = $('docsDialog');

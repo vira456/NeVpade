@@ -1,4 +1,4 @@
-// Документи машин і водіїв: копії (фото або PDF) техпаспорта, страховки, посвідчення…
+// Документи машин, водіїв і рейсів: копії (фото або PDF) техпаспорта, страховки, посвідчення, ТТН, CMR…
 // Реальний бекенд: multipart/form-data, файли віддає за посиланням url (див. docs/api-contract.md).
 // Режим моків: файли зберігаються в IndexedDB браузера (localStorage для фото замалий).
 import { request, ApiError } from './client.js';
@@ -18,6 +18,17 @@ export const DRIVER_DOC_TYPES = {
   tax_id: 'ІПН',
   medical: 'Медична довідка',
   tachograph: 'Картка водія (тахограф)',
+  other: 'Інше',
+};
+
+export const TRIP_DOC_TYPES = {
+  ttn: 'ТТН',
+  cmr: 'CMR',
+  act: 'Акт виконаних робіт',
+  invoice: 'Рахунок',
+  request: 'Заявка на перевезення',
+  loading_photo: 'Фото завантаження',
+  unloading_photo: 'Фото розвантаження',
   other: 'Інше',
 };
 

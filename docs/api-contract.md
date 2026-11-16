@@ -1,4 +1,4 @@
-# API-контракт NeVpade (чернетка v0.1)
+# API-контракт NeVpade (чернетка v0.2)
 
 Документ узгоджують фронтенд і бекенд. Мокові дані фронтенду (`frontend/src/js/mock/`) відповідають саме цим структурам, тому зміни в контракті треба вносити в обидва місця.
 
@@ -11,6 +11,8 @@
 - Ідентифікатор: поле `id` (рядок). `_id` з MongoDB назовні не віддається
 - Гроші: числа в гривнях (`24000`), відстань у км, вага в тоннах
 - Авторизація: заголовок `Authorization: Bearer <token>` для всіх запитів, крім `/auth/login`
+  - **Обговорити:** зараз фронт тримає токен у `localStorage` — його може прочитати будь-який скрипт на сторінці (XSS). Надійніше, щоб `/auth/login` ставив cookie `HttpOnly; Secure; SameSite=Strict`, а фронт слав запити з `credentials: 'include'` без заголовка `Authorization`. Тоді потрібен CORS з `allow_credentials=True` і точним `origin` фронту (не `*`)
+- Ролі: `owner` (керівник компанії) і `manager`. Права перевіряє сервер; фронт лише ховає недоступні кнопки (див. розділ 8, «Ролі»)
 - Помилки: `{ "detail": "Текст помилки", "code": "machine_code" }` з відповідним статусом. `detail` показується користувачу, тож пишемо його українською; `code` необов'язковий і потрібен, коли фронт має відреагувати по-особливому
 
 | Код | Значення |
@@ -121,21 +123,58 @@
 - 200 `{ "message": "Пароль змінено" }`
 - 400 `invalid_code` / `code_expired` — як у verify-email
 
+### Вхід і реєстрація через Google / Facebook — загальна схема
+
+Одна кнопка «Продовжити з Google» і для входу, і для реєстрації: що саме відбулось, вирішує бекенд.
+
+```
+Кнопка Google ──► POST /auth/google ──┬─ користувач уже є (за googleId або email) ──► AuthResponse ──► /pages/dashboard.html
+                                      │
+                                      └─ новий ──► створити без компанії, isNew: true ──► /pages/onboarding.html
+                                                   «Завершіть реєстрацію»: ім'я, компанія (створити / код), телефон
+                                                       │
+                                                       ▼
+                                            POST /auth/complete-signup ──► SMS ──► /pages/verify-phone.html?mode=social
+                                                       │
+                                                       ▼
+                                            POST /auth/verify-phone ──► /pages/dashboard.html
+```
+
+Куди вести користувача, фронт вирішує лише за полями `user` (`nextPageFor` у `frontend/src/js/api/auth.js`):
+1. `companyId: null` → `/pages/onboarding.html`
+2. `phoneVerified: false` → `/pages/verify-phone.html` (якщо `phone` уже є — одразу поле для коду)
+3. інакше → `/pages/dashboard.html`
+
+Те саме перевіряє кожна сторінка застосунку, тож якщо людина закрила вкладку посеред реєстрації, наступного разу вона повернеться на потрібний крок.
+
 ### POST `/auth/google` — вхід через Google
 ```json
 { "credential": "<ID-токен від Google Identity Services>" }
 ```
-- Бекенд перевіряє підпис токена (Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`), бере `email`, `name`, `sub`
-- Якщо користувача з таким email нема — створює (пошта вважається підтвердженою, `phoneVerified: false`), якщо є — прив'язує `googleId`
-- 200 → **AuthResponse**; 401 — токен недійсний
-- Якщо у відповіді `user.phoneVerified: false`, фронт відкриває сторінку «Вкажіть номер телефону» (`/auth/phone` → `/auth/verify-phone`). Інші ендпоінти (рейси тощо) для такого користувача мають повертати 403
+- Бекенд перевіряє підпис токена (Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`): `aud` = наш `GOOGLE_CLIENT_ID`, `iss` = `accounts.google.com`, `email_verified: true`. Бере `sub`, `email`, `name`, `picture`
+- Шукає користувача спершу за `googleId` (= `sub`), потім за `email`:
+  - знайшов за email (раніше реєструвався паролем) → прив'язує `googleId`, далі звичайний вхід
+  - не знайшов → створює: `emailVerified: true` (пошту підтвердив Google), `password: null`, `phone: null`, `phoneVerified: false`, `companyId: null`, `role: null`
+- 200 → **AuthResponse** + `"isNew": true` для щойно створеного; 401 — токен недійсний
+- Поки `companyId` або `phoneVerified` не заповнено, токен дає доступ лише до `/auth/me`, `/auth/complete-signup`, `/auth/phone`, `/auth/verify-phone`, `/auth/resend-code`; решта → `403 { "code": "signup_incomplete" }`
+
+### POST `/auth/complete-signup` — «Завершіть реєстрацію» (з токеном)
+```json
+{ "name": "Олена Коваль", "phone": "+380671234567", "company": { "mode": "create", "name": "ТОВ «Нова логістика»" } }
+```
+`company` — як у `/auth/register`: `create` → нова компанія, роль `owner`; `join` + `code` → роль `manager`.
+- Зберігає ім'я (Google може дати псевдонім — користувач його виправив), компанію, роль і телефон, надсилає SMS з кодом
+- 200 `{ "user": { ...companyId, companyName, role, phone, "phoneVerified": false }, "message": "Код надіслано в SMS" }`
+- 404 `company_not_found`, 409 `phone_taken`, 422 — ті самі правила, що в `/auth/register`
+- 409 `already_completed` — у користувача вже є компанія
+- Далі фронт відкриває введення коду → `POST /auth/verify-phone` → **AuthResponse** з `phoneVerified: true`
 
 ### POST `/auth/facebook` — вхід через Facebook
 ```json
 { "accessToken": "<токен від Facebook SDK>" }
 ```
 - Бекенд перевіряє токен запитом `GET https://graph.facebook.com/me?fields=id,name,email&access_token=...`
-- Далі логіка як у Google (поле `facebookId`). Якщо Facebook не віддав email — 400 з поясненням
+- Далі логіка як у Google (поле `facebookId`, той самий крок `/auth/complete-signup`). Якщо Facebook не віддав email — 400 з поясненням
 - 200 → **AuthResponse**
 
 ### GET `/auth/me`
@@ -148,7 +187,14 @@
 - SMS надсилати через SMS-шлюз з API (наприклад, TurboSMS чи Twilio). Для розробки й захисту можна мати режим, коли код SMS не відправляється, а пишеться в лог сервера
 
 ### Спільні ключі
-`GOOGLE_CLIENT_ID` (Google Cloud Console → OAuth client ID, тип Web, Authorized JavaScript origins: `http://localhost:5173`) і `FACEBOOK_APP_ID` однакові для фронту й бекенду. Фронт тримає їх у `frontend/.env`, бекенд — у своєму `.env`.
+`GOOGLE_CLIENT_ID` і `FACEBOOK_APP_ID` однакові для фронту й бекенду. Фронт тримає їх у `frontend/.env` (`VITE_GOOGLE_CLIENT_ID`), бекенд — у своєму `.env`. Секрет клієнта (`client_secret`) для цієї схеми не потрібен і на фронт не потрапляє.
+
+Як отримати `GOOGLE_CLIENT_ID`:
+1. [console.cloud.google.com](https://console.cloud.google.com) → створити проєкт «NeVpade»
+2. **APIs & Services → OAuth consent screen**: тип External, назва застосунку, пошта підтримки; scopes лише `email`, `profile`, `openid`; у **Test users** додати пошти, з яких будете входити (поки застосунок у режимі Testing, інші не зможуть)
+3. **Credentials → Create credentials → OAuth client ID**, тип **Web application**
+4. **Authorized JavaScript origins**: `http://localhost:5173` (і `http://localhost` — Google іноді вимагає обидва), пізніше — адреса сайту на хостингу. **Redirect URIs** не потрібні: кнопка працює через спливаюче вікно й повертає ID-токен у JavaScript
+5. Скопіювати Client ID (`…apps.googleusercontent.com`) у `frontend/.env` → `VITE_GOOGLE_CLIENT_ID=…`, `VITE_USE_MOCK=false`, і Ірі в бекенд
 
 ---
 
@@ -159,9 +205,12 @@
 | GET | `/trips?status=planned&search=Львів` | список (фільтри необов'язкові) |
 | GET | `/trips/{id}` | один рейс |
 | POST | `/trips` | створити |
-| PUT | `/trips/{id}` | оновити (усі поля, зокрема `status`, `driverId`, `vehicleId`) — лише свій рейс, інакше `403` |
-| DELETE | `/trips/{id}` | видалити — лише свій рейс, інакше `403`; відповідь `204` |
+| PUT | `/trips/{id}` | оновити (усі поля, зокрема `status`, `driverId`, `vehicleId`, `payment`) — свій рейс або будь-який для `owner`, інакше `403 not_owner` |
+| PATCH | `/trips/{id}/payment` | лише оплата: `{ "paidAt": "2026-11-20" }` або `{ "paidAt": null }` — зняти позначку |
+| DELETE | `/trips/{id}` | видалити (разом із документами рейсу) — ті самі права, що й PUT; відповідь `204` |
 | POST | `/trips/{id}/calculate` | розрахунок вартості, пального, ЗП |
+
+Фронт отримує всі рейси компанії одним запитом і сам сортує, фільтрує за датами й оплатою та ділить на сторінки по 20. Коли рейсів стане тисячі — додамо `?page=&limit=&sort=` (формат відповіді тоді `{ "items": [...], "total": 1234 }`).
 
 Об'єкт рейсу:
 ```json
@@ -175,15 +224,28 @@
   "cargo": { "type": "Будматеріали", "weightT": 18, "volumeM3": 60 },
   "vehicleId": "veh_01",
   "driverId": "drv_01",
+  "clientId": "cli_01",
   "client": { "name": "ТОВ «БудСервіс»", "phone": "+380671234567" },
   "price": 24000,
+  "payment": { "dueDate": "2026-11-30", "paidAt": null },
   "distanceKm": 240,
   "status": "planned",
   "source": "manual",
-  "createdAt": "2026-11-09T10:00:00Z"
+  "managerId": "usr_01",
+  "createdAt": "2026-11-09T10:00:00Z",
+  "history": [
+    { "at": "2026-11-09T10:00:00Z", "by": "usr_01", "action": "created" },
+    { "at": "2026-11-10T08:15:00Z", "by": "usr_01", "action": "updated",
+      "changes": [ { "field": "price", "from": 22000, "to": 24000 } ] },
+    { "at": "2026-11-15T06:40:00Z", "by": "usr_01", "action": "status", "to": "in_progress" }
+  ]
 }
 ```
 - `status`: `planned` | `in_progress` | `done` | `cancelled`
+- `clientId` — посилання на довідник клієнтів (розділ 2б); `client { name, phone }` — знімок для списку, сервер оновлює його, коли клієнта перейменували. `clientId` може бути `null` (старі рейси, імпорт)
+- `payment.dueDate` — коли клієнт має заплатити; якщо фронт не надіслав, сервер ставить `unloadDate` (або `loadDate`) + `paymentDays` клієнта (14, якщо клієнта немає). `payment.paidAt` — дата оплати або `null`
+- Стан оплати фронт рахує сам: `paidAt` є → «Оплачено»; рейс `planned`/`cancelled` → не показується; `dueDate` < сьогодні → «Прострочено»; інакше «Очікує оплати»
+- `history` веде **лише сервер** (фронт її не надсилає). `action`: `created` | `imported` | `status` (+`to`) | `updated` (+`changes` — лише поля `price`, `loadDate`, `unloadDate`, `driverId`, `vehicleId`, `distanceKm`, `route`) | `paid` | `unpaid` | `transferred` (+`from`, `to` — id менеджерів)
 - `source`: `manual` | `import`
 - `importedFrom` (для `source: "import"`): `{ "platform": "della", "url": "https://della.ua/…" | null }`, інакше `null`
 - `notes`: рядок, необов'язково (тип кузова, завантаження, умови оплати)
@@ -192,8 +254,15 @@
 
 ### POST `/trips` — новий рейс
 Фронт надсилає: `from`, `to` (`city`, `address`), `loadDate`, `unloadDate`, `cargo`, `distanceKm`, `price`, `client`, `driverId`, `vehicleId`, `notes`, `source`, `importedFrom`.
-Сервер сам ставить `id`, `number` (наступний `TR-XXXX`), `status: "planned"`, `managerId` (поточний користувач) і `createdAt`. Відповідь — створений рейс.
-Обов'язкові: `from.city`, `to.city`, `loadDate`, `cargo.type`, `cargo.weightT > 0`, `distanceKm > 0`, `price > 0`; інакше `422`.
+Також `clientId` і `payment` (`dueDate`, `paidAt`). Нового клієнта фронт спершу створює `POST /clients`, потім надсилає його `clientId`.
+Сервер сам ставить `id`, `number` (наступний `TR-XXXX`), `status: "planned"`, `managerId` (поточний користувач), `createdAt` і перший запис `history`. Відповідь — створений рейс.
+Обов'язкові: `from.city`, `to.city`, `loadDate`, `cargo.type`, `cargo.weightT > 0`, `distanceKm > 0`, `price > 0`; `payment.dueDate` не раніше `loadDate`; інакше `422`.
+
+### Машина й водій рейсу
+- POST/PUT з `vehicleId` машини у стані `broken` або `repair` → `409` з `code: "vehicle_unavailable"` (`detail`: «Машина ВХ 1234 АК зламалась — оберіть іншу»)
+- Стан машини й водія сервер змінює сам за статусом рейсу:
+  - рейс → `in_progress`: машина → `on_trip` (якщо вона не `loading`/`unloaded`), водій → `on_trip`
+  - рейс → `done` або `cancelled` (чи видалено рейс у дорозі): машина `loading`/`on_trip`/`unloaded` → `available`, водій → `available` — якщо в них немає іншого рейсу `in_progress`
 
 ### Імпорт вантажу з Della (парсинг)
 Менеджер вставляє посилання на сторінку пошуку Della (`https://della.ua/search/….html`), фронт завантажує її HTML, розбирає картки вантажів (`frontend/src/js/utils/della.js` → `parseDellaSearchPage`) і показує список. Вибрані вантажі створюються звичайним `POST /trips` з `source: "import"`, `importedFrom: { "platform": "della", "url": "<сторінка пошуку>" }`.
@@ -213,6 +282,46 @@
 - приклад на Python: `httpx.get("https://della.ua" + path, headers={...}, timeout=10).text`
 
 Також можна вставити текст одного оголошення вручну або кнопкою-закладкою «→ NeVpade» — тоді розбір іде з тексту (`parseDellaListing`).
+
+---
+
+## 2а. Документи рейсу
+
+ТТН, CMR, акти, рахунки, фото вантажу — ті самі запити, що й для машин і водіїв (розділ 4а) з `{owner}` = `trips`:
+`GET/POST /trips/{id}/documents`, `DELETE /trips/{id}/documents/{docId}`, `GET /trips/documents/summary`.
+
+`type`: `ttn` (ТТН) | `cmr` | `act` (акт виконаних робіт) | `invoice` (рахунок) | `request` (заявка на перевезення) | `loading_photo` | `unloading_photo` | `other`.
+
+Заявку на перевезення фронт друкує сам (кнопка «Друк заявки» в картці рейсу → вікно друку / «Зберегти як PDF»), сервер для цього не потрібен.
+
+---
+
+## 2б. Клієнти `/clients`
+
+| Метод | URL | Опис |
+|---|---|---|
+| GET | `/clients` | усі клієнти компанії |
+| POST | `/clients` | додати |
+| PUT | `/clients/{id}` | змінити (сервер оновлює знімок `client` у рейсах цього клієнта) |
+| DELETE | `/clients/{id}` | видалити (`204`) — лише `owner` (інакше `403 owner_only`) і лише клієнта без рейсів (інакше `409 client_has_trips`) |
+
+```json
+{
+  "id": "cli_01",
+  "name": "ТОВ «БудСервіс»",
+  "edrpou": "38214567",
+  "contactName": "Олена Ковальчук",
+  "phone": "+380671234567",
+  "email": "buy@budservis.ua",
+  "city": "Хмельницький",
+  "paymentDays": 14,
+  "notes": "",
+  "createdAt": "2024-10-15T09:00:00Z"
+}
+```
+- Обов'язкове лише `name`. `edrpou` — 8 цифр (юрособа) або 10 (ФОП), унікальний у компанії → інакше `409 edrpou_taken`
+- `paymentDays` — відстрочка оплати в днях (0–120), з неї рахується `payment.dueDate` нових рейсів
+- Борг, виручку й кількість рейсів фронт рахує з `/trips`; окремий ендпоінт не потрібен
 
 ---
 
@@ -241,6 +350,7 @@
   "statusUpdatedAt": "2026-11-11T17:40:00Z"
 }
 ```
+- DELETE — лише `owner`, інакше `403 owner_only` (так само для водіїв)
 - `status` — стан машини: `available` (вільна) | `loading` (на завантаженні) | `on_trip` (в дорозі) | `unloaded` (розвантажилась) | `broken` (зламалась) | `repair` (на ремонті)
 - `statusUpdatedAt` — сервер ставить сам при кожній зміні `status`
 - `fuelConsumption` — л/100 км; `nextServiceKm` і `insuranceUntil` можуть бути `null`
@@ -280,7 +390,7 @@
 
 ## 4а. Документи машин і водіїв (копії: фото або PDF)
 
-`{owner}` — `vehicles` або `drivers`.
+`{owner}` — `vehicles`, `drivers` або `trips` (документи рейсу, розділ 2а).
 
 | Метод | URL | Опис |
 |---|---|---|
@@ -354,7 +464,11 @@ POST, поля форми:
 
 ## 6. Аналітика `/analytics`
 
-Параметр `period`: `week` | `month` | `year` (поточний тиждень / місяць / рік).
+Параметр `period`: `week` | `month` | `year` (поточний тиждень з понеділка / календарний місяць / рік).
+
+Усе рахується **з рейсів** компанії зі статусом `done` або `in_progress` (заплановані й скасовані не входять), за датою `loadDate`. Доходи — `price`, витрати — за формулою з «Розрахунку рейсу» нижче. Так нові, змінені й видалені рейси одразу видно в цифрах. У моках фронт рахує так само (`frontend/src/js/api/analytics.js`).
+
+**Звіт в Excel** (кнопка на сторінці аналітики) фронт формує сам із `/trips`, `/vehicles`, `/drivers`, `/clients`, `/company`, `/company/members` за довільний період (`frontend/src/js/utils/finance-report.js`) — окремий ендпоінт не потрібен. Аркуші: зведення з порівнянням, динаміка, усі рейси з витратами, клієнти, водії, машини.
 
 ### GET `/analytics/summary?period=month`
 ```json
@@ -363,7 +477,7 @@ POST, поля форми:
   "previous": { "income": 418000, "expenses": 271000, "profit": 147000, "tripsCount": 19, "distanceKm": 7620 }
 }
 ```
-`previous` — ті самі показники за попередній такий самий період; фронт показує зміну у %.
+`previous` — ті самі показники за **такий самий відрізок** попереднього періоду: 1–11 листопада порівнюємо з 1–11 жовтня, а не з цілим жовтнем (інакше на початку місяця завжди «мінус»). Фронт показує зміну у %.
 
 ### GET `/analytics/income?period=year`
 ```json
@@ -373,7 +487,7 @@ POST, поля форми:
   "expenses": [205000, 198000, 221000]
 }
 ```
-Підписи: для `week` — дні («Пн»…«Нд»), для `month` — тижні («1–7 лист.»), для `year` — місяці.
+Підписи: для `week` — дні («Пн»…«Нд»), для `month` — тижні («1–7 лист.»), для `year` — місяці. Майбутні проміжки (ще не настали) — `null`, а не `0`, щоб лінія графіка не падала до нуля.
 
 ### GET `/analytics/expenses?period=month`
 ```json
@@ -386,11 +500,13 @@ POST, поля форми:
 ```
 
 ### Розрахунок рейсу — POST `/trips/{id}/calculate`
-Фронт показує його в картці рейсу. У моках рахується так (бекенд може уточнити формули):
-- пальне, л = `distanceKm × fuelConsumption / 100` (витрата з автомобіля рейсу); вартість = л × ціна пального (56 грн/л)
-- зарплата водія = `distanceKm × ratePerKm` (ставка з водія рейсу)
-- інші витрати (дороги, стоянки, амортизація) = `distanceKm × 3.5`
-- `profit = price − (fuelCost + driverSalary + otherCosts)`
+Фронт показує його в картці рейсу. Та сама формула — для аналітики й структури витрат (`frontend/src/js/utils/economics.js`; якщо бекенд змінить числа, треба змінити й там):
+- пальне, л = `distanceKm × fuelConsumption / 100` (витрата з автомобіля рейсу, без машини — 32); вартість `fuel` = л × 56 грн/л
+- зарплата водія `salary` = `distanceKm × ratePerKm` (ставка з водія рейсу, без водія — 10)
+- ремонт і ТО `repair` = `distanceKm × 2.2`
+- дороги, стоянки, зважування `tolls` = `distanceKm × 1.1`
+- інше `other` = 350 грн на рейс
+- відповідь: `otherCosts = repair + tolls + other`, `totalCost`, `profit = price − totalCost`
 
 ---
 
@@ -430,9 +546,12 @@ POST, поля форми:
 
 ### GET `/profile/kpi`
 ```json
-{ "tripsCount": 142, "rating": 4.9, "ratingMax": 5, "activeDrivers": 8 }
+{ "tripsCount": 66, "tripsThisMonth": 4, "paidOnTime": 87, "activeDrivers": 5 }
 ```
-Рахується на бекенді: кількість рейсів менеджера, середня оцінка, кількість водіїв зі статусом не `day_off`, закріплених за менеджером.
+Рахується з рейсів менеджера (`managerId` = поточний користувач):
+- `tripsCount` — виконані (`done`) за весь час; `tripsThisMonth` — виконані з `loadDate` у поточному місяці
+- `paidOnTime` — серед виконаних рейсів із `dueDate`: % тих, де `paidAt ≤ dueDate`; `null`, якщо таких рейсів немає
+- `activeDrivers` — скільки різних водіїв зараз у рейсах менеджера `planned`/`in_progress`
 
 ### POST `/auth/change-password`
 ```json
@@ -466,6 +585,45 @@ POST, поля форми:
 ```
 `online` — користувач робив запити останні ~2 хвилини (можна оновлювати `lastSeen` у middleware авторизації).
 
+### Ролі
+`role`: `owner` (керівник) | `manager`. Хто створив компанію при реєстрації (`company.mode = "create"`) — `owner`, хто приєднався за кодом — `manager`. Роль повертає й `/auth/me` / `/auth/login` у `user.role`.
+
+| Дія | `manager` | `owner` |
+|---|---|---|
+| Змінити / видалити / передати рейс | лише свій | будь-який |
+| Видалити машину, водія, клієнта | `403 owner_only` | ✓ |
+| Змінити роль колеги | `403 owner_only` | ✓ |
+
+### GET `/company/members/{id}` — профіль колеги
+Той самий об'єкт учасника, що в списку `/company/members`. 404 `member_not_found`, якщо людини немає в компанії.
+
+### GET `/company/members/{id}/kpi` — показники колеги
+Формат і правила — як у `GET /profile/kpi`, плюс:
+```json
+{ "tripsCount": 30, "tripsThisMonth": 2, "paidOnTime": 33, "activeDrivers": 0, "activeTrips": 0, "revenueThisMonth": 34500 }
+```
+- `activeTrips` — рейси менеджера `planned` + `in_progress`
+- `revenueThisMonth` — сума `price` рейсів `done` + `in_progress` з `loadDate` у поточному місяці
+
+### POST `/company/switch` — перейти в іншу компанію
+```json
+{ "company": { "mode": "join", "code": "NVP-7315" } }
+{ "company": { "mode": "create", "name": "ТОВ «Нова логістика»" } }
+```
+- `join` → роль `manager` у новій компанії; `create` → нова компанія, роль `owner`
+- Активні рейси (`planned`, `in_progress`) користувача передаються керівнику старої компанії (з записом `transferred` в історії рейсу); виконані лишаються в старій компанії
+- 409 `last_owner` — користувач єдиний `owner`, а в компанії є інші люди
+- 409 `same_company` — код від тієї ж компанії; 404 `company_not_found` — код не існує
+- 200 `{ "user": { ...companyId, companyName, role }, "company": { ... } }`. Фронт перезаписує `user` і відкриває аналітику нової компанії
+
+### PATCH `/company/members/{id}/role`
+```json
+{ "role": "owner" }
+```
+- Лише `owner` → інакше `403 owner_only`
+- Не можна зняти роль з останнього керівника компанії → `409 last_owner`
+- Відповідь — оновлений учасник
+
 ### Чат компанії
 | Метод | URL | Опис |
 |---|---|---|
@@ -487,9 +645,22 @@ POST, поля форми:
 { "toManagerId": "usr_02", "comment": "Я на лікарняному до кінця тижня" }
 ```
 - У рейсі з'являється поле `managerId` (відповідальний менеджер); `GET /trips` повертає рейси всієї компанії, фронт сам фільтрує «Мої / Уся компанія»
-- Передати може лише поточний `managerId` → інакше 403 `not_owner`; `toManagerId` має бути з тієї ж компанії → інакше 422
+- Передати може поточний `managerId` або `owner` → інакше 403 `not_owner`; `toManagerId` має бути з тієї ж компанії → інакше 422
 - Сервер змінює `managerId`, записує `transferredAt` і додає в чат повідомлення `type: "transfer"`
 - Відповідь — оновлений рейс
+
+---
+
+## 9. Нагадування
+
+Окремого ендпоінта немає: фронт сам збирає нагадування з `/vehicles`, `/drivers`, `/trips`, `/tasks` і `/{owner}/documents/summary` (`frontend/src/js/utils/reminders.js`):
+- страховка машини закінчується за ≤ 30 днів або прострочена; до ТО ≤ 3000 км
+- документи (машини, водії) з терміном дії, що минає або минув
+- прострочені оплати (менеджер — своїх рейсів, керівник — усіх)
+- рейси на найближчі 2 дні без машини чи водія; зламана машина в запланованих рейсах
+- прострочені завдання
+
+З нагадування можна створити завдання звичайним `POST /tasks` (з `tripId`, якщо воно про рейс). Пізніше сервер може надсилати ці ж нагадування на пошту чи у Viber.
 
 ---
 
@@ -498,4 +669,6 @@ POST, поля форми:
 - [x] Логістична платформа — Della: парсинг сторінки пошуку (див. розділ 2, «Імпорт вантажу з Della»); Іра робить `GET /import/della`
 - [ ] Формула ЗП водія: за км, % від рейсу чи фіксована ставка
 - [ ] Ціна пального: константа в налаштуваннях чи окремий ендпоінт `/settings`
-- [ ] Чи потрібні ролі, окрім `manager` і `owner` (власник компанії може, наприклад, оновлювати код запрошення)
+- [x] Ролі: `owner` і `manager` (розділ 8, «Ролі»)
+- [ ] Хто може оновлювати код запрошення: будь-хто чи лише `owner`
+- [ ] Зберігання токена: перейти з `localStorage` на `HttpOnly`-cookie (див. «Загальні правила»)

@@ -30,9 +30,12 @@ npm run dev
 
 Відкрити http://localhost:5173
 
+Докладніше про налаштування, ролі й демо-дані — у [`frontend/README.md`](frontend/README.md).
+
 Режим роботи задається в `frontend/.env`:
 - `VITE_USE_MOCK=true` — інтерфейс працює автономно на локальних мокових даних;
-- `VITE_USE_MOCK=false` — запити йдуть на сервер за адресою `VITE_API_URL`.
+- `VITE_USE_MOCK=false` — запити йдуть на сервер за адресою `VITE_API_URL`;
+- `VITE_MOCK_DELAY=150` — імітація затримки мережі в режимі моків, мс.
 
 ## Запуск бекенду
 

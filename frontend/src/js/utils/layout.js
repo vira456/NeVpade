@@ -7,6 +7,7 @@ import { isLoggedIn, getCurrentUser, logout, nextPageFor } from '../api/auth.js'
 import { escapeHtml } from './format.js';
 import { withThemeReveal } from './motion.js';
 import { icons, logoMark } from './icons.js';
+import { initReminders } from './reminders.js';
 import { getTheme, setTheme, getLang, setLang, isSidebarCollapsed, setSidebarCollapsed } from './prefs.js';
 import { countUnread } from '../api/chat.js';
 
@@ -18,6 +19,8 @@ const SECTIONS = [
     links: [
       { href: DASHBOARD, label: 'Аналітика', icon: icons.analytics },
       { href: '/pages/trips.html', label: 'Рейси', icon: icons.trips },
+      { href: '/pages/clients.html', label: 'Клієнти', icon: icons.building },
+      { href: '/pages/schedule.html', label: 'Графік машин', icon: icons.calendar },
       { href: '/pages/map.html', label: 'Карта', icon: icons.map },
       { href: '/pages/fleet.html', label: 'Автопарк', icon: icons.fleet },
       { href: '/pages/kanban.html', label: 'Завдання', icon: icons.tasks },
@@ -74,13 +77,18 @@ export function renderLayout() {
       <a class="sidebar__logo" href="${DASHBOARD}" title="NeVpade">${logoMark}<span>NeVpade</span></a>
       <button class="sidebar__toggle" id="sidebarToggle" type="button" aria-controls="sidebar" aria-expanded="${!isSidebarCollapsed()}" title="Згорнути панель" aria-label="Згорнути панель">${icons.chevronLeft}</button>
     </div>
+    <div class="sidebar__scroll">
+    <button class="sidebar__link sidebar__reminders" type="button" data-reminders title="Нагадування">
+      ${icons.bell}<span>Нагадування</span><span class="sidebar__badge sidebar__badge--alert" data-reminders-badge hidden></span>
+    </button>
     ${SECTIONS.map(
       (sec) => `
       <p class="sidebar__section">${sec.title}</p>
       <nav class="sidebar__nav" aria-label="${sec.title}">
         ${sec.links
           .map((l) => {
-            const active = current === l.href;
+            // профіль колеги — підрозділ «Команди»
+            const active = current === l.href || (l.href === '/pages/team.html' && current === '/pages/member.html');
             return `<a class="sidebar__link ${active ? 'is-active' : ''}" href="${l.href}" title="${l.label}" ${active ? 'aria-current="page"' : ''}>
               ${l.icon}<span>${l.label}</span>${l.badge ? `<span class="sidebar__badge" data-badge="${l.badge}" hidden></span>` : ''}
             </a>`;
@@ -88,6 +96,7 @@ export function renderLayout() {
           .join('')}
       </nav>`
     ).join('')}
+    </div>
     <div class="sidebar__bottom">
       <div class="sidebar__prefs">
         <div class="pref" role="group" aria-label="Тема">
@@ -129,6 +138,10 @@ export function renderLayout() {
   );
 
   renderMobileBar(sidebar);
+  initReminders({
+    buttons: [...document.querySelectorAll('[data-reminders]')],
+    badges: [...document.querySelectorAll('[data-reminders-badge]')],
+  });
   if (current !== '/pages/chat.html') countUnread().then(setChatBadge).catch(() => {});
 
   if (isMockMode) console.info('[NeVpade] Режим мокових даних (VITE_USE_MOCK=true)');
@@ -143,7 +156,8 @@ function renderMobileBar(sidebar) {
   bar.className = 'mobile-bar';
   bar.innerHTML = `
     <button class="mobile-bar__menu" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Відкрити меню">${icons.menu}</button>
-    <a class="mobile-bar__logo" href="${DASHBOARD}">${logoMark}<span>NeVpade</span></a>`;
+    <a class="mobile-bar__logo" href="${DASHBOARD}">${logoMark}<span>NeVpade</span></a>
+    <button class="icon-btn mobile-bar__bell" type="button" data-reminders aria-label="Нагадування">${icons.bell}<span class="sidebar__badge sidebar__badge--alert" data-reminders-badge hidden></span></button>`;
   main.prepend(bar);
 
   const backdrop = document.createElement('div');
