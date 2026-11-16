@@ -69,12 +69,12 @@ function validate() {
 
 export async function renderKpi() {
   const kpi = await getKpi();
-  document.getElementById('kpiTrips').textContent = kpi.tripsCount.toLocaleString(locale());
+  document.getElementById('kpiTrips').textContent = (kpi.tripsCount ?? 0).toLocaleString(locale());
   document.getElementById('kpiTripsNote').textContent = t('за весь час · {n} цього місяця', { n: kpi.tripsThisMonth });
   // частка рейсів, які клієнт оплатив не пізніше терміну
-  document.getElementById('kpiRating').innerHTML = kpi.paidOnTime === null ? '—' : `${kpi.paidOnTime}<small>%</small>`;
+  document.getElementById('kpiRating').innerHTML = kpi.paidOnTime == null ? '—' : `${kpi.paidOnTime}<small>%</small>`;
   document.getElementById('kpiRatingBar').style.width = `${kpi.paidOnTime ?? 0}%`;
-  document.getElementById('kpiDrivers').textContent = kpi.activeDrivers;
+  document.getElementById('kpiDrivers').textContent = kpi.activeDrivers ?? 0;
   ['kpiTrips', 'kpiDrivers'].forEach((id) => countUp(document.getElementById(id)));
 }
 

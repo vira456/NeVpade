@@ -63,13 +63,33 @@ async function doRequest(path, { method = 'GET', body, mock, auth = true } = {})
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    const detail = Array.isArray(err.detail) ? err.detail[0]?.msg : err.detail;
+    // FastAPI віддає помилки по-різному: { detail: "текст" }, { detail: [{ msg }] } (422)
+    // або { detail: { message, code } } — розбираємо всі варіанти
+    const d = err.detail;
+    const detail = Array.isArray(d) ? d[0]?.msg : d && typeof d === 'object' ? d.message ?? d.msg : d;
+    if (d && typeof d === 'object' && !Array.isArray(d) && d.code && !err.code) err.code = d.code;
     // Вхід через Google є, але реєстрацію не завершено (немає компанії чи телефону) → повертаємо на потрібний крок
     if (res.status === 403 && err.code === 'signup_incomplete' && !location.pathname.includes('/onboarding') && !location.pathname.includes('/verify-phone')) {
       location.replace('/pages/onboarding.html'); // сторінка сама переведе далі, якщо компанія вже є
       return null;
     }
-    throw new ApiError(detail || `Помилка ${res.status}`, res.status, err.code);
+    // стандартні англійські відповіді FastAPI — перекладаємо, щоб користувач розумів, що сталося
+    const STD = { 'Not Found': 'Цей розділ ще не підключено на сервері', 'Method Not Allowed': 'Ця дія ще не підтримується сервером', 'Internal Server Error': 'Помилка на сервері. Спробуйте пізніше' };
+    throw new ApiError(STD[detail] ?? (detail || `Помилка ${res.status}`), res.status, err.code);
   }
-  return res.status === 204 ? null : res.json();
+  if (res.status === 204) return null;
+  const text = await res.text();
+  return text ? normalizeIds(JSON.parse(text)) : null;
+}
+
+// MongoDB повертає _id — сторінки всюди працюють з id, тож доповнюємо
+function normalizeIds(value) {
+  if (Array.isArray(value)) return value.map(normalizeIds);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = normalizeIds(v);
+    if (out._id !== undefined && out.id === undefined) out.id = String(out._id);
+    return out;
+  }
+  return value;
 }

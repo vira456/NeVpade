@@ -19,8 +19,11 @@ function syncCurrentUser(profile) {
 }
 
 // ---------- Профіль ----------
+// Сервер може назвати ім'я name замість fullName — сторінки працюють з fullName
+const normalizeProfile = (p) => ({ ...p, fullName: p?.fullName ?? p?.name ?? '', avatarUrl: p?.avatarUrl ?? null });
+
 export async function getProfile() {
-  const profile = await request('/profile', { mock: mockProfile });
+  const profile = normalizeProfile(await request('/profile', { mock: mockProfile }));
   syncCurrentUser(profile);
   return profile;
 }
@@ -34,7 +37,7 @@ export async function updateProfile(data) {
       save('mock.profile', updated);
       return updated;
     },
-  });
+  }).then(normalizeProfile);
   syncCurrentUser(profile);
   return profile;
 }
@@ -73,14 +76,28 @@ export function kpiFromTrips(trips, managerId) {
   };
 }
 
-export const getKpi = () =>
-  request('/profile/kpi', {
-    mock: () => kpiFromTrips(mockTrips(), getCurrentUser()?.id ?? 'usr_01'),
-  });
+// Якщо сервер повернув старий формат (без tripsThisMonth / paidOnTime) або не має ендпоінта —
+// рахуємо показники самі з /trips, щоб на сторінці не було «undefined»
+const KPI_FIELDS = ['tripsCount', 'tripsThisMonth', 'paidOnTime', 'activeDrivers'];
+async function withFallback(path, managerId, fields = KPI_FIELDS) {
+  let kpi = null;
+  try {
+    kpi = await request(path, { mock: () => kpiFromTrips(mockTrips(), managerId) });
+  } catch {
+    // нема ендпоінта (404) — порахуємо нижче
+  }
+  if (kpi && fields.every((k) => k in kpi)) return kpi;
+  const { getTrips } = await import('./trips.js');
+  // те, що сервер таки повернув, лишаємо, решту дораховуємо
+  const known = kpi ? Object.fromEntries(fields.filter((k) => k in kpi).map((k) => [k, kpi[k]])) : {};
+  return { ...kpiFromTrips(await getTrips(), managerId), ...known };
+}
+
+export const getKpi = () => withFallback('/profile/kpi', getCurrentUser()?.id ?? 'usr_01');
 
 /** Показники колеги — для сторінки «Профіль колеги» */
 export const getMemberKpi = (memberId) =>
-  request(`/company/members/${memberId}/kpi`, { mock: () => kpiFromTrips(mockTrips(), memberId) });
+  withFallback(`/company/members/${memberId}/kpi`, memberId, [...KPI_FIELDS, 'activeTrips', 'revenueThisMonth']);
 
 // ---------- Безпека ----------
 export const changePassword = (currentPassword, newPassword) =>

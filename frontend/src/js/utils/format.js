@@ -2,8 +2,10 @@ import { locale, isEnglish } from '../i18n/index.js';
 
 const UAH = isEnglish ? 'UAH' : 'грн';
 const KM = isEnglish ? 'km' : 'км';
-export const money = (n) => `${Number(n).toLocaleString(locale())} ${UAH}`;
-export const km = (n) => `${Number(n).toLocaleString(locale())} ${KM}`;
+// Порожнє значення з сервера (null/undefined) показуємо як «—», а не «NaN грн»
+const num = (n) => (n === null || n === undefined || n === '' || !Number.isFinite(Number(n)) ? null : Number(n));
+export const money = (n) => (num(n) === null ? '—' : `${num(n).toLocaleString(locale())} ${UAH}`);
+export const km = (n) => (num(n) === null ? '—' : `${num(n).toLocaleString(locale())} ${KM}`);
 export const date = (iso) => new Date(iso).toLocaleDateString(locale());
 
 export const TRIP_STATUS = {
@@ -40,7 +42,7 @@ export function compactMoney(n) {
 
 // Захист від XSS при вставці тексту користувача в innerHTML
 export const escapeHtml = (s = '') =>
-  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // ---------- Оплата рейсу ----------
 export const PAYMENT_STATUS = {

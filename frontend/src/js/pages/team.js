@@ -52,18 +52,18 @@ function render() {
             <a class="member__name" href="${profileHref(m)}" data-no-i18n>${escapeHtml(m.name)}</a>${me ? ' <span class="member__you">це ви</span>' : ''}
             <span class="member__pos">${escapeHtml(m.position)}</span>
             ${roleControl(m)}
-            <span class="member__status ${m.online ? 'is-online' : ''}">${m.online ? 'В мережі' : `Був(ла) ${lastSeen(m.lastSeen)}`}</span>
+            <span class="member__status ${m.online ? 'is-online' : ''}">${m.online ? 'В мережі' : m.lastSeen ? `Був(ла) ${lastSeen(m.lastSeen)}` : 'Не в мережі'}</span>
           </div>
           <div class="member__contacts">
-            <a href="tel:${m.phone}">${m.phone}</a>
-            <a href="mailto:${m.email}" data-no-i18n>${escapeHtml(m.email)}</a>
+            ${m.phone ? `<a href="tel:${escapeHtml(m.phone)}">${escapeHtml(m.phone)}</a>` : ''}
+            ${m.email ? `<a href="mailto:${escapeHtml(m.email)}" data-no-i18n>${escapeHtml(m.email)}</a>` : ''}
           </div>
           <div class="member__load" title="Активні рейси (заплановані й у дорозі)">
             <strong>${active}</strong><span>активних рейсів</span>
           </div>
           <div class="member__actions">
             ${me ? '' : `<a class="icon-btn" href="/pages/chat.html" title="Написати в чаті" aria-label="Написати в чаті">${icons.chat}</a>
-            <a class="icon-btn" href="tel:${m.phone}" title="Подзвонити" aria-label="Подзвонити">${icons.phone}</a>`}
+            ${m.phone ? `<a class="icon-btn" href="tel:${escapeHtml(m.phone)}" title="Подзвонити" aria-label="Подзвонити">${icons.phone}</a>` : ''}`}
           </div>
         </li>`;
         })

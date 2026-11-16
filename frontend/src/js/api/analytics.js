@@ -32,34 +32,49 @@ export function periodRange(period, today = new Date()) {
   return { from: new Date(y, m, 1), to: new Date(y, m + 1, 1), prevFrom: new Date(y, m - 1, 1), prevTo: new Date(y, m - 1, Math.min(t.getDate(), prevLast) + 1) };
 }
 
-function withCosts(from, to) {
-  const vehicles = mockVehicles();
-  const drivers = mockDrivers();
+// Звідки беремо рейси для розрахунку: моки — з браузера, сервер без /analytics — з /trips, /vehicles, /drivers
+const mockSource = () => ({ trips: mockTrips(), vehicles: mockVehicles(), drivers: mockDrivers() });
+async function serverSource() {
+  const [{ getTrips }, { getVehicles }, { getDrivers }] = await Promise.all([import('./trips.js'), import('./vehicles.js'), import('./drivers.js')]);
+  const [trips, vehicles, drivers] = await Promise.all([getTrips(), getVehicles().catch(() => []), getDrivers().catch(() => [])]);
+  return { trips: trips ?? [], vehicles: vehicles ?? [], drivers: drivers ?? [] };
+}
+
+/** Запит до /analytics/...; якщо на сервері його ще немає (404/405/501) — рахуємо на фронті з рейсів */
+async function analytics(path, compute) {
+  try {
+    return await request(path, { mock: () => compute(mockSource()) });
+  } catch (err) {
+    if (![404, 405, 501].includes(err.status)) throw err;
+    return compute(await serverSource());
+  }
+}
+
+function withCosts(src, from, to) {
+  const { vehicles, drivers } = src;
   const a = ymd(from);
   const b = ymd(to);
-  return mockTrips()
+  return src.trips
     .filter((t) => COUNTED.includes(t.status) && t.loadDate >= a && t.loadDate < b)
     .map((t) => ({ trip: t, cost: tripCosts(t, vehicles.find((v) => v.id === t.vehicleId), drivers.find((d) => d.id === t.driverId)) }));
 }
 
 function totals(rows) {
-  const income = rows.reduce((s, r) => s + r.trip.price, 0);
+  const income = rows.reduce((s, r) => s + (r.trip.price || 0), 0);
   const expenses = rows.reduce((s, r) => s + r.cost.total, 0);
-  return { income, expenses, profit: income - expenses, tripsCount: rows.length, distanceKm: rows.reduce((s, r) => s + r.trip.distanceKm, 0) };
+  return { income, expenses, profit: income - expenses, tripsCount: rows.length, distanceKm: rows.reduce((s, r) => s + (r.trip.distanceKm || 0), 0) };
 }
 
 export const getSummary = (period = 'month') =>
-  request(`/analytics/summary?period=${period}`, {
-    mock: () => {
-      const r = periodRange(period);
-      return { ...totals(withCosts(r.from, r.to)), previous: totals(withCosts(r.prevFrom, r.prevTo)) };
-    },
+  analytics(`/analytics/summary?period=${period}`, (src) => {
+    const r = periodRange(period);
+    return { ...totals(withCosts(src, r.from, r.to)), previous: totals(withCosts(src, r.prevFrom, r.prevTo)) };
   });
 
 // Графік: тиждень — по днях, місяць — по тижнях (1–7, 8–14…), рік — по місяцях
 export const getIncome = (period = 'month') =>
-  request(`/analytics/income?period=${period}`, {
-    mock: () => {
+  analytics(`/analytics/income?period=${period}`, (src) => {
+    {
       const { from, to } = periodRange(period);
       const buckets = [];
       if (period === 'week') {
@@ -86,17 +101,15 @@ export const getIncome = (period = 'month') =>
       }
       // майбутні відрізки — порожні (null), щоб лінія графіка не «падала» в нуль
       const today = new Date();
-      const rows = buckets.map((b) => (b.from > today ? null : totals(withCosts(b.from, b.to))));
+      const rows = buckets.map((b) => (b.from > today ? null : totals(withCosts(src, b.from, b.to))));
       return { labels: buckets.map((b) => b.label), income: rows.map((r) => r?.income ?? null), expenses: rows.map((r) => r?.expenses ?? null) };
-    },
+    }
   });
 
 export const getExpenses = (period = 'month') =>
-  request(`/analytics/expenses?period=${period}`, {
-    mock: () => {
-      const { from, to } = periodRange(period);
-      const out = { fuel: 0, salary: 0, repair: 0, tolls: 0, other: 0 };
-      for (const { cost } of withCosts(from, to)) for (const k of Object.keys(out)) out[k] += cost[k];
-      return out;
-    },
+  analytics(`/analytics/expenses?period=${period}`, (src) => {
+    const { from, to } = periodRange(period);
+    const out = { fuel: 0, salary: 0, repair: 0, tolls: 0, other: 0 };
+    for (const { cost } of withCosts(src, from, to)) for (const k of Object.keys(out)) out[k] += cost[k];
+    return out;
   });

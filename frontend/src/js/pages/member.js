@@ -25,13 +25,18 @@ function renderHead(m) {
   document.title = `${m.name} · NeVpade`;
   $('mAvatar').outerHTML = avatar(m, { size: 84 });
   $('mStatus').classList.toggle('is-offline', !m.online);
-  $('mStatus').querySelector('.status__text').textContent = m.online ? t('В мережі') : t('Був(ла) {date}', { date: lastSeen(m.lastSeen) });
+  $('mStatus').querySelector('.status__text').textContent = m.online ? t('В мережі') : m.lastSeen ? t('Був(ла) {date}', { date: lastSeen(m.lastSeen) }) : t('Не в мережі');
   $('mName').textContent = m.name;
   $('mPosition').textContent = m.position ?? '';
-  $('mContacts').innerHTML = `
-    <a href="tel:${escapeHtml(m.phone)}">${escapeHtml(m.phone)}</a>
-    <a href="mailto:${escapeHtml(m.email)}" data-no-i18n>${escapeHtml(m.email)}</a>`;
-  $('mCall').href = `tel:${m.phone}`;
+  // сервер може не віддати якесь поле — показуємо лише те, що є
+  $('mContacts').innerHTML = [
+    m.phone && `<a href="tel:${escapeHtml(m.phone)}">${escapeHtml(m.phone)}</a>`,
+    m.email && `<a href="mailto:${escapeHtml(m.email)}" data-no-i18n>${escapeHtml(m.email)}</a>`,
+  ]
+    .filter(Boolean)
+    .join('');
+  if (m.phone) $('mCall').href = `tel:${m.phone}`;
+  else $('mCall').hidden = true;
   renderRole(m);
 }
 
@@ -57,9 +62,9 @@ function renderRole(m) {
 }
 
 function renderKpi(k, active) {
-  $('kTrips').textContent = k.tripsCount.toLocaleString(locale());
+  $('kTrips').textContent = (k.tripsCount ?? 0).toLocaleString(locale());
   $('kTripsNote').textContent = t('за весь час · {n} цього місяця', { n: k.tripsThisMonth });
-  $('kPaid').innerHTML = k.paidOnTime === null ? '—' : `${k.paidOnTime}<small>%</small>`;
+  $('kPaid').innerHTML = k.paidOnTime == null ? '—' : `${k.paidOnTime}<small>%</small>`;
   $('kPaidBar').style.width = `${k.paidOnTime ?? 0}%`;
   $('kActive').textContent = k.activeTrips;
   $('kActiveNote').textContent = t('в дорозі: {n} · водіїв: {d}', { n: active.filter((x) => x.status === 'in_progress').length, d: k.activeDrivers });
