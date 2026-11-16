@@ -9,7 +9,7 @@ from ..utils import is_oid, now, oid, public
 
 router = APIRouter(prefix="/company/chat", tags=["Чат компанії"])
 
-HISTORY_LIMIT = 200
+HISTORY_LIMIT = 100  # без after — останні 100 (контракт)
 
 
 class MessageIn(CamelModel):

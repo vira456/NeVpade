@@ -11,8 +11,8 @@ from pymongo.errors import DuplicateKeyError
 
 from ..deps import company_filter, current_user, db
 from ..errors import ApiError
-from ..schemas.common import CamelModel, Email, Phone
-from ..services.users import default_settings
+from ..schemas.common import CamelModel, Email, FullName3, Phone
+from ..services.users import default_settings, release_phone_from_unverified
 
 router = APIRouter(prefix="/profile", tags=["Профіль"])
 
@@ -31,7 +31,7 @@ class ProfileOut(CamelModel):
 
 
 class ProfileUpdate(CamelModel):
-    full_name: str | None = Field(default=None, min_length=2, max_length=100)
+    full_name: FullName3 | None = None
     position: str | None = Field(default=None, max_length=100)
     email: Email | None = None
     phone: Phone | None = None
@@ -98,7 +98,7 @@ async def update_profile(body: ProfileUpdate, user: dict = Depends(current_user)
     data = body.model_dump(exclude_unset=True, exclude_none=True)
     fields: dict = {}
     if "full_name" in data:
-        fields["name"] = " ".join(data["full_name"].split())
+        fields["name"] = data["full_name"]
     for key in ("position", "language"):
         if key in data:
             fields[key] = data[key]
@@ -107,7 +107,8 @@ async def update_profile(body: ProfileUpdate, user: dict = Depends(current_user)
             raise ApiError(409, "Цей email уже використовується", "email_taken")
         fields["email"] = data["email"]
     if "phone" in data and data["phone"] != user.get("phone"):
-        if await database.users.find_one({"phone": data["phone"], "_id": {"$ne": user["_id"]}}, {"_id": 1}):
+        # Номер, який «тримає» лише незавершена реєстрація, звільняємо (як і під час реєстрації)
+        if await release_phone_from_unverified(database, data["phone"], except_id=user["_id"]):
             raise ApiError(409, "Цей номер уже використовується", "phone_taken")
         fields["phone"] = data["phone"]
     if not fields:
@@ -133,10 +134,13 @@ async def delete_avatar(user: dict = Depends(current_user), database: AsyncDatab
 
 @router.get("/kpi", response_model=KpiOut)
 async def kpi(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    me = str(user["_id"])
-    trips_count = await database.trips.count_documents({**company_filter(user), "managerId": me})
-    done = await database.trips.count_documents({**company_filter(user), "managerId": me, "status": "done"})
-    cancelled = await database.trips.count_documents({**company_filter(user), "managerId": me, "status": "cancelled"})
+    pipeline = [
+        {"$match": {**company_filter(user), "managerId": str(user["_id"])}},
+        {"$group": {"_id": "$status", "n": {"$sum": 1}}},
+    ]
+    by_status = {row["_id"]: row["n"] async for row in await database.trips.aggregate(pipeline)}
+    trips_count = sum(by_status.values())
+    done, cancelled = by_status.get("done", 0), by_status.get("cancelled", 0)
     # Рейтинг: частка успішно завершених рейсів серед закритих (завершені + скасовані), у шкалі 0–5
     rating = round(5 * done / (done + cancelled), 1) if done + cancelled else 5.0
     active_drivers = await database.drivers.count_documents({**company_filter(user), "status": {"$ne": "day_off"}})

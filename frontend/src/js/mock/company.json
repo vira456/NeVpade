@@ -1,0 +1,58 @@
+{
+  "company": {
+    "id": "cmp_01",
+    "name": "ТОВ «Західтранс»",
+    "inviteCode": "NVP-4821",
+    "city": "Хмельницький",
+    "createdAt": "2025-03-12"
+  },
+  "members": [
+    {
+      "id": "usr_01",
+      "name": "Федорова Віра Дмитрівна",
+      "position": "Старший менеджер з вантажоперевезень",
+      "email": "v.fedorova@nevpade.ua",
+      "phone": "+380671234567",
+      "online": true,
+      "role": "owner"
+    },
+    {
+      "id": "usr_02",
+      "name": "Мельничук Олег Петрович",
+      "position": "Менеджер з вантажоперевезень",
+      "email": "o.melnychuk@nevpade.ua",
+      "phone": "+380672345678",
+      "online": true,
+      "role": "manager"
+    },
+    {
+      "id": "usr_03",
+      "name": "Савчук Ірина Олегівна",
+      "position": "Менеджер-логіст",
+      "email": "i.savchuk@nevpade.ua",
+      "phone": "+380503456789",
+      "online": false,
+      "lastSeen": "2026-11-10T08:40:00Z",
+      "role": "manager"
+    },
+    {
+      "id": "usr_04",
+      "name": "Гуменюк Тарас Іванович",
+      "position": "Диспетчер",
+      "email": "t.humeniuk@nevpade.ua",
+      "phone": "+380934567890",
+      "online": true,
+      "role": "manager"
+    },
+    {
+      "id": "usr_05",
+      "name": "Кравчук Наталія Сергіївна",
+      "position": "Менеджер з продажу перевезень",
+      "email": "n.kravchuk@nevpade.ua",
+      "phone": "+380685678901",
+      "online": false,
+      "lastSeen": "2026-11-09T17:15:00Z",
+      "role": "manager"
+    }
+  ]
+}

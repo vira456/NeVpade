@@ -7,7 +7,8 @@ services:
     rootDir: backend
     plan: free
     branch: main
-    buildCommand: pip install -r requirements.txt
+    # Збираємо й фронтенд: бекенд віддає сайт з frontend/dist (головна — «/», API — «/api»)
+    buildCommand: pip install -r requirements.txt && cd ../frontend && npm ci && npm run build:server
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
     healthCheckPath: /api/health
     envVars:

@@ -4,10 +4,10 @@ from pymongo import ReturnDocument, UpdateOne
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..deps import current_user, db
-from ..errors import not_found
+from ..errors import invalid, not_found
 from ..schemas.entities import ReorderIn, TaskIn, TaskOut, TaskUpdate
 from ..services.crud import ensure_ref
-from ..utils import is_oid, now, oid, public
+from ..utils import drop_nulls, is_oid, now, oid, public, today_kyiv
 
 router = APIRouter(prefix="/tasks", tags=["Завдання (Kanban)"])
 
@@ -29,6 +29,8 @@ async def list_tasks(user: dict = Depends(current_user), database: AsyncDatabase
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 async def create_task(body: TaskIn, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
     data = body.model_dump(by_alias=True)
+    if data.get("dueDate") and data["dueDate"] < today_kyiv().isoformat():
+        raise invalid("Термін виконання не може бути в минулому")
     await ensure_ref(database, user, "trips", data.get("tripId"), "Рейс")
     if data.get("order") is None:  # нова картка — в кінець колонки
         data["order"] = await database.tasks.count_documents({**_mine(user), "status": data["status"]})
@@ -53,11 +55,10 @@ async def reorder_tasks(body: ReorderIn, user: dict = Depends(current_user), dat
 
 
 async def _update(task_id: str, body: TaskUpdate, user: dict, database: AsyncDatabase) -> dict:
-    data = body.model_dump(by_alias=True, exclude_unset=True)
+    # null можна передати лише для дати й прив'язки до рейсу; title/status/priority/order — ігноруємо
+    data = drop_nulls(body.model_dump(by_alias=True, exclude_unset=True), frozenset({"dueDate", "tripId"}))
     if "tripId" in data:
         await ensure_ref(database, user, "trips", data["tripId"], "Рейс")
-    if data.get("order") is None:
-        data.pop("order", None)
     doc = await database.tasks.find_one_and_update(
         {"_id": oid(task_id, "Завдання"), **_mine(user)},
         {"$set": {**data, "updatedAt": now()}},

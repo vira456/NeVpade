@@ -18,6 +18,17 @@ def _bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _num(name: str, default, cast):
+    """Число зі змінної середовища; порожнє значення (напр. `JWT_EXPIRE_HOURS=` у .env) → типове."""
+    value = (os.getenv(name) or "").strip()
+    if not value:
+        return default
+    try:
+        return cast(value)
+    except ValueError:
+        raise RuntimeError(f"Змінна {name} має бути числом, отримано: {value!r}") from None
+
+
 def _list(name: str, default: str) -> list[str]:
     return [item.strip().rstrip("/") for item in os.getenv(name, default).split(",") if item.strip()]
 
@@ -30,7 +41,7 @@ class Settings:
 
     # --- JWT ---
     jwt_secret: str = os.getenv("JWT_SECRET", "")
-    jwt_expire_hours: int = int(os.getenv("JWT_EXPIRE_HOURS", "168"))  # 7 днів
+    jwt_expire_hours: int = _num("JWT_EXPIRE_HOURS", 168, int)  # 7 днів
 
     # --- CORS: адреси фронтенду через кому ---
     cors_origins: list[str] = field(
@@ -48,7 +59,7 @@ class Settings:
     email_from_name: str = os.getenv("EMAIL_FROM_NAME", "NeVpade")
     brevo_api_key: str = os.getenv("BREVO_API_KEY", "")
     smtp_host: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_port: int = _num("SMTP_PORT", 587, int)
     smtp_user: str = os.getenv("SMTP_USER", "")
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
 
@@ -61,7 +72,7 @@ class Settings:
     dev_fixed_code: str = os.getenv("DEV_FIXED_CODE", "")
 
     # --- Бізнес-налаштування за замовчуванням ---
-    default_fuel_price: float = float(os.getenv("DEFAULT_FUEL_PRICE", "56"))  # грн/л
+    default_fuel_price: float = _num("DEFAULT_FUEL_PRICE", 56.0, float)  # грн/л
 
     debug: bool = _bool("DEBUG", False)
 

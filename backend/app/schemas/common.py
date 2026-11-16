@@ -3,10 +3,10 @@ import re
 from datetime import date
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict
 from pydantic.alias_generators import to_camel
 
-from ..utils import normalize_phone
+from ..utils import normalize_name, normalize_optional_phone, normalize_phone
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _PASSWORD_LETTER = re.compile(r"[A-Za-zА-Яа-яІіЇїЄєҐґ]")
@@ -56,6 +56,11 @@ def _code(value: str) -> str:
 Email = Annotated[str, AfterValidator(_email)]
 Password = Annotated[str, AfterValidator(_password)]
 Phone = Annotated[str, AfterValidator(normalize_phone)]
+# Необов'язковий номер: "" або null → None
+OptionalPhone = Annotated[str | None, BeforeValidator(normalize_optional_phone)]
+# Ім'я та прізвище (реєстрація) і ПІБ з 2–3 слів (профіль) — як у контракті
+FullName2 = Annotated[str, AfterValidator(lambda v: normalize_name(v, min_words=2, max_words=2, max_len=60))]
+FullName3 = Annotated[str, AfterValidator(lambda v: normalize_name(v, min_words=2, max_words=3, max_len=80))]
 IsoDate = Annotated[str | None, AfterValidator(_date)]
 Code = Annotated[str, AfterValidator(_code)]
 

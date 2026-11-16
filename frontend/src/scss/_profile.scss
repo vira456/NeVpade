@@ -1,0 +1,282 @@
+@use 'variables' as *;
+
+
+.profile {
+  max-width: 1100px;
+
+  // Поки дані вантажаться — без «стрибків» тексту
+  &.is-loading .profile-head__name,
+  &.is-loading .profile-head__position { color: transparent; background: $color-bg; border-radius: 6px; }
+}
+
+// ---------- Шапка ----------
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 28px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    text-align: center;
+    gap: 18px;
+    padding: 24px 16px;
+  }
+
+  &__info { min-width: 0; }
+  &__name { margin: 8px 0 4px; font-size: 30px; }
+  &__position { margin: 0; color: $color-muted; }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    @media (max-width: 600px) { justify-content: center; }
+  }
+
+  &__hint { margin: 8px 0 0; font-size: 13px; color: $color-muted; }
+}
+
+// ---------- Аватар ----------
+.avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: $color-accent;
+  color: $color-on-accent;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-shadow: 0 0 0 4px $color-surface, 0 0 0 5px $color-border;
+
+  &__img { width: 100%; height: 100%; object-fit: cover; }
+  &__initials { font-size: 38px; font-weight: 700; color: $color-on-accent; }
+
+  // Затемнення з написом «Змінити» при наведенні
+  &__upload {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, .5);
+    color: #fff;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity .2s;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  &:hover &__upload,
+  &__upload:focus-within,
+  &.is-dragover &__upload { opacity: 1; }
+
+  &.is-dragover { box-shadow: 0 0 0 4px $color-surface, 0 0 0 6px $color-primary; }
+  &.is-loading { opacity: .6; }
+
+  @media (hover: none) {
+    &__upload { opacity: 1; background: none; align-items: end; }
+    &__upload-text { background: rgba(0, 0, 0, .6); width: 100%; text-align: center; padding: 4px 0 8px; }
+  }
+}
+
+.avatar:has(input:focus-visible) { box-shadow: 0 0 0 4px $color-surface, 0 0 0 6px $color-primary; }
+
+// ---------- Статус ----------
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, $color-success 10%, transparent);
+  color: $color-success;
+  font-size: 13px;
+  font-weight: 500;
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $color-success;
+    box-shadow: 0 0 0 0 color-mix(in srgb, $color-success 50%, transparent);
+    animation: pulse 2s infinite;
+  }
+
+  &.is-offline { background: $color-bg; color: $color-muted; }
+  &.is-offline &__dot { background: $color-faint; animation: none; }
+}
+
+@keyframes pulse {
+  70% { box-shadow: 0 0 0 6px color-mix(in srgb, $color-success 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, $color-success 0%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status__dot { animation: none; }
+}
+
+// ---------- KPI ----------
+.kpi {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $gap;
+  margin-bottom: $gap;
+
+  @media (max-width: 700px) { grid-template-columns: 1fr; }
+
+  &__card { display: flex; flex-direction: column; gap: 6px; }
+  &__label { color: $color-muted; font-size: 14px; }
+
+  &__value {
+    font-family: $font-display;
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+
+    small { font-size: 16px; color: $color-muted; font-weight: 500; }
+  }
+
+  &__note { font-size: 13px; color: $color-muted; }
+
+  &__bar {
+    display: block;
+    height: 6px;
+    border-radius: 999px;
+    background: $color-bg;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  &__bar-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: $color-text;
+    border-radius: inherit;
+    transition: width .6s ease-out;
+  }
+}
+
+// ---------- Форми ----------
+.profile-form {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  margin-bottom: $gap;
+
+  &__title { margin: 0; font-size: 20px; }
+  &__desc { margin: -8px 0 0; color: $color-muted; font-size: 14px; line-height: 1.5; }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    &--split { justify-content: space-between; }
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+
+  @media (max-width: 700px) { grid-template-columns: 1fr; }
+
+  &__wide { grid-column: 1 / -1; }
+}
+
+select.input { appearance: none; padding-right: 36px; cursor: pointer;
+  background: $color-surface-2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7785' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 14px center;
+}
+
+// Дві колонки: форма + бічна картка
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: $gap;
+  align-items: start;
+
+  @media (max-width: 1000px) { grid-template-columns: 1fr; }
+}
+
+// ---------- Шаблон Viber ----------
+// Звичайний (не моноширинний) варіант для описів
+.textarea--plain.textarea { font-family: inherit; min-height: 90px; font-size: 15px; }
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 160px;
+  line-height: 1.5;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 14px;
+}
+
+.textarea-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+
+  &__warning { color: $color-error; }
+  &__counter { margin-left: auto; color: $color-muted; font-variant-numeric: tabular-nums;
+    &.is-over { color: $color-error; font-weight: 600; }
+  }
+}
+
+// ---------- Надійність пароля ----------
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__meter {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+
+    span { height: 4px; border-radius: 2px; background: $color-border; transition: background .2s; }
+
+    &[data-level='1'] span:nth-child(-n + 1) { background: $color-error; }
+    &[data-level='2'] span:nth-child(-n + 2) { background: $color-warning; }
+    &[data-level='3'] span:nth-child(-n + 3) { background: #5f9e3a; }
+    &[data-level='4'] span:nth-child(-n + 4) { background: $color-success; }
+  }
+
+  &__label { min-width: 70px; text-align: right; font-size: 13px; color: $color-muted; }
+}
+
+// ---------- Сесія ----------
+.session {
+  &__device { display: flex; }
+
+  &__badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: $color-on-accent;
+    background: $color-accent;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  &__list {
+    margin: 0;
+    display: grid;
+    gap: 12px;
+
+    div { display: grid; gap: 2px; }
+    dt { font-size: 13px; color: $color-muted; }
+    dd { margin: 0; font-weight: 500; }
+  }
+
+  .btn--danger { justify-self: start; }
+}
