@@ -149,10 +149,22 @@ form.addEventListener('submit', async (e) => {
 
 async function init() {
   form.querySelector('.chat__send').innerHTML = icons.send;
-  const [m, company, tr, history] = await Promise.all([getMembers(), getCompany(), getTrips(), getMessages()]);
+  let history;
+  const [m, company, tr] = await Promise.all([getMembers(), getCompany(), getTrips().catch(() => [])]);
+  try {
+    history = await getMessages();
+  } catch (err) {
+    // чат ще не підключено на сервері — пояснюємо, а не показуємо порожній екран
+    members = m;
+    renderPeople();
+    document.getElementById('chatSub').textContent = company.name ?? '';
+    list.innerHTML = `<div class="empty"><p class="empty__title">${t('Чат зараз недоступний')}</p><p>${escapeHtml(err.message)}</p></div>`;
+    input.disabled = true;
+    return;
+  }
   members = m;
   trips = tr;
-  messages = history;
+  messages = history ?? [];
   document.getElementById('chatSub').textContent = t(plural(members.length, ['{company} · {n} учасник', '{company} · {n} учасники', '{company} · {n} учасників']), { company: company.name, n: members.length });
   renderPeople();
   renderAll();

@@ -50,17 +50,31 @@ export const getCompany = () =>
     mock: () => otherCompany() ?? { ...freshSeed(seed.company), name: getCurrentUser()?.companyName || seed.company.name },
   });
 
-export const getMembers = () => request('/company/members', { mock: mockMembers });
+// Сервер на MongoDB може віддати _id замість id — вирівнюємо, щоб посилання на профілі працювали
+const normalize = (m) => ({ ...m, id: String(m.id ?? m._id ?? m.userId ?? '') });
+export const getMembers = () => request('/company/members', { mock: mockMembers }).then((list) => (list ?? []).map(normalize));
 
-/** Один колега — для сторінки «Профіль колеги» */
-export const getMember = (id) =>
-  request(`/company/members/${id}`, {
-    mock: () => {
-      const m = mockMembers().find((x) => x.id === id);
-      if (!m) throw new ApiError('Такого колеги в компанії немає', 404, 'member_not_found');
-      return m;
-    },
-  });
+/**
+ * Один колега — для сторінки «Профіль колеги».
+ * Якщо на сервері ще немає GET /company/members/{id}, беремо людину зі списку /company/members.
+ */
+export async function getMember(id) {
+  try {
+    const one = await request(`/company/members/${id}`, {
+      mock: () => {
+        const m = mockMembers().find((x) => x.id === id);
+        if (!m) throw new ApiError('Такого колеги в компанії немає', 404, 'member_not_found');
+        return m;
+      },
+    });
+    return normalize(one);
+  } catch (err) {
+    if (err.code === 'member_not_found' || err.status === 401) throw err;
+    const m = (await getMembers()).find((x) => x.id === String(id));
+    if (!m) throw new ApiError('Такого колеги в компанії немає', 404, 'member_not_found');
+    return m;
+  }
+}
 
 /**
  * Перейти в іншу компанію: { mode: 'join', code } або { mode: 'create', name }.

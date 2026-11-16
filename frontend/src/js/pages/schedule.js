@@ -136,7 +136,7 @@ function renderFree() {
   const date = new Date(`${selected}T00:00:00`).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
   $('freeInfo').innerHTML = free.length
     ? `${t('Вільні {date}:', { date })} ${free
-        .map((v) => `<span class="schedule-free__item">${plate(v.plate, { small: true })} <span data-no-i18n>${escapeHtml(v.type || v.model)} · ${v.capacityT} т</span></span>`)
+        .map((v) => `<span class="schedule-free__item">${plate(v.plate, { small: true })} <span data-no-i18n>${escapeHtml(v.type || v.model || '')}${v.capacityT ? ` · ${v.capacityT} т` : ''}</span></span>`)
         .join('')}`
     : t('{date}: вільних машин немає', { date });
 }

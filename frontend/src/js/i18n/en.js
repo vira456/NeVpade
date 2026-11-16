@@ -919,7 +919,11 @@ export default {
     "Ви вже в цій компанії": "You're already in this company",
     "Ви єдиний керівник компанії. Спершу призначте керівником когось із колег у списку команди": "You're the company's only head. Make a colleague head in the team list first",
     "Рейсів ще немає": "No trips yet",
-    "Створіть перший рейс вручну або імпортуйте вантаж з Della.": "Create the first trip manually or import a load from Della."
+    "Створіть перший рейс вручну або імпортуйте вантаж з Della.": "Create the first trip manually or import a load from Della.",
+    "Чат зараз недоступний": "Chat is unavailable right now",
+    "Цей розділ ще не підключено на сервері": "This section isn't connected on the server yet",
+    "Ця дія ще не підтримується сервером": "The server doesn't support this action yet",
+    "Помилка на сервері. Спробуйте пізніше": "Server error. Please try again later"
   },
   patterns: [
     [

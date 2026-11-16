@@ -71,7 +71,7 @@ function renderList() {
             <span class="badge badge--${t.status}">${TRIP_STATUS[t.status]}</span>
           </span>
           <span class="trip-item__route">${escapeHtml(t.from.city)} → ${escapeHtml(t.to.city)}</span>
-          <span class="trip-item__meta">${new Date(t.loadDate).toLocaleDateString(locale())} · ${t.distanceKm} км · ${escapeHtml(t.cargo.type)}</span>
+          <span class="trip-item__meta">${new Date(`${t.loadDate}T00:00:00`).toLocaleDateString(locale())}${t.distanceKm ? ` · ${t.distanceKm} км` : ''} · ${escapeHtml(t.cargo?.type)}</span>
         </button>
       </li>`
         )
@@ -84,7 +84,7 @@ function renderDetails(trip, route) {
   const driver = driverOf(trip);
   const vehicle = vehicleOf(trip);
   const km = route ? (route.distance / 1000).toFixed(0) : trip.distanceKm;
-  const time = route ? formatDuration(route.duration) : `≈ ${estimateDuration(trip.distanceKm)}`;
+  const time = route ? formatDuration(route.duration) : trip.distanceKm ? `≈ ${estimateDuration(trip.distanceKm)}` : '—';
 
   els.details.innerHTML = `
     <div class="route-card__head">
@@ -98,7 +98,7 @@ function renderDetails(trip, route) {
         <span><strong>${escapeHtml(trip.to.city)}</strong><br><small>${escapeHtml(trip.to.address ?? '')}</small></span></li>
     </ol>
     <dl class="route-card__stats">
-      <div><dt>Відстань</dt><dd>${km} км</dd></div>
+      <div><dt>Відстань</dt><dd>${km ? `${km} км` : "—"}</dd></div>
       <div><dt>У дорозі</dt><dd>${time}</dd></div>
       <div><dt>Вартість</dt><dd>${money(trip.price)}</dd></div>
     </dl>

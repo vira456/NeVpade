@@ -161,7 +161,7 @@ function vehicleOptions(selectedId, forDriverId) {
       .map((v) => {
         const holder = driverOfVehicle(v.id);
         const busy = holder && holder.id !== forDriverId ? ` — ${holder.name.split(' ')[0]}` : '';
-        return `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${escapeHtml(`${v.plate} · ${v.model}${busy}`)}</option>`;
+        return `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${escapeHtml(`${v.plate}${v.model ? ` · ${v.model}` : ''}${busy}`)}</option>`;
       })
       .join('')
   );
@@ -181,7 +181,7 @@ function renderDrivers() {
           <label class="visually-hidden" for="veh-${d.id}">${escapeHtml(t('Машина водія {name}', { name: d.name }))}</label>
           <select class="input input--compact" id="veh-${d.id}" data-assign="${d.id}" data-no-i18n>${vehicleOptions(d.vehicleId, d.id)}</select>
         </td>
-        <td class="num">${nf(d.ratePerKm)} грн/км</td>
+        <td class="num">${d.ratePerKm ? `${nf(d.ratePerKm)} грн/км` : '—'}</td>
         <td>${trip ? `<a href="/pages/trips.html?trip=${trip.id}">${escapeHtml(trip.number)}</a><span class="sub" data-no-i18n>${escapeHtml(trip.from.city)} → ${escapeHtml(trip.to.city)}</span>` : '<span class="sub">—</span>'}</td>
         <td>${statusBadge(d.status, DRIVER_STATUS)}</td>
         <td class="trip-tr__actions">
@@ -456,7 +456,7 @@ document.querySelector('.main').addEventListener('click', (e) => {
       ownerType,
       ownerId: id,
       title: isVehicle ? 'Документи машини' : 'Документи водія',
-      owner: isVehicle ? `${item.plate} · ${item.model}` : item.name,
+      owner: isVehicle ? [item.plate, item.model].filter(Boolean).join(' · ') : item.name,
       types: isVehicle ? VEHICLE_DOC_TYPES : DRIVER_DOC_TYPES,
       onChange: async () => {
         await loadDocSummary();

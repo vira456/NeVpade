@@ -9,7 +9,7 @@ import { deleteOwnerDocsMock } from './documents.js';
 import { load } from '../utils/storage.js';
 import seedCompany from '../mock/company.json';
 
-export const myId = () => getCurrentUser()?.id ?? 'usr_01';
+export const myId = () => String(getCurrentUser()?.id ?? getCurrentUser()?._id ?? 'usr_01');
 
 /** Роль поточного користувача: owner (керівник) або manager */
 export function myRole() {
