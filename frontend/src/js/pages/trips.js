@@ -103,7 +103,7 @@ function filtered() {
     .filter((t) => {
       if (!q) return true;
       const d = driverOf(t);
-      return `${t.number} ${t.from.city} ${t.to.city} ${t.cargo.type} ${t.client?.name ?? ''} ${d?.name ?? ''}`.toLowerCase().includes(q);
+      return `${t.number} ${t.from.city} ${t.to.city} ${t.cargo.type} ${t.client?.name ?? ''} ${d?.name ?? ''} ${managerOf(t)?.name ?? ''}`.toLowerCase().includes(q);
     })
     .sort((a, b) => SORTS[sort.key](a, b) * sort.dir);
 }
@@ -191,7 +191,7 @@ function render() {
           <td data-label="Маршрут" class="trip-tr__route">${routeLine(t)}</td>
           <td data-label="Вантаж">${escapeHtml(t.cargo.type)}<span class="sub">${cargoSize(t.cargo)}</span></td>
           <td data-label="Водій">${d ? escapeHtml(d.name) : '—'}<span class="sub">${v ? escapeHtml(v.plate) : ''}</span></td>
-          <td data-label="Менеджер" class="col-manager">${t.managerId === myId() ? '<span class="sub">Ви</span>' : `<span data-no-i18n>${escapeHtml(shortName(managerOf(t)?.name ?? '—'))}</span>`}</td>
+          <td data-label="Менеджер" class="col-manager">${t.managerId === myId() ? '<span class="sub">Ви</span>' : managerOf(t) ? `<a class="manager-link" href="/pages/member.html?id=${encodeURIComponent(t.managerId)}" data-no-i18n>${escapeHtml(shortName(managerOf(t).name))}</a>` : '—'}</td>
           <td data-label="Вартість" class="num trip-tr__price">${money(t.price)}</td>
           <td data-label="Статус" class="trip-tr__state">${statusBadge(t.status)}${paymentLine(t)}</td>
           <td class="trip-tr__actions">
@@ -201,7 +201,9 @@ function render() {
         </tr>`;
         })
         .join('')
-    : `<tr><td colspan="8"><div class="empty"><p class="empty__title">Рейсів не знайдено</p><p>Змініть пошуковий запит або оберіть інший статус.</p></div></td></tr>`;
+    : trips.length
+      ? `<tr><td colspan="8"><div class="empty"><p class="empty__title">Рейсів не знайдено</p><p>Змініть пошуковий запит або оберіть інший статус.</p></div></td></tr>`
+      : `<tr><td colspan="8"><div class="empty"><p class="empty__title">Рейсів ще немає</p><p>Створіть перший рейс вручну або імпортуйте вантаж з Della.</p></div></td></tr>`;
 }
 
 // ---------- Історія змін ----------
@@ -368,7 +370,7 @@ async function openTrip(id) {
 
     ${
       t.managerId !== myId()
-        ? `<p class="trip-card__owner">${avatar(managerOf(t) ?? { name: '?' }, { size: 28, dot: false })}<span>${tr('Рейс веде {name}', { name: `<b data-no-i18n>${escapeHtml(managerOf(t)?.name ?? '—')}</b>` })}</span></p>`
+        ? `<p class="trip-card__owner">${avatar(managerOf(t) ?? { name: '?' }, { size: 28, dot: false })}<span>${tr('Рейс веде {name}', { name: managerOf(t) ? `<a class="manager-link" href="/pages/member.html?id=${encodeURIComponent(t.managerId)}" data-no-i18n><b>${escapeHtml(managerOf(t).name)}</b></a>` : '—' })}</span></p>`
         : ''
     }
     ${
@@ -647,7 +649,10 @@ async function init() {
   const params = new URLSearchParams(location.search);
   if (params.get('pay')) payFilter.value = params.get('pay');
   if (params.get('client')) search.value = clients.find((c) => c.id === params.get('client'))?.name ?? '';
-  if ((params.get('pay') || params.get('client')) && !params.get('scope')) scope = 'all';
+  // рейси колеги зі сторінки його профілю
+  const byManager = params.get('manager') && members.find((m) => m.id === params.get('manager'));
+  if (byManager) search.value = byManager.name;
+  if ((params.get('pay') || params.get('client') || byManager) && !params.get('scope')) scope = 'all';
   document.querySelectorAll('#scopeTabs [data-scope]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scope === scope)));
   renderTabs();
   render();

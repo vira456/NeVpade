@@ -112,6 +112,7 @@
 }
 
 .company-card {
+  &__switch { margin-top: 16px; width: 100%; }
   &__facts {
     margin: 14px 0 0;
     display: grid;
@@ -198,7 +199,7 @@
   &__spacer { width: 34px; flex-shrink: 0; }
 
   &__body { display: grid; gap: 2px; min-width: 0; }
-  &__author { font-size: 12px; font-weight: 700; color: $color-muted; margin-left: 4px; }
+  &__author { font-size: 12px; font-weight: 700; color: $color-muted; margin-left: 4px; text-decoration: none; &:hover { color: $color-text; text-decoration: underline; } }
 
   &__bubble {
     padding: 9px 14px;
@@ -310,3 +311,89 @@
     cursor: pointer;
   }
 }
+
+// Ім'я й аватар колеги ведуть на його профіль
+.member__avatar { display: block; border-radius: 50%; }
+a.member__name { color: inherit; text-decoration: none; &:hover { text-decoration: underline; text-underline-offset: 3px; } }
+
+// Попередження в діалозі «Змінити компанію»
+.switch-note {
+  margin: 0 0 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  background: color-mix(in srgb, $color-warning 14%, transparent);
+  p { margin: 0; }
+  p + p { margin-top: 6px; }
+  &.is-bad { background: color-mix(in srgb, $color-error 12%, transparent); }
+}
+
+// ---------- Профіль колеги ----------
+.back-link {
+  justify-self: start;
+  font-size: 14px;
+  font-weight: 600;
+  color: $color-muted;
+  text-decoration: none;
+  &:hover { color: $color-text; }
+}
+
+.member-page {
+  display: grid;
+  gap: $gap;
+  align-content: start;
+  .kpi { margin-bottom: 0; }
+  &.is-loading .member-head__name { color: transparent; background: $color-bg; border-radius: 6px; }
+}
+
+.member-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 26px 28px;
+
+  &__info { min-width: 0; }
+  &__name { margin: 8px 0 2px; font-size: 28px; }
+  &__position { margin: 0; color: $color-muted; }
+  &__role { margin-top: 8px; display: flex; .role-badge, .role-select { margin-top: 0; } }
+  &__contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-top: 10px;
+    font-size: 14px;
+    a { color: $color-text; text-decoration: none; &:hover { text-decoration: underline; } }
+  }
+  &__actions { display: flex; flex-direction: column; gap: 8px; }
+
+  @media (max-width: $bp-tablet) {
+    grid-template-columns: auto minmax(0, 1fr);
+    &__actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+  }
+  @media (max-width: $bp-phone) {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    padding: 22px 16px;
+    &__role, &__contacts, &__actions { justify-content: center; }
+  }
+}
+
+.kpi--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  @media (max-width: 1100px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi__value { font-size: 30px; }
+  @media (max-width: 520px) { gap: 10px; .kpi__value { font-size: 22px; } .kpi__card { padding: 16px; } }
+  @media (max-width: 340px) { grid-template-columns: 1fr; }
+}
+
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $gap;
+  align-items: start;
+  @media (max-width: $bp-tablet) { grid-template-columns: 1fr; }
+}
+
+.mini-trips__empty { display: block !important; background: none !important; padding: 6px 0 !important; color: $color-muted; font-size: 14px; }

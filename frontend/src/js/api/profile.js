@@ -54,25 +54,33 @@ export async function updateAvatar(image) {
   return profile;
 }
 
-// Показники менеджера — з його рейсів
+// Показники менеджера — з його рейсів (однаково для свого профілю й профілю колеги)
+export function kpiFromTrips(trips, managerId) {
+  const mine = trips.filter((t) => t.managerId === managerId);
+  const done = mine.filter((t) => t.status === 'done');
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const withPayment = done.filter((t) => t.payment?.dueDate);
+  const onTime = withPayment.filter((t) => t.payment.paidAt && t.payment.paidAt <= t.payment.dueDate).length;
+  const active = mine.filter((t) => ['planned', 'in_progress'].includes(t.status));
+  return {
+    tripsCount: done.length,
+    tripsThisMonth: done.filter((t) => t.loadDate.startsWith(month)).length,
+    paidOnTime: withPayment.length ? Math.round((onTime / withPayment.length) * 100) : null,
+    activeDrivers: new Set(active.filter((t) => t.driverId).map((t) => t.driverId)).size,
+    activeTrips: active.length,
+    revenueThisMonth: mine.filter((t) => ['done', 'in_progress'].includes(t.status) && t.loadDate.startsWith(month)).reduce((s, t) => s + (t.price || 0), 0),
+  };
+}
+
 export const getKpi = () =>
   request('/profile/kpi', {
-    mock: () => {
-      const me = getCurrentUser()?.id ?? 'usr_01';
-      const mine = mockTrips().filter((t) => t.managerId === me);
-      const done = mine.filter((t) => t.status === 'done');
-      const month = new Date().toISOString().slice(0, 7);
-      const withPayment = done.filter((t) => t.payment?.dueDate);
-      const onTime = withPayment.filter((t) => t.payment.paidAt && t.payment.paidAt <= t.payment.dueDate).length;
-      const drivers = new Set(mine.filter((t) => ['planned', 'in_progress'].includes(t.status) && t.driverId).map((t) => t.driverId));
-      return {
-        tripsCount: done.length,
-        tripsThisMonth: done.filter((t) => t.loadDate.startsWith(month)).length,
-        paidOnTime: withPayment.length ? Math.round((onTime / withPayment.length) * 100) : null,
-        activeDrivers: drivers.size,
-      };
-    },
+    mock: () => kpiFromTrips(mockTrips(), getCurrentUser()?.id ?? 'usr_01'),
   });
+
+/** Показники колеги — для сторінки «Профіль колеги» */
+export const getMemberKpi = (memberId) =>
+  request(`/company/members/${memberId}/kpi`, { mock: () => kpiFromTrips(mockTrips(), memberId) });
 
 // ---------- Безпека ----------
 export const changePassword = (currentPassword, newPassword) =>

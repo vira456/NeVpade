@@ -87,7 +87,8 @@ export function renderLayout() {
       <nav class="sidebar__nav" aria-label="${sec.title}">
         ${sec.links
           .map((l) => {
-            const active = current === l.href;
+            // профіль колеги — підрозділ «Команди»
+            const active = current === l.href || (l.href === '/pages/team.html' && current === '/pages/member.html');
             return `<a class="sidebar__link ${active ? 'is-active' : ''}" href="${l.href}" title="${l.label}" ${active ? 'aria-current="page"' : ''}>
               ${l.icon}<span>${l.label}</span>${l.badge ? `<span class="sidebar__badge" data-badge="${l.badge}" hidden></span>` : ''}
             </a>`;

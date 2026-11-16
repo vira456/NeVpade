@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1280" />
+  <!-- nevpade:head -->
+  <title>Профіль колеги · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main member-page is-loading">
+      <a class="back-link" href="/pages/team.html">← Команда</a>
+
+      <!-- Шапка: хто це і як зв'язатися -->
+      <section class="card member-head">
+        <span id="mAvatar"></span>
+        <div class="member-head__info">
+          <div class="status" id="mStatus">
+            <span class="status__dot" aria-hidden="true"></span>
+            <span class="status__text"></span>
+          </div>
+          <h1 class="member-head__name" id="mName" data-no-i18n>&nbsp;</h1>
+          <p class="member-head__position" id="mPosition"></p>
+          <div class="member-head__role" id="mRole"></div>
+          <div class="member-head__contacts" id="mContacts"></div>
+        </div>
+        <div class="member-head__actions">
+          <a class="btn" href="/pages/chat.html">Написати в чаті</a>
+          <a class="btn btn--ghost" id="mCall" href="#">Подзвонити</a>
+        </div>
+      </section>
+
+      <!-- Показники — так само, як у власному профілі -->
+      <div class="kpi kpi--4">
+        <article class="card kpi__card">
+          <span class="kpi__label">Виконано рейсів</span>
+          <strong class="kpi__value" id="kTrips">—</strong>
+          <span class="kpi__note" id="kTripsNote">&nbsp;</span>
+        </article>
+        <article class="card kpi__card">
+          <span class="kpi__label">Оплачено вчасно</span>
+          <strong class="kpi__value" id="kPaid">—</strong>
+          <span class="kpi__bar"><span class="kpi__bar-fill" id="kPaidBar"></span></span>
+        </article>
+        <article class="card kpi__card">
+          <span class="kpi__label">Рейсів у роботі</span>
+          <strong class="kpi__value" id="kActive">—</strong>
+          <span class="kpi__note" id="kActiveNote">&nbsp;</span>
+        </article>
+        <article class="card kpi__card">
+          <span class="kpi__label">Виручка цього місяця</span>
+          <strong class="kpi__value" id="kRevenue">—</strong>
+          <span class="kpi__note">виконані й у дорозі</span>
+        </article>
+      </div>
+
+      <div class="member-grid">
+        <section class="card">
+          <div class="card__head">
+            <h2 class="card__title">Рейси в роботі</h2>
+            <a class="card__link" id="mAllTrips" href="/pages/trips.html">Усі рейси</a>
+          </div>
+          <ul class="mini-trips" id="mActive"></ul>
+        </section>
+        <section class="card">
+          <div class="card__head">
+            <h2 class="card__title">Останні виконані</h2>
+          </div>
+          <ul class="mini-trips" id="mDone"></ul>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/member.js"></script>
+</body>
+</html>

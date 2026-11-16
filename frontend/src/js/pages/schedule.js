@@ -86,7 +86,11 @@ function render() {
   if (unassigned.length) rows.push(rowHtml({ label: `<strong>${t('Без машини')}</strong><span class="schedule__model">${t('потрібно призначити')}</span>`, bars: unassigned, days, today, warn: true }));
 
   grid.style.setProperty('--days', DAYS);
-  grid.innerHTML = head + rows.join('');
+  grid.innerHTML =
+    head +
+    (rows.length
+      ? rows.join('')
+      : `<div class="schedule__empty"><p class="empty__title">${t('У автопарку ще немає машин')}</p><a class="btn btn--sm" href="/pages/fleet.html">${t('Додати машину')}</a></div>`);
   renderFree();
 }
 

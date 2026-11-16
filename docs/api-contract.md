@@ -594,6 +594,28 @@ POST, поля форми:
 | Видалити машину, водія, клієнта | `403 owner_only` | ✓ |
 | Змінити роль колеги | `403 owner_only` | ✓ |
 
+### GET `/company/members/{id}` — профіль колеги
+Той самий об'єкт учасника, що в списку `/company/members`. 404 `member_not_found`, якщо людини немає в компанії.
+
+### GET `/company/members/{id}/kpi` — показники колеги
+Формат і правила — як у `GET /profile/kpi`, плюс:
+```json
+{ "tripsCount": 30, "tripsThisMonth": 2, "paidOnTime": 33, "activeDrivers": 0, "activeTrips": 0, "revenueThisMonth": 34500 }
+```
+- `activeTrips` — рейси менеджера `planned` + `in_progress`
+- `revenueThisMonth` — сума `price` рейсів `done` + `in_progress` з `loadDate` у поточному місяці
+
+### POST `/company/switch` — перейти в іншу компанію
+```json
+{ "company": { "mode": "join", "code": "NVP-7315" } }
+{ "company": { "mode": "create", "name": "ТОВ «Нова логістика»" } }
+```
+- `join` → роль `manager` у новій компанії; `create` → нова компанія, роль `owner`
+- Активні рейси (`planned`, `in_progress`) користувача передаються керівнику старої компанії (з записом `transferred` в історії рейсу); виконані лишаються в старій компанії
+- 409 `last_owner` — користувач єдиний `owner`, а в компанії є інші люди
+- 409 `same_company` — код від тієї ж компанії; 404 `company_not_found` — код не існує
+- 200 `{ "user": { ...companyId, companyName, role }, "company": { ... } }`. Фронт перезаписує `user` і відкриває аналітику нової компанії
+
 ### PATCH `/company/members/{id}/role`
 ```json
 { "role": "owner" }

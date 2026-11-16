@@ -210,8 +210,8 @@ function renderExpenses(e) {
       ([key, value]) => `
       <li class="bars__row" title="${EXPENSE_LABELS[key]}: ${money(value)}">
         <span class="bars__label">${EXPENSE_LABELS[key]}</span>
-        <span class="bars__value">${compactMoney(value)} <small>${Math.round((value / total) * 100)} %</small></span>
-        <span class="bars__track"><span class="bars__fill" data-w="${(value / max) * 100}"></span></span>
+        <span class="bars__value">${compactMoney(value)} <small>${total ? Math.round((value / total) * 100) : 0} %</small></span>
+        <span class="bars__track"><span class="bars__fill" data-w="${max ? (value / max) * 100 : 0}"></span></span>
       </li>`
     )
     .join('');
