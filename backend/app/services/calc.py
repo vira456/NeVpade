@@ -1,51 +1,49 @@
 """Бізнес-логіка розрахунку собівартості рейсу.
 
-Формула (узгоджена з фронтендом):
-  пальне, л     = відстань × витрата (л/100 км) / 100
-  пальне, грн   = пальне, л × ціна пального (налаштування менеджера, типово 56 грн/л)
-  ЗП водія      = відстань × ставка водія (грн/км)
-  інші витрати  = відстань × 3,5 грн/км (дороги/стоянки 1,2 + ремонт/амортизація 1,3 + інше 1,0)
-  собівартість  = пальне + ЗП + інші витрати
-  прибуток      = ціна рейсу − собівартість
+Формула узгоджена з фронтендом (frontend/src/js/utils/economics.js, контракт — «Розрахунок рейсу»):
+  пальне, л   = відстань × витрата (л/100 км) / 100        (без машини — 32 л/100 км)
+  пальне, грн = пальне, л × ціна пального                   (налаштування менеджера, типово 56 грн/л)
+  ЗП водія    = відстань × ставка водія (грн/км)            (без водія — 10 грн/км)
+  ремонт і ТО = відстань × 2,2 грн/км
+  дороги      = відстань × 1,1 грн/км (стоянки, зважування)
+  інше        = 350 грн на рейс (зв'язок, документи)
+  собівартість = пальне + ЗП + ремонт + дороги + інше;  прибуток = ціна − собівартість
 """
-DEFAULT_CONSUMPTION = 32.0  # л/100 км, якщо авто не призначене
-DEFAULT_RATE = 10.0  # грн/км, якщо водія не призначено
+DEFAULT_CONSUMPTION = 32.0  # л/100 км
+DEFAULT_RATE = 10.0  # грн/км
 
-TOLLS_PER_KM = 1.2
-REPAIR_PER_KM = 1.3
-OTHER_PER_KM = 1.0
-OTHER_COSTS_PER_KM = TOLLS_PER_KM + REPAIR_PER_KM + OTHER_PER_KM  # 3.5
-
-
-def calculate(trip: dict, vehicle: dict | None, driver: dict | None, fuel_price: float) -> dict:
-    distance = float(trip.get("distanceKm") or 0)
-    consumption = float((vehicle or {}).get("fuelConsumption") or DEFAULT_CONSUMPTION)
-    rate = float((driver or {}).get("ratePerKm") or DEFAULT_RATE)
-
-    fuel_liters = round(distance * consumption / 100, 1)
-    fuel_cost = round(fuel_liters * fuel_price)
-    driver_salary = round(distance * rate)
-    other_costs = round(distance * OTHER_COSTS_PER_KM)
-    total_cost = fuel_cost + driver_salary + other_costs
-    return {
-        "distanceKm": distance,
-        "fuelLiters": fuel_liters,
-        "fuelCost": fuel_cost,
-        "driverSalary": driver_salary,
-        "otherCosts": other_costs,
-        "totalCost": total_cost,
-        "profit": round(float(trip.get("price") or 0)) - total_cost,
-    }
+REPAIR_PER_KM = 2.2
+TOLLS_PER_KM = 1.1
+OTHER_PER_TRIP = 350
 
 
 def expense_breakdown(trip: dict, vehicle: dict | None, driver: dict | None, fuel_price: float) -> dict:
-    """Витрати рейсу за статтями — для аналітики (кругова діаграма витрат)."""
-    c = calculate(trip, vehicle, driver, fuel_price)
-    distance = c["distanceKm"]
+    """Витрати рейсу за статтями: { fuel, salary, repair, tolls, other } + fuelLiters."""
+    km = float(trip.get("distanceKm") or 0)
+    consumption = float((vehicle or {}).get("fuelConsumption") or DEFAULT_CONSUMPTION)
+    rate = float((driver or {}).get("ratePerKm") or DEFAULT_RATE)
+    fuel_liters = round(km * consumption / 100, 1)
     return {
-        "fuel": c["fuelCost"],
-        "salary": c["driverSalary"],
-        "repair": round(distance * REPAIR_PER_KM),
-        "tolls": round(distance * TOLLS_PER_KM),
-        "other": round(distance * OTHER_PER_KM),
+        "fuelLiters": fuel_liters,
+        "fuel": round(fuel_liters * fuel_price),
+        "salary": round(km * rate),
+        "repair": round(km * REPAIR_PER_KM),
+        "tolls": round(km * TOLLS_PER_KM),
+        "other": OTHER_PER_TRIP if km else 0,
+    }
+
+
+def calculate(trip: dict, vehicle: dict | None, driver: dict | None, fuel_price: float) -> dict:
+    """Відповідь POST /trips/{id}/calculate."""
+    c = expense_breakdown(trip, vehicle, driver, fuel_price)
+    other_costs = c["repair"] + c["tolls"] + c["other"]
+    total = c["fuel"] + c["salary"] + other_costs
+    return {
+        "distanceKm": float(trip.get("distanceKm") or 0),
+        "fuelLiters": c["fuelLiters"],
+        "fuelCost": c["fuel"],
+        "driverSalary": c["salary"],
+        "otherCosts": other_costs,
+        "totalCost": total,
+        "profit": round(float(trip.get("price") or 0)) - total,
     }

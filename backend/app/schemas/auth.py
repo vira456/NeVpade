@@ -87,8 +87,8 @@ class UserOut(CamelModel):
     email: str
     phone: str | None = None
     phone_verified: bool
-    role: str
-    company_id: str
+    role: str | None = None  # null — новий користувач Google/Facebook ще не обрав компанію
+    company_id: str | None = None
     company_name: str | None = None
     position: str | None = None
     avatar_url: str | None = None
@@ -97,6 +97,20 @@ class UserOut(CamelModel):
 class AuthResponse(CamelModel):
     token: str
     user: UserOut
+    is_new: bool = False  # щойно створений через Google/Facebook → фронт відкриває «Завершіть реєстрацію»
+
+
+class CompleteSignupIn(CamelModel):
+    """«Завершіть реєстрацію» після першого входу через Google/Facebook."""
+
+    name: FullName2
+    phone: Phone
+    company: CompanyChoice
+
+
+class CompleteSignupOut(CamelModel):
+    user: UserOut
+    message: str
 
 
 class RegisterOut(CamelModel):

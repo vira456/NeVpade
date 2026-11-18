@@ -16,7 +16,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from ..deps import company_filter, current_user, db
 from ..errors import ApiError, invalid, not_found
 from ..schemas.common import _date
-from ..schemas.entities import DRIVER_DOC_TYPES, VEHICLE_DOC_TYPES, DocumentOut, DocumentsSummaryItem
+from ..schemas.entities import DRIVER_DOC_TYPES, TRIP_DOC_TYPES, VEHICLE_DOC_TYPES, DocumentOut, DocumentsSummaryItem
 from ..security import create_file_token, decode_file_token
 from ..services.crud import get_company_doc
 from ..services.documents import EXPIRING_DAYS, MAX_FILE_BYTES, clean_filename, sniff_mime
@@ -24,10 +24,11 @@ from ..utils import iso, is_oid, now, oid, today_kyiv
 
 router = APIRouter(tags=["Документи"])
 
-Owner = Literal["vehicles", "drivers"]
+Owner = Literal["vehicles", "drivers", "trips"]
 _OWNERS: dict[str, tuple[tuple[str, ...], str]] = {
     "vehicles": (VEHICLE_DOC_TYPES, "Машину"),
     "drivers": (DRIVER_DOC_TYPES, "Водія"),
+    "trips": (TRIP_DOC_TYPES, "Рейс"),
 }
 
 

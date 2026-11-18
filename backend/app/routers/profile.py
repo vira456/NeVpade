@@ -9,9 +9,10 @@ from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
-from ..deps import company_filter, current_user, db
+from ..deps import current_user, db
 from ..errors import ApiError
 from ..schemas.common import CamelModel, Email, FullName3, Phone
+from ..services.kpi import manager_kpi
 from ..services.users import default_settings, release_phone_from_unverified
 
 router = APIRouter(prefix="/profile", tags=["Профіль"])
@@ -72,8 +73,8 @@ class SettingsUpdate(CamelModel):
 
 class KpiOut(CamelModel):
     trips_count: int
-    rating: float
-    rating_max: int = 5
+    trips_this_month: int
+    paid_on_time: int | None = None  # %, None — ще немає виконаних рейсів із терміном оплати
     active_drivers: int
 
 
@@ -134,17 +135,7 @@ async def delete_avatar(user: dict = Depends(current_user), database: AsyncDatab
 
 @router.get("/kpi", response_model=KpiOut)
 async def kpi(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    pipeline = [
-        {"$match": {**company_filter(user), "managerId": str(user["_id"])}},
-        {"$group": {"_id": "$status", "n": {"$sum": 1}}},
-    ]
-    by_status = {row["_id"]: row["n"] async for row in await database.trips.aggregate(pipeline)}
-    trips_count = sum(by_status.values())
-    done, cancelled = by_status.get("done", 0), by_status.get("cancelled", 0)
-    # Рейтинг: частка успішно завершених рейсів серед закритих (завершені + скасовані), у шкалі 0–5
-    rating = round(5 * done / (done + cancelled), 1) if done + cancelled else 5.0
-    active_drivers = await database.drivers.count_documents({**company_filter(user), "status": {"$ne": "day_off"}})
-    return KpiOut(trips_count=trips_count, rating=rating, active_drivers=active_drivers)
+    return await manager_kpi(database, user["companyId"], str(user["_id"]))
 
 
 @router.get("/settings", response_model=SettingsOut)
