@@ -636,14 +636,28 @@ transferForm.addEventListener('submit', async (e) => {
   }
 });
 
+// Якщо щось другорядне (водії, клієнти, документи…) не завантажилось — рейси все одно показуємо
+const soft = (promise, fallback, label) =>
+  promise.catch((err) => {
+    console.warn(`[trips] ${label}:`, err);
+    return fallback;
+  });
+// документи з IndexedDB інколи «зависають» (напр. браузер блокує сховище) — не чекаємо довше 3 с
+const withTimeout = (promise, ms, fallback) => Promise.race([promise, new Promise((r) => setTimeout(() => r(fallback), ms))]);
+
 async function init() {
-  [trips, drivers, vehicles, members, clients, docCounts] = await Promise.all([
-    getTrips(),
-    getDrivers(),
-    getVehicles(),
-    getMembers(),
-    getClients(),
-    getDocumentsSummary('trips').catch(() => ({})),
+  try {
+    trips = (await getTrips()) ?? [];
+  } catch (err) {
+    showToast(tr('Не вдалося завантажити рейси: {msg}', { msg: err.message }), 'error');
+    trips = [];
+  }
+  [drivers, vehicles, members, clients, docCounts] = await Promise.all([
+    soft(getDrivers(), [], 'drivers'),
+    soft(getVehicles(), [], 'vehicles'),
+    soft(getMembers(), [], 'members'),
+    soft(getClients(), [], 'clients'),
+    withTimeout(soft(getDocumentsSummary('trips'), {}, 'documents'), 3000, {}),
   ]);
   // фільтр з посилання: ?pay=overdue (з нагадувань і сторінки клієнтів)
   const params = new URLSearchParams(location.search);

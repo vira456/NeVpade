@@ -923,7 +923,8 @@ export default {
     "Чат зараз недоступний": "Chat is unavailable right now",
     "Цей розділ ще не підключено на сервері": "This section isn't connected on the server yet",
     "Ця дія ще не підтримується сервером": "The server doesn't support this action yet",
-    "Помилка на сервері. Спробуйте пізніше": "Server error. Please try again later"
+    "Помилка на сервері. Спробуйте пізніше": "Server error. Please try again later",
+    "Не вдалося завантажити рейси: {msg}": "Couldn't load trips: {msg}"
   },
   patterns: [
     [
