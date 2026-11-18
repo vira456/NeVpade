@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BeforeValidator, Field, field_validator, model_validator
 
-from .common import CamelModel, IsoDate, OptionalPhone, Phone, _date
+from .common import CamelModel, Email, IsoDate, OptionalPhone, Phone, _date
 
 RequiredDate = Annotated[str, AfterValidator(_date)]
 Money = Annotated[float, Field(ge=0, le=100_000_000)]
@@ -24,6 +24,7 @@ TaskPriority = Literal["low", "medium", "high"]
 LICENSE_CATEGORIES = ("B", "C1", "C", "CE", "D")
 VEHICLE_DOC_TYPES = ("registration", "insurance", "inspection", "license", "lease", "other")
 DRIVER_DOC_TYPES = ("license", "passport", "tax_id", "medical", "tachograph", "other")
+TRIP_DOC_TYPES = ("ttn", "cmr", "act", "invoice", "request", "loading_photo", "unloading_photo", "other")
 
 
 def _categories(value: list[str] | None) -> list[str] | None:
@@ -140,6 +141,19 @@ class Client(CamelModel):
     phone: str | None = Field(default=None, max_length=30)
 
 
+class Payment(CamelModel):
+    """Оплата рейсу: коли клієнт має заплатити і коли заплатив (null — ще ні)."""
+
+    due_date: IsoDate = None
+    paid_at: IsoDate = None
+
+
+class PaymentIn(CamelModel):
+    """PATCH /trips/{id}/payment — { paidAt: 'YYYY-MM-DD' } або { paidAt: null }."""
+
+    paid_at: IsoDate = None
+
+
 class ImportedFrom(CamelModel):
     platform: str = Field(max_length=30)
     url: str | None = Field(default=None, max_length=500)
@@ -156,8 +170,10 @@ class TripBase(CamelModel):
     cargo: Cargo = Field(default_factory=Cargo)
     vehicle_id: str | None = None
     driver_id: str | None = None
+    client_id: str | None = None
     client: Client = Field(default_factory=Client)
     price: Money = 0
+    payment: Payment = Field(default_factory=Payment)
     distance_km: float = Field(default=0, ge=0, le=20_000)
     status: TripStatus = "planned"
     source: TripSource = "manual"
@@ -180,6 +196,8 @@ class TripIn(TripBase):
             raise ValueError("Вкажіть вартість рейсу в гривнях")
         if self.unload_date and self.unload_date < self.load_date:
             raise ValueError("Дата розвантаження не може бути раніше дати завантаження")
+        if self.payment.due_date and self.payment.due_date < self.load_date:
+            raise ValueError("Термін оплати не може бути раніше дати завантаження")
         return self
 
 
@@ -192,8 +210,10 @@ class TripUpdate(CamelModel):
     cargo: Cargo | None = None
     vehicle_id: str | None = None
     driver_id: str | None = None
+    client_id: str | None = None
     client: Client | None = None
     price: float | None = Field(default=None, gt=0, le=100_000_000)
+    payment: Payment | None = None
     distance_km: float | None = Field(default=None, gt=0, le=20_000)
     status: TripStatus | None = None
     notes: str | None = Field(default=None, max_length=2000)
@@ -218,6 +238,7 @@ class TripOut(TripBase):
     manager_id: str | None = None
     created_at: str | None = None
     transferred_at: str | None = None
+    history: list[dict] = Field(default_factory=list)
 
 
 class TransferIn(CamelModel):
@@ -242,6 +263,55 @@ class CalculationOut(CamelModel):
     other_costs: int
     total_cost: int
     profit: int
+
+
+# ---------- Клієнти ----------
+def _edrpou(value: str | None) -> str | None:
+    if value is None or not str(value).strip():
+        return None
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if len(digits) not in (8, 10):
+        raise ValueError("ЄДРПОУ — 8 цифр (юрособа) або ІПН ФОП — 10 цифр")
+    return digits
+
+
+Edrpou = Annotated[str | None, BeforeValidator(_edrpou)]
+OptionalEmail = Annotated[Email | None, BeforeValidator(lambda v: None if v is None or not str(v).strip() else v)]
+
+
+class ClientIn(CamelModel):
+    name: str = Field(min_length=2, max_length=150)
+    edrpou: Edrpou = None
+    contact_name: Text(100) = ""
+    phone: str | None = Field(default=None, max_length=30)
+    email: OptionalEmail = None
+    city: Text(80) = ""
+    payment_days: int = Field(default=14, ge=0, le=120, description="Відстрочка оплати, днів")
+    notes: Text(1000) = ""
+
+
+class ClientUpdate(CamelModel):
+    name: str | None = Field(default=None, min_length=2, max_length=150)
+    edrpou: Edrpou = None
+    contact_name: str | None = Field(default=None, max_length=100)
+    phone: str | None = Field(default=None, max_length=30)
+    email: OptionalEmail = None
+    city: str | None = Field(default=None, max_length=80)
+    payment_days: int | None = Field(default=None, ge=0, le=120)
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class ClientOut(CamelModel):
+    id: str
+    name: str
+    edrpou: str | None = None
+    contact_name: str | None = ""
+    phone: str | None = None
+    email: str | None = None
+    city: str | None = ""
+    payment_days: int = 14
+    notes: str | None = ""
+    created_at: str | None = None
 
 
 # ---------- Завдання (Kanban) ----------

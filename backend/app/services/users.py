@@ -8,7 +8,8 @@ from pymongo.errors import DuplicateKeyError
 from ..config import settings
 from ..schemas.auth import AuthResponse, UserOut
 from ..security import create_token
-from ..utils import now
+from ..errors import ApiError
+from ..utils import now, squash
 
 # Скільки часу після підтвердження пошти / входу можна прив'язати телефон через публічні ендпоінти
 PHONE_SETUP_WINDOW = timedelta(minutes=30)
@@ -66,6 +67,19 @@ async def create_company(db: AsyncDatabase, name: str, owner_id, city: str | Non
     raise RuntimeError("Не вдалося створити компанію")
 
 
+async def resolve_company_choice(db: AsyncDatabase, choice, user_name: str) -> dict:
+    """{ mode: 'create', name } / { mode: 'join', code } з форми → що зберегти/виконати:
+    { mode: 'create', name } або { mode: 'join', companyId }. Невідомий код — 404 company_not_found."""
+    if choice is None:
+        return {"mode": "create", "name": f"Компанія {user_name}"}
+    if choice.mode == "join":
+        company = await db.companies.find_one({"inviteCode": choice.code}, {"_id": 1})
+        if company is None:
+            raise ApiError(404, "Компанію з таким кодом не знайдено. Перевірте код у колеги", "company_not_found")
+        return {"mode": "join", "companyId": company["_id"]}
+    return {"mode": "create", "name": squash(choice.name)}
+
+
 async def attach_company(db: AsyncDatabase, user: dict, choice: dict | None) -> dict:
     """Прив'язує користувача до компанії: нова (він — власник) або існуюча (за кодом)."""
     choice = choice or {"mode": "create", "name": f"Компанія {user['name']}"}
@@ -87,10 +101,11 @@ async def attach_company(db: AsyncDatabase, user: dict, choice: dict | None) -> 
 
 
 async def ensure_company(db: AsyncDatabase, user: dict) -> None:
-    """У користувача з підтвердженою поштою завжди має бути компанія: якщо її немає — створюємо/приєднуємо
-    за збереженим під час реєстрації вибором (pendingCompany)."""
-    if user.get("emailVerified") and user.get("companyId") is None:
-        await attach_company(db, user, user.get("pendingCompany"))
+    """Компанію обрано під час реєстрації (pendingCompany), пошту підтверджено, а компанії немає —
+    створюємо/приєднуємо. Новим користувачам Google/Facebook компанію обирає сам користувач
+    на кроці «Завершіть реєстрацію», тож без pendingCompany нічого не робимо."""
+    if user.get("emailVerified") and user.get("companyId") is None and user.get("pendingCompany"):
+        await attach_company(db, user, user["pendingCompany"])
 
 
 # ---------- Відповіді ----------
@@ -102,22 +117,22 @@ async def user_out(db: AsyncDatabase, user: dict) -> UserOut:
         email=user["email"],
         phone=user.get("phone"),
         phone_verified=bool(user.get("phoneVerified")),
-        role=user.get("role", "manager"),
-        company_id=str(user.get("companyId") or ""),
+        role=user.get("role"),
+        company_id=str(user["companyId"]) if user.get("companyId") else None,
         company_name=company["name"] if company else None,
         position=user.get("position"),
         avatar_url=user.get("avatarUrl"),
     )
 
 
-async def auth_response(db: AsyncDatabase, user: dict) -> AuthResponse:
+async def auth_response(db: AsyncDatabase, user: dict, *, is_new: bool = False) -> AuthResponse:
     """Видає токен. Якщо телефон ще не підтверджено — відкриває «вікно» для його прив'язки."""
     await ensure_company(db, user)
     update = {"lastSeenAt": now()}
     if not user.get("phoneVerified"):
         update["phoneSetupUntil"] = now() + PHONE_SETUP_WINDOW
     await db.users.update_one({"_id": user["_id"]}, {"$set": update})
-    return AuthResponse(token=create_token(str(user["_id"])), user=await user_out(db, user))
+    return AuthResponse(token=create_token(str(user["_id"])), user=await user_out(db, user), is_new=is_new)
 
 
 async def release_phone_from_unverified(db: AsyncDatabase, phone: str, except_id=None) -> bool:

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..deps import company_filter, current_user, db
-from ..services.analytics import Analytics, Period, period_range, previous_range
+from ..services.analytics import COUNTED, Analytics, Period, period_range, previous_range
 from ..utils import today_kyiv
 from .trips import fuel_price_for
 
@@ -17,13 +17,13 @@ async def _analytics(
     user: dict = Depends(current_user),
     database: AsyncDatabase = Depends(db),
 ) -> tuple[Analytics, Period]:
-    """Рейси компанії за поточний і попередній період (не всю історію) + довідники авто й водіїв."""
+    """Виконані й поточні рейси компанії за поточний і попередній період (не всю історію) + авто й водії."""
     today = today_kyiv()
     since = previous_range(period, today)[0].isoformat()
     until = period_range(period, today)[1].isoformat()
     flt = company_filter(user)
     trips = await database.trips.find(
-        {**flt, "loadDate": {"$gte": since, "$lte": until}, "status": {"$ne": "cancelled"}}, _TRIP_FIELDS
+        {**flt, "loadDate": {"$gte": since, "$lte": until}, "status": {"$in": list(COUNTED)}}, _TRIP_FIELDS
     ).to_list(None)
     vehicles = {str(v["_id"]): v async for v in database.vehicles.find(flt, {"fuelConsumption": 1})}
     drivers = {str(d["_id"]): d async for d in database.drivers.find(flt, {"name": 1, "ratePerKm": 1})}

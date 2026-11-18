@@ -5,7 +5,7 @@ from fastapi import Depends
 from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..deps import company_filter, current_user, db
+from ..deps import company_filter, current_user, db, require_owner
 from ..errors import ApiError, not_found
 from ..schemas.entities import VehicleIn, VehicleOut, VehicleStatusIn, VehicleUpdate
 from ..services.crud import crud_router, get_company_doc
@@ -35,6 +35,7 @@ async def _validate(database: AsyncDatabase, user: dict, data: dict, existing: d
 
 
 async def _before_delete(database: AsyncDatabase, user: dict, doc: dict) -> None:
+    require_owner(user, "Видаляти машини може лише керівник")
     active = await database.trips.find_one(
         {**company_filter(user), "vehicleId": str(doc["_id"]), "status": "in_progress"}, {"number": 1}
     )

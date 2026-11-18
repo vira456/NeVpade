@@ -10,6 +10,8 @@ from ..errors import ApiError
 from ..schemas.auth import (
     AuthResponse,
     ChangePasswordIn,
+    CompleteSignupIn,
+    CompleteSignupOut,
     EmailCodeIn,
     FacebookIn,
     ForgotIn,
@@ -27,8 +29,16 @@ from ..schemas.auth import (
 from ..schemas.common import Message
 from ..security import hash_password, verify_password
 from ..services import codes, notify, social
-from ..services.users import PHONE_SETUP_WINDOW, attach_company, auth_response, new_user_doc, release_phone_from_unverified, user_out
-from ..utils import now, squash
+from ..services.users import (
+    PHONE_SETUP_WINDOW,
+    attach_company,
+    auth_response,
+    new_user_doc,
+    release_phone_from_unverified,
+    resolve_company_choice,
+    user_out,
+)
+from ..utils import now
 
 router = APIRouter(prefix="/auth", tags=["Авторизація"])
 
@@ -70,15 +80,7 @@ async def register(body: RegisterIn, database: AsyncDatabase = Depends(db)):
     if await release_phone_from_unverified(database, body.phone, except_id=existing["_id"] if existing else None):
         raise ApiError(409, "Цей номер уже використовується", "phone_taken")
 
-    pending = {"mode": "create", "name": f"Компанія {body.name}"}
-    if body.company:
-        if body.company.mode == "join":
-            company = await database.companies.find_one({"inviteCode": body.company.code})
-            if company is None:
-                raise ApiError(404, "Компанію з таким кодом не знайдено. Перевірте код у колеги", "company_not_found")
-            pending = {"mode": "join", "companyId": company["_id"]}
-        else:
-            pending = {"mode": "create", "name": squash(body.company.name)}
+    pending = await resolve_company_choice(database, body.company, body.name)
 
     fields = {"name": body.name, "phone": body.phone, "passwordHash": hash_password(body.password), "pendingCompany": pending}
     if existing:  # незавершена реєстрація з тим самим email — перезаписуємо дані
@@ -201,15 +203,19 @@ async def _social_login(database: AsyncDatabase, *, provider_field: str, provide
                         avatar: str | None = None) -> AuthResponse:
     user = await database.users.find_one({provider_field: provider_id}) or await database.users.find_one({"email": email})
 
+    is_new = False
     if user is None:
-        doc = new_user_doc(name=name, email=email, emailVerified=True, avatarUrl=avatar, **{provider_field: provider_id})
+        # Новий: пошту підтвердив Google/Facebook; компанію, ім'я й телефон людина вкаже на кроці
+        # «Завершіть реєстрацію» (POST /auth/complete-signup)
+        doc = new_user_doc(name=name, email=email, emailVerified=True, avatarUrl=avatar, role=None,
+                           **{provider_field: provider_id})
         try:
             result = await database.users.insert_one(doc)
         except DuplicateKeyError:  # паралельний запит уже створив користувача
             user = await database.users.find_one({"email": email})
         else:
             doc["_id"] = result.inserted_id
-            user = doc
+            user, is_new = doc, True
     else:
         update: dict = {provider_field: provider_id}
         if not user.get("emailVerified"):
@@ -224,9 +230,27 @@ async def _social_login(database: AsyncDatabase, *, provider_field: str, provide
         await database.users.update_one({"_id": user["_id"]}, {"$set": update})
         user.update(update)
 
-    if user.get("companyId") is None:
-        await attach_company(database, user, None)
-    return await auth_response(database, user)
+    return await auth_response(database, user, is_new=is_new)
+
+
+@router.post("/complete-signup", response_model=CompleteSignupOut)
+async def complete_signup(body: CompleteSignupIn, user: dict = Depends(any_user), database: AsyncDatabase = Depends(db)):
+    """«Завершіть реєстрацію» (з токеном): ім'я, компанія й телефон → SMS з кодом → /auth/verify-phone."""
+    if user.get("companyId") is not None:
+        raise ApiError(409, "Реєстрацію вже завершено", "already_completed")
+    if await release_phone_from_unverified(database, body.phone, except_id=user["_id"]):
+        raise ApiError(409, "Цей номер уже використовується", "phone_taken")
+    choice = await resolve_company_choice(database, body.company, body.name)
+    try:
+        await database.users.update_one({"_id": user["_id"]}, {"$set": {
+            "name": body.name, "phone": body.phone, "phoneVerified": False, "phoneSetupUntil": now() + PHONE_SETUP_WINDOW,
+        }})
+    except DuplicateKeyError:
+        raise ApiError(409, "Цей номер уже використовується", "phone_taken") from None
+    user.update(name=body.name, phone=body.phone, phoneVerified=False)
+    await attach_company(database, user, choice)
+    await _send_phone_code(database, user, cooldown=False)
+    return CompleteSignupOut(user=await user_out(database, user), message="Код надіслано в SMS")
 
 
 @router.post("/google", response_model=AuthResponse)

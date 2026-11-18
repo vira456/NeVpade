@@ -49,8 +49,7 @@ async def any_user(
     user = await _token_user(creds, database)
     if user is None or not user.get("emailVerified"):
         raise ApiError(401, "Сесія завершилась. Увійдіть знову", "token_invalid")
-    # Пошту підтверджено, а компанії немає (напр. запит verify-email обірвався або запис правили вручну) —
-    # довиконуємо цей крок за вибором, який користувач зробив під час реєстрації
+    # Компанію обрано під час реєстрації, але її не створено (запит verify-email обірвався тощо) — довиконуємо
     await ensure_company(database, user)
 
     moment = now()
@@ -62,10 +61,20 @@ async def any_user(
 
 
 async def current_user(user: dict = Depends(any_user)) -> dict:
-    """Повноцінний доступ до даних — лише з підтвердженим телефоном (контракт, розділ 1)."""
-    if not user.get("phoneVerified"):
-        raise ApiError(403, "Підтвердьте номер телефону, щоб продовжити", "phone_not_verified")
+    """Доступ до даних — лише після завершеної реєстрації: є компанія й підтверджений телефон.
+    До того працюють тільки /auth/me, /auth/complete-signup, /auth/phone, /auth/verify-phone, /auth/resend-code."""
+    if user.get("companyId") is None or not user.get("phoneVerified"):
+        raise ApiError(403, "Завершіть реєстрацію: оберіть компанію й підтвердьте телефон", "signup_incomplete")
     return user
+
+
+def is_owner(user: dict) -> bool:
+    return user.get("role") == "owner"
+
+
+def require_owner(user: dict, detail: str = "Це може зробити лише керівник компанії") -> None:
+    if not is_owner(user):
+        raise ApiError(403, detail, "owner_only")
 
 
 def company_filter(user: dict) -> dict:
