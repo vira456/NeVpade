@@ -39,6 +39,7 @@ async def connect() -> None:
             "(або «Allow access from anywhere» 0.0.0.0/0). Також перевірте інтернет і MONGODB_URI у backend/.env."
         ) from exc
     await _create_indexes(_db)
+    await _db.users.update_many({"settings.fuelPrice": settings.default_fuel_price}, {"$set": {"settings.fuelPrice": None}})
     log.info("MongoDB: підключено до бази «%s»", settings.mongodb_db)
 
 

@@ -61,7 +61,7 @@ class SettingsOut(CamelModel):
     viber_template: str | None = None
     push_enabled: bool = True
     sound_enabled: bool = False
-    fuel_price: float
+    fuel_price: float | None = None  # None — ринкова ціна (GET /fuel-price)
 
 
 class SettingsUpdate(CamelModel):
@@ -146,8 +146,6 @@ async def get_settings(user: dict = Depends(current_user)):
 @router.patch("/settings", response_model=SettingsOut)
 async def update_settings(body: SettingsUpdate, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
     patch = body.model_dump(by_alias=True, exclude_unset=True)
-    if "fuelPrice" in patch and patch["fuelPrice"] is None:
-        patch.pop("fuelPrice")
     for flag in ("pushEnabled", "soundEnabled"):
         if flag in patch and patch[flag] is None:
             patch.pop(flag)

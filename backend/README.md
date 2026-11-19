@@ -116,6 +116,7 @@ https://www.brevo.com → *Senders* → підтвердити свій email �
 | Імпорт з Della | `GET /import/della?path=/search/….html` → `{ html }` |
 | Завдання | `GET/POST /tasks`, `PUT/PATCH/DELETE /tasks/{id}`, `PUT /tasks/reorder` |
 | Аналітика | `GET /analytics/summary|income|expenses|drivers?period=week|month|year` |
+| Пальне | `GET /fuel-price` → `{ diesel, date, source, sourceUrl, updatedAt, isFallback }` |
 
 Повний опис полів — у Swagger (`/docs`).
 
@@ -128,7 +129,8 @@ https://www.brevo.com → *Senders* → підтвердити свій email �
 - Хтось почав реєстрацію з чужим email і не підтвердив його → при вході справжнього власника через Google ці дані скидаються.
 
 ### Рішення щодо відкритих питань контракту
-- **ЗП водія** — за км (`ratePerKm` водія). **Ціна пального** — у налаштуваннях менеджера (`/profile/settings`, поле `fuelPrice`, типово 56 грн/л).
+- **ЗП водія** — за км (`ratePerKm` водія).
+- **Ціна пального** — ринкова середня ціна дизеля по АЗС України з https://index.minfin.com.ua/markets/fuel/ (дані Консалтингової групи А-95): сервер оновлює її раз на 12 год і зберігає в MongoDB (колекція `meta`). Менеджер може задати власну (`PATCH /profile/settings { "fuelPrice": 60 }`, `null` — повернутися до ринкової). Якщо сайт недоступний — остання відома ціна, а без неї — `DEFAULT_FUEL_PRICE`.
 - **Інші витрати** — ремонт і ТО 2,2 грн/км + дороги 1,1 грн/км + 350 грн на рейс (як у `frontend/src/js/utils/economics.js`; так рахується й структура витрат в аналітиці).
 - **Аналітика** — лише рейси `done` і `in_progress`; поточний період порівнюється з таким самим відрізком попереднього (1–11 листопада ↔ 1–11 жовтня).
 - **Ролі** — `owner` (керівник: назва й код запрошення компанії, будь-які рейси, видалення машин/водіїв/клієнтів, ролі колег) і `manager` (лише свої рейси).

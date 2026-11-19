@@ -5,7 +5,6 @@ from datetime import timedelta
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
-from ..config import settings
 from ..schemas.auth import AuthResponse, UserOut
 from ..security import create_token
 from ..errors import ApiError
@@ -16,7 +15,8 @@ PHONE_SETUP_WINDOW = timedelta(minutes=30)
 
 
 def default_settings() -> dict:
-    return {"viberTemplate": None, "pushEnabled": True, "soundEnabled": False, "fuelPrice": settings.default_fuel_price}
+    # fuelPrice: None — рахувати за ринковою ціною дизеля (GET /fuel-price); число — власна ціна менеджера
+    return {"viberTemplate": None, "pushEnabled": True, "soundEnabled": False, "fuelPrice": None}
 
 
 def new_user_doc(*, name: str, email: str, **extra) -> dict:
