@@ -1,10 +1,9 @@
-// Вхід через Google і Facebook.
+// Вхід через Google (лише для менеджерів: власник входить з кодом власника).
 // Якщо ключі не задані в .env (або увімкнено моки) — кнопки імітують вхід, щоб інтерфейс працював автономно.
 import { isMockMode } from '../api/client.js';
-import { loginWithGoogle, loginWithFacebook } from '../api/auth.js';
+import { loginWithGoogle } from '../api/auth.js';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID;
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -24,7 +23,6 @@ function loadScript(src) {
 export async function initSocialButtons({ onSuccess, onError, text = 'continue_with' }) {
   const googleBtn = document.getElementById('googleBtn');
   const googleSlot = document.getElementById('googleSlot');
-  const facebookBtn = document.getElementById('facebookBtn');
 
   const run = async (fn) => {
     try {
@@ -58,23 +56,4 @@ export async function initSocialButtons({ onSuccess, onError, text = 'continue_w
     googleBtn.addEventListener('click', () => run(() => loginWithGoogle('mock-google-credential')));
   }
 
-  // ----- Facebook -----
-  if (FACEBOOK_APP_ID && !isMockMode) {
-    loadScript('https://connect.facebook.net/uk_UA/sdk.js')
-      .then(() => FB.init({ appId: FACEBOOK_APP_ID, cookie: false, xfbml: false, version: 'v19.0' }))
-      .catch((err) => onError(err.message));
-
-    facebookBtn.addEventListener('click', () => {
-      if (!window.FB) return onError('Facebook ще завантажується, спробуйте за мить');
-      FB.login(
-        (resp) => {
-          if (resp.authResponse) run(() => loginWithFacebook(resp.authResponse.accessToken));
-          else onError('Вхід через Facebook скасовано');
-        },
-        { scope: 'email,public_profile' }
-      );
-    });
-  } else {
-    facebookBtn.addEventListener('click', () => run(() => loginWithFacebook('mock-facebook-token')));
-  }
 }

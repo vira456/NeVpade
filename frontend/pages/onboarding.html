@@ -44,20 +44,18 @@
             <div class="field__error"></div>
           </div>
           <fieldset class="field company-field">
-            <legend class="field__label">Компанія</legend>
-            <div class="seg seg--block" role="radiogroup" aria-label="Компанія">
-              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="create" checked />Створити нову</label>
-              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="join" />Приєднатися за кодом</label>
-            </div>
-            <div class="company-field__create">
+            <legend class="field__label">Код запрошення компанії</legend>
+            <input type="radio" name="companyMode" value="join" checked hidden />
+            <div class="company-field__create" hidden>
               <input class="input" id="companyName" name="companyName" type="text" maxlength="80" placeholder="Назва компанії, напр. ТОВ «Західтранс»" aria-label="Назва компанії" autocomplete="organization" />
               <p class="field__hint">Колеги приєднаються до неї за кодом запрошення зі сторінки «Команда».</p>
             </div>
-            <div class="company-field__join" hidden>
+            <div class="company-field__join">
               <input class="input" id="inviteCode" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код запрошення" autocomplete="off" spellcheck="false" />
-              <p class="field__hint">Код дає колега: «Команда» → «Код запрошення».</p>
+              <p class="field__hint">Код дає власник компанії зі свого кабінету.</p>
               <p class="auth__mock-hint" data-mock-only hidden>Режим моків: код тестової компанії — <b>NVP-4821</b></p>
             </div>
+            <p class="field__hint">Власник компанії? Зареєструйтесь <a href="/pages/register.html">поштою й паролем</a> — так ви отримаєте код власника.</p>
             <div class="field__error"></div>
           </fieldset>
           <div class="field">

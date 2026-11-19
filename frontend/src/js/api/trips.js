@@ -1,23 +1,16 @@
 // Рейси всієї компанії (поле managerId — відповідальний менеджер).
-// Права: менеджер змінює лише свої рейси, керівник компанії (role = owner) — будь-які.
+// Права: менеджер змінює лише свої рейси, власник компанії (role = owner) — будь-які.
 import { request, ApiError } from './client.js';
-import { getCurrentUser } from './auth.js';
+import { getCurrentUser, roleOf } from './auth.js';
 import { mockTransferMessage } from './chat.js';
 import { mockTrips, saveTrips, mockVehicles, saveVehicles, mockDrivers, saveDrivers, mockClients } from './mock-store.js';
 import { tripCosts } from '../utils/economics.js';
 import { deleteOwnerDocsMock } from './documents.js';
-import { load } from '../utils/storage.js';
-import seedCompany from '../mock/company.json';
 
 export const myId = () => String(getCurrentUser()?.id ?? getCurrentUser()?._id ?? 'usr_01');
 
-/** Роль поточного користувача: owner (керівник) або manager */
-export function myRole() {
-  const user = getCurrentUser();
-  if (user?.role) return user.role;
-  const roles = load('mock.roles') ?? {};
-  return roles[myId()] ?? seedCompany.members.find((m) => m.id === myId())?.role ?? 'manager';
-}
+/** Роль поточного користувача: owner (власник) або manager */
+export const myRole = () => roleOf(getCurrentUser());
 export const isOwner = () => myRole() === 'owner';
 /** Чи може поточний користувач змінювати рейс */
 export const canEditTrip = (trip) => trip.managerId === myId() || isOwner();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=1280" />
   <!-- nevpade:head -->
-  <title>Реєстрація · NeVpade</title>
+  <title>Реєстрація менеджера · NeVpade</title>
 </head>
 <body>
   <div class="auth">
@@ -33,10 +33,25 @@
     <main class="auth__panel">
       <div class="auth__box">
         <a class="auth__mobile-logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
-        <h1 class="auth__title">Реєстрація</h1>
-        <p class="auth__subtitle">Створіть акаунт. Ми надішлемо коди підтвердження на пошту та в SMS.</p>
-        <form class="auth__form" id="registerForm" novalidate>
+        <nav class="auth-switch" aria-label="Тип реєстрації">
+          <a class="auth-switch__item is-active" href="/pages/register.html" aria-current="page">Я менеджер</a>
+          <a class="auth-switch__item" href="/pages/register-owner.html">Я власник компанії</a>
+        </nav>
+        <h1 class="auth__title">Реєстрація менеджера</h1>
+        <p class="auth__subtitle">Приєднайтеся до своєї компанії за кодом запрошення. Ми надішлемо коди підтвердження на пошту та в SMS.</p>
+        <form class="auth__form" id="registerForm" data-role="manager" novalidate>
           <div class="auth__alert" hidden></div>
+          <fieldset class="field company-field">
+            <legend class="field__label">Код запрошення компанії</legend>
+            <input type="radio" name="companyMode" value="join" checked hidden />
+            <div class="company-field__join">
+              <input class="input" id="inviteCode" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код запрошення" autocomplete="off" spellcheck="false" />
+              <p class="field__hint">Код дає власник компанії. Після реєстрації він підтвердить ваш вступ — тоді відкриється робочий простір.</p>
+              <p class="auth__mock-hint" data-mock-only hidden>Режим моків: код тестової компанії — <b>NVP-4821</b></p>
+            </div>
+            <div class="company-field__create" hidden><input id="companyName" name="companyName" type="hidden" /></div>
+            <div class="field__error"></div>
+          </fieldset>
           <div class="field">
             <label class="field__label" for="name">Ім'я та прізвище</label>
             <input class="input" id="name" name="name" type="text" autocomplete="name" placeholder="Олена Коваль" maxlength="60" />
@@ -55,23 +70,6 @@
             </div>
             <div class="field__error"></div>
           </div>
-          <fieldset class="field company-field">
-            <legend class="field__label">Компанія</legend>
-            <div class="seg seg--block" role="radiogroup" aria-label="Компанія">
-              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="create" checked />Створити нову</label>
-              <label class="seg__btn"><input class="visually-hidden" type="radio" name="companyMode" value="join" />Приєднатися за кодом</label>
-            </div>
-            <div class="company-field__create">
-              <input class="input" id="companyName" name="companyName" type="text" maxlength="80" placeholder="Назва компанії, напр. ТОВ «Західтранс»" aria-label="Назва компанії" autocomplete="organization" />
-              <p class="field__hint">Колеги приєднаються до неї за кодом запрошення зі сторінки «Команда».</p>
-            </div>
-            <div class="company-field__join" hidden>
-              <input class="input" id="inviteCode" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код запрошення" autocomplete="off" spellcheck="false" />
-              <p class="field__hint">Код дає колега: «Команда» → «Код запрошення».</p>
-              <p class="auth__mock-hint" data-mock-only hidden>Режим моків: код тестової компанії — <b>NVP-4821</b></p>
-            </div>
-            <div class="field__error"></div>
-          </fieldset>
           <div class="field">
             <label class="field__label" for="password">Пароль</label>
             <div class="field__wrap">
@@ -99,11 +97,10 @@
             <span class="field__error"></span>
           </label>
           <button class="btn btn--block" type="submit">Зареєструватися</button>
-          <div class="auth__divider">або</div>
-          <div class="auth__social">
+          <div class="auth__divider" data-social>або</div>
+          <div class="auth__social" data-social>
             <div id="googleSlot"></div>
             <button class="btn btn--social" id="googleBtn" type="button">Продовжити з Google</button>
-            <button class="btn btn--social btn--facebook" id="facebookBtn" type="button">Продовжити з Facebook</button>
           </div>
         </form>
         <p class="auth__footer">Вже є акаунт? <a href="/pages/login.html">Увійти</a></p>

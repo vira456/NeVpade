@@ -25,6 +25,17 @@ let duplicateWarned = false;
 /** Підключає форму до сторінки рейсів */
 export function initTripForm(options) {
   ctx = { ...ctx, ...options };
+  // форму могли відкрити ще до того, як завантажились водії й машини — доповнюємо списки, не скидаючи введене
+  if (dialog.open) {
+    const keep = ['tfStatus', 'tfDriver', 'tfVehicle'].map((id) => [id, $(id).value]);
+    fillOptions();
+    keep.forEach(([id, v]) => ($(id).value = v));
+    if (editing) {
+      $('tfDriver').value = editing.driverId ?? '';
+      $('tfVehicle').value = editing.vehicleId ?? '';
+    }
+    updateCrewHint();
+  }
   $('dellaBookmarklet').href = dellaBookmarklet();
   $('dellaBookmarklet').addEventListener('click', (e) => {
     e.preventDefault(); // це кнопка для перетягування на панель закладок, а не для кліку

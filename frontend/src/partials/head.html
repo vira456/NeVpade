@@ -19,6 +19,35 @@
         root.classList.add('i18n-pending');
         setTimeout(function () { root.classList.remove('i18n-pending'); }, 1500);
       }
+      // Власник має окремий інтерфейс (інші кольори меню) — клас ставимо до малювання, щоб не блимало
+      var role = null;
+      try {
+        var u = localStorage.getItem('token') && JSON.parse(localStorage.getItem('user') || 'null');
+        role = u && u.role;
+        if (role === 'owner') root.classList.add('owner-ui');
+      } catch (e) {}
+      // Бокове меню з минулої сторінки — одразу, не чекаючи скриптів (потім layout.js малює його наново)
+      try {
+        var snap = localStorage.getItem('token') && JSON.parse(localStorage.getItem('nevpade.sidebarSnapshot') || 'null');
+        if (snap && snap.lang === get('lang', 'uk') && snap.role === role) {
+          var mo = new MutationObserver(function () {
+            var s = document.querySelector('.sidebar');
+            if (!s) return;
+            mo.disconnect();
+            if (s.children.length) return;
+            s.innerHTML = snap.html;
+            var p = location.pathname;
+            s.querySelectorAll('a[href]').forEach(function (a) {
+              var h = a.getAttribute('href');
+              var on = h === p || (p === '/pages/member.html' && (h === '/pages/team.html' || h === '/pages/owner-team.html'));
+              a.classList.toggle('is-active', on);
+              if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+            });
+          });
+          mo.observe(root, { childList: true, subtree: true });
+          document.addEventListener('DOMContentLoaded', function () { mo.disconnect(); });
+        }
+      } catch (e) {}
     })();
   </script>
   <style>.i18n-pending body { visibility: hidden; }</style>

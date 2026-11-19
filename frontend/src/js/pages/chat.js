@@ -150,7 +150,8 @@ form.addEventListener('submit', async (e) => {
 async function init() {
   form.querySelector('.chat__send').innerHTML = icons.send;
   let history;
-  const [m, company, tr] = await Promise.all([getMembers(), getCompany(), getTrips().catch(() => [])]);
+  const [all, company, tr] = await Promise.all([getMembers(), getCompany(), getTrips().catch(() => [])]);
+  const m = all.filter((x) => x.role !== 'owner'); // чат — простір менеджерів
   try {
     history = await getMessages();
   } catch (err) {

@@ -121,13 +121,23 @@ function paymentLine(t) {
   return `<span class="pay-line pay-line--${p}">${tr(PAYMENT_STATUS[p])} · ${note}</span>`;
 }
 
+let loaded = false; // поки рейси вантажаться, вкладки вже є, лише без чисел
 function renderTabs() {
   const visible = trips.filter((t) => scope === 'all' || t.managerId === myId());
-  tabs.innerHTML = TABS.map((tab) => {
-    const count = tab.status ? visible.filter((t) => t.status === tab.status).length : visible.length;
-    return `<button class="seg__btn" type="button" data-status="${tab.status}" aria-pressed="${tab.status === status}">
-      ${tab.label}<span class="seg__count">${count}</span></button>`;
-  }).join('');
+  const countOf = (tab) => (!loaded ? '…' : tab.status ? visible.filter((t) => t.status === tab.status).length : visible.length);
+  // кнопки вже є — оновлюємо лише числа й вибір (без перемальовування, щоб не губився фокус)
+  if (tabs.children.length === TABS.length) {
+    TABS.forEach((tab, i) => {
+      const btn = tabs.children[i];
+      btn.setAttribute('aria-pressed', String(tab.status === status));
+      btn.querySelector('.seg__count').textContent = countOf(tab);
+    });
+    return;
+  }
+  tabs.innerHTML = TABS.map(
+    (tab) => `<button class="seg__btn" type="button" data-status="${tab.status}" aria-pressed="${tab.status === status}">
+      ${tab.label}<span class="seg__count">${countOf(tab)}</span></button>`
+  ).join('');
 }
 
 function renderSortHeaders() {
@@ -168,6 +178,11 @@ function renderPager(total) {
 }
 
 function render() {
+  if (!loaded) {
+    renderTabs();
+    document.getElementById('tripsBody').innerHTML = '<tr><td colspan="8"><div class="empty"><p>Завантажуємо рейси…</p></div></td></tr>';
+    return;
+  }
   const all = filtered();
   renderSortHeaders();
   renderPager(all.length);
@@ -589,7 +604,7 @@ let transferring = null;
 
 function openTransfer(trip) {
   transferring = trip;
-  const colleagues = members.filter((m) => m.id !== myId());
+  const colleagues = members.filter((m) => m.id !== myId() && m.role !== 'owner'); // власник рейсів не веде
   document.getElementById('transferText').textContent = tr('Рейс {n}: {from} → {to}', { n: trip.number, from: trip.from.city, to: trip.to.city });
   document.getElementById('transferList').innerHTML = colleagues
     .map((m) => {
@@ -646,22 +661,38 @@ const soft = (promise, fallback, label) =>
 const withTimeout = (promise, ms, fallback) => Promise.race([promise, new Promise((r) => setTimeout(() => r(fallback), ms))]);
 
 async function init() {
-  try {
-    trips = (await getTrips()) ?? [];
-  } catch (err) {
-    showToast(tr('Не вдалося завантажити рейси: {msg}', { msg: err.message }), 'error');
-    trips = [];
-  }
-  [drivers, vehicles, members, clients, docCounts] = await Promise.all([
+  render(); // кнопки статусів — одразу, числа й рядки з'являться після завантаження
+  // усе вантажимо паралельно; рейси — головне, решта не повинна їх блокувати
+  const params = new URLSearchParams(location.search);
+  if (params.get('pay')) payFilter.value = params.get('pay');
+  if (params.get('pay') && !params.get('scope')) scope = 'all';
+  document.querySelectorAll('#scopeTabs [data-scope]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scope === scope)));
+  const tripsReady = getTrips()
+    .then((x) => x ?? [])
+    .catch((err) => {
+      showToast(tr('Не вдалося завантажити рейси: {msg}', { msg: err.message }), 'error');
+      return [];
+    })
+    .then((list) => {
+      trips = list;
+      // таблицю показуємо, щойно прийшли рейси (імена клієнтів і менеджерів доповнюються далі);
+      // якщо фільтр з посилання залежить від клієнта чи колеги — чекаємо, щоб список не «стрибав»
+      if (!params.get('client') && !params.get('manager')) {
+        loaded = true;
+        render();
+      }
+      return list;
+    });
+  [trips, drivers, vehicles, members, clients, docCounts] = await Promise.all([
+    tripsReady,
     soft(getDrivers(), [], 'drivers'),
     soft(getVehicles(), [], 'vehicles'),
     soft(getMembers(), [], 'members'),
     soft(getClients(), [], 'clients'),
     withTimeout(soft(getDocumentsSummary('trips'), {}, 'documents'), 3000, {}),
   ]);
+  loaded = true;
   // фільтр з посилання: ?pay=overdue (з нагадувань і сторінки клієнтів)
-  const params = new URLSearchParams(location.search);
-  if (params.get('pay')) payFilter.value = params.get('pay');
   if (params.get('client')) search.value = clients.find((c) => c.id === params.get('client'))?.name ?? '';
   // рейси колеги зі сторінки його профілю
   const byManager = params.get('manager') && members.find((m) => m.id === params.get('manager'));

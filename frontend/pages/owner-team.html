@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1280" />
+  <!-- nevpade:head -->
+  <title>Менеджери · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main owner">
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Менеджери</h1>
+          <p class="main__subtitle" id="teamSummary">&nbsp;</p>
+        </div>
+        <div class="main__actions">
+          <div class="seg" id="teamPeriod" role="group" aria-label="Період">
+            <button class="seg__btn" type="button" data-period="month" aria-pressed="true">Місяць</button>
+            <button class="seg__btn" type="button" data-period="year" aria-pressed="false">Рік</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="owner__layout">
+        <section class="card join-requests" id="joinRequests" hidden aria-labelledby="joinTitle">
+          <div class="card__head">
+            <h2 class="card__title" id="joinTitle">Заявки на вступ <span class="card__count" id="joinCount"></span></h2>
+          </div>
+          <p class="invite__text">Ці люди зареєструвались з вашим кодом запрошення. Доки ви не приймете заявку, вони не бачать даних компанії.</p>
+          <ul class="join-requests__list" id="joinList"></ul>
+        </section>
+
+        <section class="card owner__team">
+          <div class="table-wrap">
+            <table class="table owner-table">
+              <thead>
+                <tr>
+                  <th scope="col">Менеджер</th>
+                  <th scope="col" class="num">В роботі</th>
+                  <th scope="col" class="num" id="thTrips">Рейсів за місяць</th>
+                  <th scope="col" id="thIncome">Дохід за місяць</th>
+                  <th scope="col" class="num" title="Частка виконаних рейсів, які клієнти оплатили не пізніше терміну">Оплачено вчасно</th>
+                  <th scope="col" class="num">Прострочені оплати</th>
+                  <th scope="col"><span class="visually-hidden">Дії</span></th>
+                </tr>
+              </thead>
+              <tbody id="teamBody">
+                <tr><td colspan="7"><div class="empty"><p>Завантажуємо команду…</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="card invite owner__invite">
+          <h2 class="card__title">Код запрошення</h2>
+          <p class="invite__text">Дайте код новому менеджеру: він введе його під час реєстрації, а ви підтвердите заявку тут.</p>
+          <div class="invite__code">
+            <strong id="inviteCode" data-no-i18n>—</strong>
+            <button class="icon-btn" id="copyInvite" type="button" title="Скопіювати код" aria-label="Скопіювати код"></button>
+          </div>
+          <button class="btn--link" id="regenInvite" type="button">Створити новий код</button>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <dialog class="modal" id="removeDialog" aria-labelledby="removeTitle">
+    <form class="modal__body" id="removeForm" novalidate>
+      <h2 class="modal__title" id="removeTitle">&nbsp;</h2>
+      <p class="modal__text" id="removeText"></p>
+      <div class="auth__alert" hidden></div>
+      <div class="field" id="removeTransferField">
+        <label class="field__label" for="removeTransferTo">Кому передати активні рейси</label>
+        <select class="input" id="removeTransferTo" name="transferTo"></select>
+        <div class="field__error"></div>
+      </div>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" data-cancel>Скасувати</button>
+        <button class="btn btn--danger" type="submit" id="removeSubmit">Прибрати з компанії</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="/src/js/pages/owner/team.js"></script>
+</body>
+</html>

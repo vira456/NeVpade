@@ -1,7 +1,7 @@
 // Клієнти: довідник замовників з боргами, історією рейсів і контактами
 import { renderLayout } from '../utils/layout.js';
 import { getClients, createClient, updateClient, deleteClient } from '../api/clients.js';
-import { getTrips, isOwner } from '../api/trips.js';
+import { getTrips } from '../api/trips.js';
 import { money, escapeHtml, paymentStatus, PAYMENT_STATUS, TRIP_STATUS, daysPastDue, plural } from '../utils/format.js';
 import { routeLine, statusBadge, shortDate } from '../utils/components.js';
 import { icons } from '../utils/icons.js';
@@ -160,7 +160,7 @@ function openClient(id) {
 
     <div class="trip-card__manage">
       <button class="btn btn--ghost" type="button" data-edit="${c.id}">${icons.edit}Редагувати</button>
-      ${isOwner() ? `<button class="btn btn--danger" type="button" data-delete="${c.id}">${icons.trash}Видалити</button>` : ''}
+      <button class="btn btn--danger" type="button" data-delete="${c.id}">${icons.trash}Видалити</button>
     </div>
     <footer class="trip-card__actions">
       ${c.phone ? `<a class="btn btn--ghost" href="tel:${escapeHtml(c.phone)}">${icons.phone}Подзвонити</a>` : ''}
