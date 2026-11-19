@@ -21,7 +21,7 @@ backend/
 │   ├── utils.py            _id → id, дати, телефони
 │   ├── schemas/            Pydantic-моделі (валідація, camelCase у JSON)
 │   ├── services/           бізнес-логіка: розрахунок рейсу, аналітика, коди,
-│   │                       пошта/SMS, перевірка Google/Facebook, CRUD-фабрика
+│   │                       пошта/SMS, перевірка Google, код власника, CRUD-фабрика
 │   └── routers/            ендпоінти: auth, profile, company, chat, trips,
 │                           vehicles, drivers, tasks, analytics
 └── tests/                  модульні тести логіки (pytest)
@@ -112,10 +112,11 @@ python -m pytest
 
 | Розділ | Ендпоінти |
 |---|---|
-| Авторизація | `POST /auth/register`, `/auth/verify-email`, `/auth/phone`, `/auth/verify-phone`, `/auth/resend-code`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/google`, `/auth/facebook`, `/auth/complete-signup`, `/auth/change-password`; `GET /auth/me` |
+| Авторизація | `POST /auth/register`, `/auth/verify-email`, `/auth/phone`, `/auth/verify-phone`, `/auth/resend-code`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/google`, `/auth/complete-signup`, `/auth/join-request`, `/auth/owner-code`, `/auth/owner-code/reset`, `/auth/change-password`; `GET /auth/me` |
 | Профіль | `GET/PUT /profile`, `PUT/DELETE /profile/avatar`, `GET /profile/kpi`, `GET/PATCH /profile/settings` |
-| Компанія | `GET/PUT /company`, `POST /company/invite`, `POST /company/switch`, `GET/POST /company/chat?after=<id>` |
-| Команда | `GET /company/members`, `GET /company/members/{id}`, `GET /company/members/{id}/kpi`, `PATCH /company/members/{id}/role` |
+| Компанія | `GET/PATCH /company`, `POST /company/invite`, `POST /company/switch`, `POST /company/transfer-ownership`, `GET/POST /company/chat?after=<id>` |
+| Команда | `GET /company/members`, `GET /company/members/{id}`, `GET /company/members/{id}/kpi`, `DELETE /company/members/{id}?transferTo=` |
+| Заявки на вступ | `GET /company/join-requests`, `POST /company/join-requests/{id}/approve`, `…/reject` |
 | Рейси | `GET /trips?status=&search=&mine=`, `GET/PUT/DELETE /trips/{id}`, `POST /trips`, `PATCH /trips/{id}/payment`, `POST /trips/{id}/calculate`, `POST /trips/{id}/transfer`, `POST /trips/import` |
 | Клієнти | CRUD `/clients` |
 | Автопарк | CRUD `/vehicles`, `PATCH /vehicles/{id}/status` |
@@ -123,25 +124,35 @@ python -m pytest
 | Документи | `GET/POST /vehicles/{id}/documents`, `DELETE /vehicles/{id}/documents/{docId}`, `GET /vehicles/documents/summary` (так само для `/drivers` і `/trips`); файл — `GET /files/{docId}?token=` |
 | Імпорт з Della | `GET /import/della?path=/search/….html` → `{ html }` |
 | Завдання | `GET/POST /tasks`, `PUT/PATCH/DELETE /tasks/{id}`, `PUT /tasks/reorder` |
-| Аналітика | `GET /analytics/summary|income|expenses|drivers?period=week|month|year` |
+| Аналітика | `GET /analytics/summary|income|expenses|drivers?period=week|month|year`, `GET /analytics/team?period=month|year` (власник) |
 | Пальне | `GET /fuel-price` → `{ diesel, date, source, sourceUrl, updatedAt, isFallback }` |
 
 Повний опис полів — у Swagger (`/docs`).
 
-### Сценарії авторизації
-- **Email**: `register` → лист з кодом → `verify-email` → SMS → `verify-phone` → токен.
-  Компанія створюється (або користувач приєднується за кодом `NVP-1234`) після підтвердження пошти.
-- **Google/Facebook**: токен видається одразу, пошта вважається підтвердженою. Новий користувач (`isNew: true`) ще без
-  компанії: на кроці «Завершіть реєстрацію» (`/auth/complete-signup`) вказує ім'я, компанію й телефон → SMS → `/auth/verify-phone`.
-  Поки немає компанії чи підтвердженого телефону, ендпоінти даних повертають `403 signup_incomplete`.
-- Хтось почав реєстрацію з чужим email і не підтвердив його → при вході справжнього власника через Google ці дані скидаються.
+### Ролі й авторизація
+Дві ролі — два інтерфейси. **Власник** (`owner`) створює компанію й лише переглядає її роботу (рейси, клієнтів,
+аналітику); у нього кабінет: огляд і `GET /analytics/team`, менеджери, заявки на вступ, назва компанії, код запрошення,
+передача компанії, звільнення менеджера. **Менеджер** (`manager`) веде рейси, клієнтів, автопарк, водіїв, завдання.
+Зміни від власника → `403 manager_only`, дії кабінету від менеджера → `403 owner_only`. Роль і статус читаються з бази
+на кожному запиті, тож зміна діє одразу.
+
+- **Власник**: `register` (`role: "owner"`, `company.mode: "create"`) → лист → `verify-email` → SMS → `verify-phone` →
+  токен + **код власника** `OWN-XXXX-XXXX` (один раз; у базі лише bcrypt-хеш). Вхід — пошта + пароль + код;
+  5 невдалих спроб поспіль → пауза 15 хв. «Забули код?» — `POST /auth/owner-code/reset` (новий код листом),
+  новий код з кабінету — `POST /auth/owner-code` з паролем. Токен власника діє 12 год.
+  Власник, зареєстрований до появи кодів, отримує код у відповіді на перший вхід.
+- **Менеджер**: `register` з кодом запрошення (`join`) → … → `verify-phone` → заявка власнику, `memberStatus: "pending"`;
+  до рішення власника ендпоінти даних → `403 membership_pending`. Відхилили — `POST /auth/join-request` з іншим кодом.
+- **Google** — лише для менеджерів: новий користувач (`isNew: true`) на кроці «Завершіть реєстрацію»
+  (`/auth/complete-signup`) вказує ім'я, код запрошення й телефон. Власник через Google не входить (`403 wrong_role`).
+- Менеджер, якого прибрали з компанії, при вході отримує `403 not_in_company`; його активні рейси переходять іншому менеджеру.
 
 ### Рішення щодо відкритих питань контракту
 - **ЗП водія** — за км (`ratePerKm` водія).
 - **Ціна пального** — ринкова середня ціна дизеля по АЗС України з https://index.minfin.com.ua/markets/fuel/ (дані Консалтингової групи А-95): сервер оновлює її раз на 12 год і зберігає в MongoDB (колекція `meta`). Менеджер може задати власну (`PATCH /profile/settings { "fuelPrice": 60 }`, `null` — повернутися до ринкової). Якщо сайт недоступний — остання відома ціна, а без неї — `DEFAULT_FUEL_PRICE`.
 - **Інші витрати** — ремонт і ТО 2,2 грн/км + дороги 1,1 грн/км + 350 грн на рейс (як у `frontend/src/js/utils/economics.js`; так рахується й структура витрат в аналітиці).
 - **Аналітика** — лише рейси `done` і `in_progress`; поточний період порівнюється з таким самим відрізком попереднього (1–11 листопада ↔ 1–11 жовтня).
-- **Ролі** — `owner` (керівник: назва й код запрошення компанії, будь-які рейси, видалення машин/водіїв/клієнтів, ролі колег) і `manager` (лише свої рейси).
+- **Ролі** — див. «Ролі й авторизація» вище; ролі не змінюються вручну, лише передачею компанії.
 - **Імпорт рейсів** — фронт розбирає сторінку Della сам і створює рейси через `POST /trips` (`source: "import"`, `importedFrom`); бекенд лише віддає HTML через `GET /import/della` (лише `/search/…`, кеш 60 с, не частіше раз на 15 с). `POST /trips/import` лишився для пакетного імпорту.
 - **Телефон** — поки він не підтверджений, усі ендпоінти даних повертають 403 `phone_not_verified` (працюють лише `/auth/*` і `/auth/me`).
 - **Документи** — файли до 10 МБ зберігаються в MongoDB (колекції `documents` і `files`); тип визначається за вмістом (JPG/PNG/WEBP/PDF), посилання на файл підписане й діє 2 години.

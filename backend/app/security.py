@@ -41,9 +41,13 @@ def verify_password(password: str, hashed: str | None) -> bool:
 
 
 # ---------- JWT ----------
-def create_token(user_id: str) -> str:
+OWNER_TOKEN_HOURS = 12
+
+
+def create_token(user_id: str, *, owner: bool = False) -> str:
     issued = now()
-    payload = {"sub": user_id, "typ": "access", "iat": issued, "exp": issued + timedelta(hours=settings.jwt_expire_hours)}
+    hours = min(settings.jwt_expire_hours, OWNER_TOKEN_HOURS) if owner else settings.jwt_expire_hours
+    payload = {"sub": user_id, "typ": "access", "iat": issued, "exp": issued + timedelta(hours=hours)}
     return jwt.encode(payload, _secret(), algorithm=ALGORITHM)
 
 

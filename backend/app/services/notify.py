@@ -21,30 +21,46 @@ _PURPOSE_TEXT = {
 }
 
 
-def _html(title: str, code: str) -> str:
+_CODE_TTL_NOTE = "Код дійсний 10 хвилин. Якщо ви не робили цей запит — просто проігноруйте лист."
+_OWNER_NOTE = ("Це ваш код власника — другий фактор входу в кабінет власника. Збережіть його в надійному місці "
+               "й нікому не передавайте. Попередній код більше не діє.")
+
+
+def _html(title: str, code: str, note: str = _CODE_TTL_NOTE) -> str:
     return f"""
 <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
   <h2 style="margin:0 0 12px">NeVpade · {title}</h2>
   <p>Ваш код:</p>
   <p style="font-size:32px;letter-spacing:8px;font-weight:bold;margin:8px 0">{code}</p>
-  <p style="color:#6b7280">Код дійсний 10 хвилин. Якщо ви не робили цей запит — просто проігноруйте лист.</p>
+  <p style="color:#6b7280">{note}</p>
 </div>"""
 
 
 async def send_code_email(to: str, code: str, purpose: str) -> None:
-    subject, lead = _PURPOSE_TEXT.get(purpose, _PURPOSE_TEXT["verify"])
-    text = f"{lead}: {code}\nКод дійсний 10 хвилин."
-    provider = settings.email_provider
+    """Код підтвердження пошти або відновлення пароля."""
+    title, lead = _PURPOSE_TEXT.get(purpose, _PURPOSE_TEXT["verify"])
+    await _deliver(to, title, f"{lead}: {code}\nКод дійсний 10 хвилин.", _html(title, code), code)
 
+
+async def send_owner_code_email(to: str, code: str) -> None:
+    """Новий код власника (скидання «Забули код?» або передача компанії)."""
+    title = "Код власника"
+    await _deliver(to, title, f"Ваш код власника NeVpade: {code}\n{_OWNER_NOTE}", _html(title, code, _OWNER_NOTE), code)
+
+
+async def _deliver(to: str, title: str, text: str, html: str, code: str) -> None:
+    """Надсилає лист через сервіс з EMAIL_PROVIDER. У режимі console — лише рядок у лозі сервера."""
+    provider = settings.email_provider
     if provider == "console":
-        log.warning("[EMAIL → %s] %s: %s", to, subject, code)
+        log.warning("[EMAIL → %s] %s: %s", to, title, code)
         return
+    subject = f"NeVpade · {title}"
     senders = {"mailjet": _send_mailjet, "resend": _send_resend, "brevo": _send_brevo}
     try:
         if provider in senders:
-            await senders[provider](to, f"NeVpade · {subject}", text, _html(subject, code))
+            await senders[provider](to, subject, text, html)
         elif provider == "smtp":
-            await asyncio.to_thread(_send_smtp, to, f"NeVpade · {subject}", text, _html(subject, code))
+            await asyncio.to_thread(_send_smtp, to, subject, text, html)
         else:
             raise RuntimeError(f"Невідомий EMAIL_PROVIDER: {provider}")
     except Exception as exc:  # noqa: BLE001

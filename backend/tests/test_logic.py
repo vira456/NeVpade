@@ -8,7 +8,8 @@ from pydantic import ValidationError
 
 from app.schemas.auth import RegisterIn
 from app.schemas.entities import ClientIn, DriverIn, TaskIn, TripIn, TripOut, VehicleIn, VehicleOut
-from app.services.analytics import Analytics, buckets, period_range, previous_range
+from app.services import owner_code
+from app.services.analytics import Analytics, buckets, payment_state, period_range, previous_range
 from app.services.calc import calculate, expense_breakdown
 from app.services.documents import sniff_mime
 from app.services.fuel import parse_diesel
@@ -141,7 +142,8 @@ def test_normalize_phone_rejects_foreign():
 
 
 def test_password_policy():
-    base = {"name": "Віра Федорова", "email": "V@Example.com", "phone": "0671234567"}
+    base = {"name": "Віра Федорова", "email": "V@Example.com", "phone": "0671234567",
+            "company": {"mode": "create", "name": "ТОВ Тест"}}
     with pytest.raises(ValidationError):
         RegisterIn.model_validate({**base, "password": "short1"})
     with pytest.raises(ValidationError):
@@ -247,3 +249,35 @@ def test_parse_diesel_price():
 def test_parse_diesel_rejects_garbage():
     assert parse_diesel("<html>нічого немає</html>") is None
     assert parse_diesel("<td>Дизельное топливо</td><td>5,00</td>") is None  # неправдоподібна ціна
+
+
+# ---------- Ролі: власник створює компанію, менеджер приєднується; код власника ----------
+def test_register_role_must_match_company():
+    base = {"name": "Віра Федорова", "email": "v@e.ua", "phone": "0671234567", "password": "secret123"}
+    owner = RegisterIn.model_validate({**base, "role": "owner", "company": {"mode": "create", "name": "ТОВ Тест", "city": "Львів"}})
+    assert owner.company.city == "Львів"
+    assert RegisterIn.model_validate({**base, "company": {"mode": "join", "code": "nvp-1234"}}).role == "manager"
+    with pytest.raises(ValidationError):
+        RegisterIn.model_validate({**base, "role": "manager", "company": {"mode": "create", "name": "ТОВ Тест"}})
+    with pytest.raises(ValidationError):
+        RegisterIn.model_validate({**base, "role": "owner", "company": {"mode": "join", "code": "NVP-1234"}})
+
+
+def test_owner_code_format_and_normalize():
+    code = owner_code.generate()
+    assert len(code) == 13 and code.startswith("OWN-") and code[8] == "-"
+    assert set(code.replace("OWN-", "").replace("-", "")) <= set(owner_code.ALPHABET)
+    assert owner_code.normalize("own 7k3p92qx") == "OWN-7K3P-92QX"
+    assert owner_code.normalize("7k3p-92qx") == "OWN-7K3P-92QX"
+    assert owner_code.normalize("OWN-123") is None
+    from app.security import hash_password
+    hashed = hash_password("OWN-7K3P-92QX")
+    assert owner_code.matches("own-7k3p-92qx", hashed) and not owner_code.matches("OWN-7K3P-92QA", hashed)
+
+
+def test_payment_state_like_frontend():
+    today = date(2026, 11, 19)
+    assert payment_state({"status": "done", "payment": {"paidAt": "2026-11-01"}}, today) == "paid"
+    assert payment_state({"status": "done", "payment": {"dueDate": "2026-11-18"}}, today) == "overdue"
+    assert payment_state({"status": "planned", "payment": {"dueDate": "2026-11-30"}}, today) == "pending"
+    assert payment_state({"status": "cancelled", "payment": {"dueDate": "2026-11-01"}}, today) is None

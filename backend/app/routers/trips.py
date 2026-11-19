@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..deps import company_filter, current_user, db, is_owner
+from ..deps import company_filter, current_user, db, manager_user
 from ..errors import ApiError, invalid, not_found
 from ..schemas.entities import (
     CalculationOut,
@@ -38,8 +38,8 @@ async def _get_trip(database: AsyncDatabase, user: dict, trip_id: str) -> dict:
 
 
 def _check_can_edit(user: dict, trip: dict) -> None:
-    """Змінювати, видаляти й передавати рейс може відповідальний менеджер або керівник компанії."""
-    if trip.get("managerId") != str(user["_id"]) and not is_owner(user):
+    """Змінювати, видаляти й передавати рейс може лише його відповідальний менеджер (власник — лише переглядає)."""
+    if trip.get("managerId") != str(user["_id"]):
         raise ApiError(403, "Змінювати можна лише свої рейси", "not_owner")
 
 
@@ -104,14 +104,14 @@ async def get_trip(trip_id: str, user: dict = Depends(current_user), database: A
 
 
 @router.post("", response_model=TripOut, status_code=status.HTTP_201_CREATED)
-async def create_trip(body: TripIn, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
+async def create_trip(body: TripIn, user: dict = Depends(manager_user), database: AsyncDatabase = Depends(db)):
     data = body.model_dump(by_alias=True)
     await _prepare(database, user, data)
     return trip_out(await _insert(database, user, data))
 
 
 @router.put("/{trip_id}", response_model=TripOut)
-async def update_trip(trip_id: str, body: TripUpdate, user: dict = Depends(current_user),
+async def update_trip(trip_id: str, body: TripUpdate, user: dict = Depends(manager_user),
                       database: AsyncDatabase = Depends(db)):
     trip = await _get_trip(database, user, trip_id)
     _check_can_edit(user, trip)
@@ -132,7 +132,7 @@ async def update_trip(trip_id: str, body: TripUpdate, user: dict = Depends(curre
 
 
 @router.patch("/{trip_id}/payment", response_model=TripOut)
-async def set_payment(trip_id: str, body: PaymentIn, user: dict = Depends(current_user),
+async def set_payment(trip_id: str, body: PaymentIn, user: dict = Depends(manager_user),
                       database: AsyncDatabase = Depends(db)):
     """Позначити оплату: { paidAt: 'YYYY-MM-DD' } або { paidAt: null } — зняти позначку."""
     trip = await _get_trip(database, user, trip_id)
@@ -148,7 +148,7 @@ async def set_payment(trip_id: str, body: PaymentIn, user: dict = Depends(curren
 
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_trip(trip_id: str, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
+async def delete_trip(trip_id: str, user: dict = Depends(manager_user), database: AsyncDatabase = Depends(db)):
     trip = await _get_trip(database, user, trip_id)
     _check_can_edit(user, trip)
     await database.trips.delete_one({"_id": trip["_id"]})
@@ -168,11 +168,11 @@ async def calculate_trip(trip_id: str, user: dict = Depends(current_user), datab
 
 
 @router.post("/{trip_id}/transfer", response_model=TripOut)
-async def transfer_trip(trip_id: str, body: TransferIn, user: dict = Depends(current_user),
+async def transfer_trip(trip_id: str, body: TransferIn, user: dict = Depends(manager_user),
                         database: AsyncDatabase = Depends(db)):
     """Передати рейс іншому менеджеру компанії. У чат компанії додається системне повідомлення."""
     trip = await _get_trip(database, user, trip_id)
-    if trip.get("managerId") != str(user["_id"]) and not is_owner(user):
+    if trip.get("managerId") != str(user["_id"]):
         raise ApiError(403, "Передати можна лише свій рейс", "not_owner")
     if body.to_manager_id == trip.get("managerId"):
         raise ApiError(400, "Рейс уже в цього менеджера", "same_manager")
@@ -183,7 +183,7 @@ async def transfer_trip(trip_id: str, body: TransferIn, user: dict = Depends(cur
 
 
 @router.post("/import", response_model=TripImportOut, status_code=status.HTTP_201_CREATED)
-async def import_trips(body: TripImportIn, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
+async def import_trips(body: TripImportIn, user: dict = Depends(manager_user), database: AsyncDatabase = Depends(db)):
     """Пакетний імпорт рейсів (фронт імпортує з Della звичайним POST /trips; цей ендпоінт — для парсерів)."""
     if not body.trips:
         raise ApiError(400, "Немає рейсів для імпорту", "empty_import")

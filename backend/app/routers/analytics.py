@@ -1,9 +1,11 @@
 """Розділ 6 контракту: аналітика /analytics (рахується з рейсів компанії «на льоту»)."""
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..deps import company_filter, current_user, db
-from ..services.analytics import COUNTED, Analytics, Period, period_range, previous_range
+from ..deps import company_filter, current_user, db, owner_user
+from ..services.analytics import COUNTED, Analytics, Period, period_range, previous_range, team_stats
 from ..services.fuel import fuel_price_for
 from ..utils import today_kyiv
 
@@ -56,3 +58,16 @@ async def drivers(ctx: tuple[Analytics, Period] = Depends(_analytics)):
     """[ { driverId, name, trips, income } ] — рейтинг водіїв за доходом."""
     analytics, period = ctx
     return analytics.drivers_stats(period)
+
+
+@router.get("/team")
+async def team(period: Literal["month", "year"] = Query("month", description="month | year"),
+               user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    """Кабінет власника: підсумок компанії за період, оплати, що чекають або прострочені, і кожен менеджер."""
+    flt = company_filter(user)
+    fields = {**_TRIP_FIELDS, "managerId": 1, "payment": 1}
+    all_trips = await database.trips.find(flt, fields).to_list(None)
+    vehicles = {str(v["_id"]): v async for v in database.vehicles.find(flt, {"fuelConsumption": 1})}
+    drivers = {str(d["_id"]): d async for d in database.drivers.find(flt, {"name": 1, "ratePerKm": 1})}
+    analytics = Analytics(all_trips, vehicles, drivers, await fuel_price_for(database, user), today_kyiv())
+    return team_stats(analytics, all_trips, period)

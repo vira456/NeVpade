@@ -1,37 +1,40 @@
-"""Компанія поточного менеджера: дані, учасники й ролі, код запрошення, перехід в іншу компанію."""
+"""Компанія: дані, учасники, заявки на вступ; кабінет власника (назва, код запрошення, передача компанії,
+звільнення менеджера); перехід менеджера в іншу компанію."""
+from contextlib import suppress
 from datetime import timedelta
-from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import Field
 from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
-from ..deps import current_user, db, require_owner
-from ..errors import ApiError, not_found
+from ..deps import any_user, current_user, db, owner_user, require_manager
+from ..errors import ApiError, invalid, not_found
 from ..schemas.auth import CompanyChoice, UserOut
 from ..schemas.common import CamelModel
+from ..services import notify, owner_code
 from ..services import trips as trip_svc
 from ..services.kpi import manager_kpi
-from ..services.users import attach_company, resolve_company_choice, unique_invite_code, user_out
+from ..services.users import attach_company, open_join_request, resolve_company_choice, unique_invite_code, user_out
 from ..utils import iso, is_oid, now, oid, squash
 
 router = APIRouter(prefix="/company", tags=["Компанія"])
 
 ONLINE_WINDOW = timedelta(minutes=2)  # «в мережі» — були запити останні ~2 хв
+ACTIVE_TRIPS = ["planned", "in_progress"]
 
 
 class CompanyOut(CamelModel):
     id: str
     name: str
-    invite_code: str
+    invite_code: str | None = None  # бачить лише власник
     city: str | None = None
     created_at: str | None = None
 
 
 class CompanyUpdate(CamelModel):
-    name: str | None = Field(default=None, min_length=2, max_length=120)
+    name: str | None = Field(default=None, max_length=120)
     city: str | None = Field(default=None, max_length=80)
 
 
@@ -56,8 +59,14 @@ class MemberKpiOut(CamelModel):
     revenue_this_month: int
 
 
-class RoleIn(CamelModel):
-    role: Literal["owner", "manager"]
+class JoinRequestOut(CamelModel):
+    id: str
+    user_id: str
+    name: str
+    email: str
+    phone: str | None = None
+    created_at: str | None = None
+    status: str
 
 
 class SwitchIn(CamelModel):
@@ -69,9 +78,13 @@ class SwitchOut(CamelModel):
     company: CompanyOut
 
 
-def company_out(c: dict) -> CompanyOut:
-    return CompanyOut(id=str(c["_id"]), name=c["name"], invite_code=c["inviteCode"], city=c.get("city"),
-                      created_at=iso(c.get("createdAt")))
+class TransferOwnershipIn(CamelModel):
+    member_id: str
+
+
+def company_out(c: dict, user: dict) -> CompanyOut:
+    return CompanyOut(id=str(c["_id"]), name=c["name"], city=c.get("city"), created_at=iso(c.get("createdAt")),
+                      invite_code=c["inviteCode"] if user.get("role") == "owner" else None)
 
 
 def member_out(m: dict) -> MemberOut:
@@ -84,7 +97,8 @@ def member_out(m: dict) -> MemberOut:
 
 
 def _members_query(company_id) -> dict:
-    return {"companyId": company_id, "emailVerified": True}
+    """Учасники компанії: власник і прийняті менеджери (заявки pending/rejected — окремо)."""
+    return {"companyId": company_id, "emailVerified": True, "memberStatus": {"$nin": ["pending", "rejected"]}}
 
 
 async def _company(database: AsyncDatabase, company_id) -> dict:
@@ -94,9 +108,11 @@ async def _company(database: AsyncDatabase, company_id) -> dict:
     return company
 
 
-async def _member(database: AsyncDatabase, user: dict, member_id: str) -> dict:
-    member = (await database.users.find_one({"_id": oid(member_id), **_members_query(user["companyId"])})
-              if is_oid(member_id) else None)
+async def _member(database: AsyncDatabase, user: dict, member_id: str, *, managers_only: bool = False) -> dict:
+    query = _members_query(user["companyId"])
+    if managers_only:
+        query["role"] = "manager"
+    member = await database.users.find_one({"_id": oid(member_id), **query}) if is_oid(member_id) else None
     if member is None:
         raise ApiError(404, "Такого колеги в компанії немає", "member_not_found")
     return member
@@ -105,31 +121,38 @@ async def _member(database: AsyncDatabase, user: dict, member_id: str) -> dict:
 # ---------- Компанія ----------
 @router.get("", response_model=CompanyOut)
 async def get_company(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    return company_out(await _company(database, user["companyId"]))
+    return company_out(await _company(database, user["companyId"]), user)
 
 
-@router.put("", response_model=CompanyOut)
-async def update_company(body: CompanyUpdate, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    require_owner(user)
+@router.patch("", response_model=CompanyOut)
+async def update_company(body: CompanyUpdate, user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    """Назва й місто компанії (лише власник)."""
     data = body.model_dump(exclude_unset=True)
-    if data.get("name") is None:  # назву не можна стерти
-        data.pop("name", None)
-    else:
+    if "name" in data:
         data["name"] = squash(data["name"])
+        if len(data["name"]) < 2:
+            raise invalid("Назва компанії має містити щонайменше 2 символи", "invalid_name")
+    if "city" in data:
+        data["city"] = squash(data["city"]) or None
     if not data:  # порожній $set Mongo відхиляє з помилкою
-        return company_out(await _company(database, user["companyId"]))
+        return company_out(await _company(database, user["companyId"]), user)
     company = await database.companies.find_one_and_update(
         {"_id": user["companyId"]}, {"$set": data}, return_document=ReturnDocument.AFTER
     )
     if company is None:
         raise not_found("Компанію")
-    return company_out(company)
+    return company_out(company, user)
+
+
+@router.put("", response_model=CompanyOut, include_in_schema=False)
+async def update_company_put(body: CompanyUpdate, user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    """Старий PUT /company — те саме, що PATCH."""
+    return await update_company(body, user, database)
 
 
 @router.post("/invite")
-async def regenerate_invite(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
+async def regenerate_invite(user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
     """Новий код запрошення; старий перестає діяти. Відповідь: { inviteCode }."""
-    require_owner(user)
     for _ in range(5):
         code = await unique_invite_code(database)
         try:
@@ -140,7 +163,7 @@ async def regenerate_invite(user: dict = Depends(current_user), database: AsyncD
     raise ApiError(500, "Не вдалося згенерувати код. Спробуйте ще раз")
 
 
-# ---------- Учасники й ролі ----------
+# ---------- Учасники ----------
 @router.get("/members", response_model=list[MemberOut])
 async def members(user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
     cursor = database.users.find(_members_query(user["companyId"])).sort("createdAt", 1)
@@ -158,41 +181,117 @@ async def member_kpi(member_id: str, user: dict = Depends(current_user), databas
     return await manager_kpi(database, user["companyId"], str(colleague["_id"]), extended=True)
 
 
-@router.patch("/members/{member_id}/role", response_model=MemberOut)
-async def set_role(member_id: str, body: RoleIn, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    """Призначити керівником або зробити менеджером (лише керівник; останнього керівника зняти не можна)."""
-    require_owner(user, "Змінювати ролі може лише керівник")
-    colleague = await _member(database, user, member_id)
-    if body.role != "owner" and colleague.get("role") == "owner":
-        others = {**_members_query(user["companyId"]), "role": "owner", "_id": {"$ne": colleague["_id"]}}
-        if not await database.users.count_documents(others):
-            raise ApiError(409, "У компанії має лишитися хоча б один керівник", "last_owner")
-    updated = await database.users.find_one_and_update(
-        {"_id": colleague["_id"]}, {"$set": {"role": body.role}}, return_document=ReturnDocument.AFTER
+@router.delete("/members/{member_id}")
+async def remove_member(member_id: str, transfer_to: str | None = Query(None, alias="transferTo"),
+                        user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    """Прибрати менеджера з компанії. Його активні рейси переходять до transferTo. → { transferred }."""
+    if member_id == str(user["_id"]):
+        raise ApiError(409, "Себе прибрати не можна — спершу передайте компанію колезі", "cannot_remove_self")
+    gone = await _member(database, user, member_id, managers_only=True)
+    active = await database.trips.find(
+        {"companyId": user["companyId"], "managerId": member_id, "status": {"$in": ACTIVE_TRIPS}}
+    ).to_list(None)
+    if active and not transfer_to:
+        raise ApiError(409, "Оберіть менеджера, якому перейдуть активні рейси", "transfer_required")
+    if transfer_to:
+        target = (await database.users.find_one({"_id": oid(transfer_to), **_members_query(user["companyId"]), "role": "manager"})
+                  if is_oid(transfer_to) and transfer_to != member_id else None)
+        if target is None:
+            raise invalid("Рейси можна передати лише іншому менеджеру компанії", "invalid_transfer")
+    for trip in active:
+        await trip_svc.transfer(database, trip, by=str(user["_id"]), to=transfer_to, comment="Менеджера прибрано з компанії")
+    await database.users.update_one({"_id": gone["_id"]}, {"$set": {"companyId": None, "role": None, "memberStatus": None,
+                                                                   "removedAt": now()}})
+    return {"transferred": len(active)}
+
+
+@router.post("/transfer-ownership")
+async def transfer_ownership(body: TransferOwnershipIn, user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    """Передати компанію менеджеру: він стає власником (код власника — листом), автор — менеджером. → { user }."""
+    if body.member_id == str(user["_id"]):
+        raise ApiError(409, "Ви вже власник компанії", "same_member")
+    heir = await _member(database, user, body.member_id, managers_only=True)
+    await database.users.update_one({"_id": heir["_id"]}, {"$set": {"role": "owner", "memberStatus": None}})
+    heir.update(role="owner", memberStatus=None)
+    await database.users.update_one({"_id": user["_id"]}, {"$set": {"role": "manager", "memberStatus": "active"},
+                                                          "$unset": {"ownerCodeHash": "", "ownerLoginFails": "", "ownerLockUntil": ""}})
+    user.update(role="manager", memberStatus="active")
+    user.pop("ownerCodeHash", None)
+    await database.companies.update_one({"_id": user["companyId"]}, {"$set": {"ownerId": heir["_id"]}})
+    code = await owner_code.issue(database, heir)
+    # Компанію вже передано; якщо лист не дійшов — новий власник отримає код через «Забули код власника?»
+    with suppress(ApiError):
+        await notify.send_owner_code_email(heir["email"], code)
+    return {"user": await user_out(database, user)}
+
+
+# ---------- Заявки на вступ ----------
+async def _pending_request(database: AsyncDatabase, user: dict, request_id: str) -> dict:
+    req = (await database.join_requests.find_one({"_id": oid(request_id), "companyId": user["companyId"], "status": "pending"})
+           if is_oid(request_id) else None)
+    if req is None:
+        raise ApiError(404, "Заявку не знайдено або її вже розглянуто", "request_not_found")
+    return req
+
+
+@router.get("/join-requests", response_model=list[JoinRequestOut])
+async def join_requests(user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    requests = await database.join_requests.find({"companyId": user["companyId"], "status": "pending"}).sort("createdAt", 1).to_list(None)
+    people = {u["_id"]: u async for u in database.users.find({"_id": {"$in": [r["userId"] for r in requests]}})}
+    return [
+        JoinRequestOut(id=str(r["_id"]), user_id=str(r["userId"]), name=people[r["userId"]]["name"],
+                       email=people[r["userId"]]["email"], phone=people[r["userId"]].get("phone"),
+                       created_at=iso(r.get("createdAt")), status=r["status"])
+        for r in requests if r["userId"] in people
+    ]
+
+
+async def _decide(database: AsyncDatabase, user: dict, request_id: str, decision: str) -> dict:
+    req = await _pending_request(database, user, request_id)
+    await database.join_requests.update_one({"_id": req["_id"]}, {"$set": {"status": decision, "decidedAt": now(),
+                                                                          "decidedBy": user["_id"]}})
+    status = "active" if decision == "approved" else "rejected"
+    return await database.users.find_one_and_update(
+        {"_id": req["userId"], "companyId": user["companyId"]}, {"$set": {"memberStatus": status}},
+        return_document=ReturnDocument.AFTER,
     )
-    return member_out(updated)
 
 
-# ---------- Перехід в іншу компанію ----------
+@router.post("/join-requests/{request_id}/approve", response_model=MemberOut)
+async def approve_request(request_id: str, user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    manager = await _decide(database, user, request_id, "approved")
+    if manager is None:  # людина вже подала заявку в іншу компанію
+        raise ApiError(404, "Заявку не знайдено або її вже розглянуто", "request_not_found")
+    return member_out(manager)
+
+
+@router.post("/join-requests/{request_id}/reject")
+async def reject_request(request_id: str, user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
+    await _decide(database, user, request_id, "rejected")
+    return {"message": "Заявку відхилено"}
+
+
+# ---------- Перехід менеджера в іншу компанію ----------
 @router.post("/switch", response_model=SwitchOut)
-async def switch_company(body: SwitchIn, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
-    """Приєднатися до іншої компанії за кодом або створити нову. Активні рейси (planned, in_progress)
-    передаються керівнику старої компанії, виконані лишаються в її історії."""
-    old_company = user["companyId"]
+async def switch_company(body: SwitchIn, user: dict = Depends(any_user), database: AsyncDatabase = Depends(db)):
+    """Менеджер переходить в іншу компанію за кодом: доступ до старої закривається одразу, у нову — після
+    рішення її власника. Активні рейси лишаються в старій компанії без менеджера (власник побачить їх)."""
+    require_manager(user)
+    if body.company.mode != "join":
+        raise ApiError(400, "Нову компанію створює власник під час реєстрації", "owner_needs_password")
+    old_company = user.get("companyId")
     choice = await resolve_company_choice(database, body.company, user["name"])
-    if choice["mode"] == "join" and choice["companyId"] == old_company:
+    if choice["companyId"] == old_company:
         raise ApiError(409, "Ви вже в цій компанії", "same_company")
 
-    colleagues = {**_members_query(old_company), "_id": {"$ne": user["_id"]}}
-    successor = await database.users.find_one({**colleagues, "role": "owner"}, {"_id": 1})
-    if user.get("role") == "owner" and successor is None and await database.users.count_documents(colleagues):
-        raise ApiError(409, "Ви єдиний керівник компанії. Спершу призначте керівником когось із колег", "last_owner")
-
-    if successor is not None:
+    if old_company is not None:
         me = str(user["_id"])
-        active = database.trips.find({"companyId": old_company, "managerId": me, "status": {"$in": ["planned", "in_progress"]}})
-        async for trip in active:
-            await trip_svc.transfer(database, trip, by=me, to=str(successor["_id"]), comment="Менеджер перейшов в іншу компанію")
-
+        await database.trips.update_many(
+            {"companyId": old_company, "managerId": me, "status": {"$in": ACTIVE_TRIPS}},
+            {"$set": {"managerId": None, "transferredAt": now(), "transferredFrom": me},
+             "$push": {"history": trip_svc.history_entry(me, "transferred", **{"from": me, "to": None})}},
+        )
     company = await attach_company(database, user, choice)
-    return SwitchOut(user=await user_out(database, user), company=company_out(company))
+    if user.get("phoneVerified"):
+        await open_join_request(database, user)
+    return SwitchOut(user=await user_out(database, user), company=company_out(company, user))

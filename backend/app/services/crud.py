@@ -1,7 +1,7 @@
 """Узагальнений CRUD для сутностей компанії (автопарк, водії).
 
 Фабрика `crud_router` створює 5 стандартних ендпоінтів. Усі запити обмежені компанією
-поточного користувача — менеджер бачить і змінює лише дані своєї компанії.
+поточного користувача. Читати можуть і менеджер, і власник; створювати, змінювати й видаляти — лише менеджер.
 
 Хуки (усі необов'язкові):
 - validate(database, user, data, existing) — перевірити/доповнити дані перед записом
@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..deps import company_filter, current_user, db
+from ..deps import company_filter, current_user, db, manager_user
 from ..errors import invalid, not_found
 from ..utils import drop_nulls, is_oid, now, oid, public
 
@@ -79,7 +79,7 @@ def crud_router(
         return public(await _get(database, user, item_id))
 
     @router.post("", response_model=out_model, status_code=status.HTTP_201_CREATED)
-    async def create_item(body: in_model, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):  # type: ignore[valid-type]
+    async def create_item(body: in_model, user: dict = Depends(manager_user), database: AsyncDatabase = Depends(db)):  # type: ignore[valid-type]
         data = body.model_dump(by_alias=True)
         if validate:
             await validate(database, user, data, None)
@@ -91,7 +91,7 @@ def crud_router(
         return public(doc, "createdBy")
 
     @router.put("/{item_id}", response_model=out_model)
-    async def update_item(item_id: str, body: update_model, user: dict = Depends(current_user),  # type: ignore[valid-type]
+    async def update_item(item_id: str, body: update_model, user: dict = Depends(manager_user),  # type: ignore[valid-type]
                           database: AsyncDatabase = Depends(db)):
         existing = await _get(database, user, item_id)
         data = drop_nulls(body.model_dump(by_alias=True, exclude_unset=True), nullable)
@@ -109,7 +109,7 @@ def crud_router(
         return public(doc, "createdBy", "updatedAt")
 
     @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_item(item_id: str, user: dict = Depends(current_user), database: AsyncDatabase = Depends(db)):
+    async def delete_item(item_id: str, user: dict = Depends(manager_user), database: AsyncDatabase = Depends(db)):
         doc = await _get(database, user, item_id)
         if before_delete:
             await before_delete(database, user, doc)

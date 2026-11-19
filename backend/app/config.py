@@ -48,10 +48,8 @@ class Settings:
         default_factory=lambda: _list("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
     )
 
-    # --- Соцмережі ---
+    # --- Вхід через Google ---
     google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
-    facebook_app_id: str = os.getenv("FACEBOOK_APP_ID", "")
-    facebook_app_secret: str = os.getenv("FACEBOOK_APP_SECRET", "")
 
     # --- Пошта: mailjet | resend | brevo (HTTP API, працюють і на безкоштовному Render) | smtp | console ---
     email_provider: str = os.getenv("EMAIL_PROVIDER", "console").lower()

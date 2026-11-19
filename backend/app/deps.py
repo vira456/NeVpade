@@ -8,7 +8,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from .db import get_db
 from .errors import ApiError
 from .security import decode_token
-from .services.users import ensure_company
+from .services.users import ensure_company, member_status
 from .utils import is_oid, now, oid
 
 _bearer = HTTPBearer(auto_error=False)
@@ -65,6 +65,8 @@ async def current_user(user: dict = Depends(any_user)) -> dict:
     До того працюють тільки /auth/me, /auth/complete-signup, /auth/phone, /auth/verify-phone, /auth/resend-code."""
     if user.get("companyId") is None or not user.get("phoneVerified"):
         raise ApiError(403, "Завершіть реєстрацію: оберіть компанію й підтвердьте телефон", "signup_incomplete")
+    if member_status(user) in ("pending", "rejected"):  # власник статусу не має, менеджер — лише active
+        raise ApiError(403, "Заявка на вступ ще чекає підтвердження власника компанії", "membership_pending")
     return user
 
 
@@ -72,9 +74,25 @@ def is_owner(user: dict) -> bool:
     return user.get("role") == "owner"
 
 
-def require_owner(user: dict, detail: str = "Це може зробити лише керівник компанії") -> None:
+def require_owner(user: dict, detail: str = "Ця дія доступна лише власнику компанії") -> None:
     if not is_owner(user):
         raise ApiError(403, detail, "owner_only")
+
+
+def require_manager(user: dict) -> None:
+    """Власник лише переглядає роботу компанії; рейси, автопарк, водіїв і клієнтів веде менеджер."""
+    if is_owner(user):
+        raise ApiError(403, "Власник переглядає дані компанії, а змінює їх менеджер", "manager_only")
+
+
+async def owner_user(user: dict = Depends(current_user)) -> dict:
+    require_owner(user)
+    return user
+
+
+async def manager_user(user: dict = Depends(current_user)) -> dict:
+    require_manager(user)
+    return user
 
 
 def company_filter(user: dict) -> dict:
