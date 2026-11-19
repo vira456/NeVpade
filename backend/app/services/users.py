@@ -14,6 +14,13 @@ from ..utils import now, squash
 PHONE_SETUP_WINDOW = timedelta(minutes=30)
 
 
+def member_status(user: dict) -> str | None:
+    """Статус менеджера в компанії: pending | active | rejected (старі записи без поля — active). Власнику — None."""
+    if user.get("role") == "owner":
+        return None
+    return user.get("memberStatus") or "active"
+
+
 def default_settings() -> dict:
     # fuelPrice: None — рахувати за ринковою ціною дизеля (GET /fuel-price); число — власна ціна менеджера
     return {"viberTemplate": None, "pushEnabled": True, "soundEnabled": False, "fuelPrice": None}
@@ -75,27 +82,30 @@ async def resolve_company_choice(db: AsyncDatabase, choice, user_name: str) -> d
     if choice.mode == "join":
         company = await db.companies.find_one({"inviteCode": choice.code}, {"_id": 1})
         if company is None:
-            raise ApiError(404, "Компанію з таким кодом не знайдено. Перевірте код у колеги", "company_not_found")
+            raise ApiError(404, "Компанію з таким кодом не знайдено. Перевірте код у власника", "company_not_found")
         return {"mode": "join", "companyId": company["_id"]}
-    return {"mode": "create", "name": squash(choice.name)}
+    return {"mode": "create", "name": squash(choice.name), "city": squash(choice.city) or None}
 
 
 async def attach_company(db: AsyncDatabase, user: dict, choice: dict | None) -> dict:
-    """Прив'язує користувача до компанії: нова (він — власник) або існуюча (за кодом)."""
+    """Прив'язує користувача до компанії: нова (він — власник) або існуюча за кодом — тоді він менеджер
+    зі статусом pending, доки власник не прийме заявку."""
     choice = choice or {"mode": "create", "name": f"Компанія {user['name']}"}
     company = None
     if choice.get("mode") == "join" and choice.get("companyId"):
         company = await db.companies.find_one({"_id": choice["companyId"]})
     if company is None:
-        company = await create_company(db, choice.get("name") or f"Компанія {user['name']}", user["_id"])
-        role = "owner"
+        company = await create_company(db, choice.get("name") or f"Компанія {user['name']}", user["_id"], choice.get("city"))
+        role, status = "owner", None
     else:
-        role = "manager"
+        role, status = "manager", "pending"
     await db.users.update_one(
         {"_id": user["_id"]},
-        {"$set": {"companyId": company["_id"], "role": role}, "$unset": {"pendingCompany": ""}},
+        {"$set": {"companyId": company["_id"], "role": role, "memberStatus": status},
+         "$unset": {"pendingCompany": "", "removedAt": ""}},
     )
-    user.update(companyId=company["_id"], role=role)
+    user.update(companyId=company["_id"], role=role, memberStatus=status)
+    user.pop("removedAt", None)
     user.pop("pendingCompany", None)
     return company
 
@@ -118,6 +128,7 @@ async def user_out(db: AsyncDatabase, user: dict) -> UserOut:
         phone=user.get("phone"),
         phone_verified=bool(user.get("phoneVerified")),
         role=user.get("role"),
+        member_status=member_status(user),
         company_id=str(user["companyId"]) if user.get("companyId") else None,
         company_name=company["name"] if company else None,
         position=user.get("position"),
@@ -125,14 +136,23 @@ async def user_out(db: AsyncDatabase, user: dict) -> UserOut:
     )
 
 
-async def auth_response(db: AsyncDatabase, user: dict, *, is_new: bool = False) -> AuthResponse:
+async def auth_response(db: AsyncDatabase, user: dict, *, is_new: bool = False, owner_code: str | None = None) -> AuthResponse:
     """Видає токен. Якщо телефон ще не підтверджено — відкриває «вікно» для його прив'язки."""
     await ensure_company(db, user)
     update = {"lastSeenAt": now()}
     if not user.get("phoneVerified"):
         update["phoneSetupUntil"] = now() + PHONE_SETUP_WINDOW
     await db.users.update_one({"_id": user["_id"]}, {"$set": update})
-    return AuthResponse(token=create_token(str(user["_id"])), user=await user_out(db, user), is_new=is_new)
+    token = create_token(str(user["_id"]), owner=user.get("role") == "owner")
+    return AuthResponse(token=token, user=await user_out(db, user), is_new=is_new, owner_code=owner_code)
+
+
+# ---------- Заявки на вступ ----------
+async def open_join_request(db: AsyncDatabase, user: dict) -> None:
+    """Заявка менеджера власнику компанії (після підтвердження телефону). Попередні незакриті — скасовуємо."""
+    await db.join_requests.update_many({"userId": user["_id"], "status": "pending"}, {"$set": {"status": "cancelled"}})
+    await db.join_requests.insert_one({"companyId": user["companyId"], "userId": user["_id"], "status": "pending",
+                                       "createdAt": now()})
 
 
 async def release_phone_from_unverified(db: AsyncDatabase, phone: str, except_id=None) -> bool:

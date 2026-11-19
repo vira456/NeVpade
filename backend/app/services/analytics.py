@@ -87,11 +87,11 @@ class Analytics:
             if t.get("status") in COUNTED
         ]
 
-    def _select(self, start: date, end: date) -> list[tuple[dict, dict]]:
+    def select(self, start: date, end: date) -> list[tuple[dict, dict]]:
         return [(t, c) for t, c in self.rows if _in(t, start, end)]
 
     def _totals(self, start: date, end: date) -> dict:
-        selected = self._select(start, end)
+        selected = self.select(start, end)
         income = round(sum(float(t.get("price") or 0) for t, _ in selected))
         expenses = sum(sum(c[k] for k in EXPENSE_KEYS) for _, c in selected)
         return {
@@ -117,14 +117,14 @@ class Analytics:
 
     def expenses(self, period: Period) -> dict:
         result = dict.fromkeys(EXPENSE_KEYS, 0)
-        for _, c in self._select(*period_range(period, self.today)):
+        for _, c in self.select(*period_range(period, self.today)):
             for key in EXPENSE_KEYS:
                 result[key] += c[key]
         return result
 
     def drivers_stats(self, period: Period) -> list[dict]:
         stats: dict[str, dict] = {}
-        for t, _ in self._select(*period_range(period, self.today)):
+        for t, _ in self.select(*period_range(period, self.today)):
             driver_id = t.get("driverId")
             if not driver_id:
                 continue
@@ -133,3 +133,55 @@ class Analytics:
             row["trips"] += 1
             row["income"] += round(float(t.get("price") or 0))
         return sorted(stats.values(), key=lambda r: r["income"], reverse=True)
+
+
+# ---------- Кабінет власника: компанія й кожен менеджер ----------
+def payment_state(trip: dict, today: date) -> str | None:
+    """Як на фронті (utils/format.js → paymentStatus): paid | overdue | pending; None — не рахуємо."""
+    if trip.get("status") == "cancelled":
+        return None
+    payment = trip.get("payment") or {}
+    if payment.get("paidAt"):
+        return "paid"
+    if not payment.get("dueDate"):
+        return None
+    return "overdue" if payment["dueDate"] < today.isoformat() else "pending"
+
+
+def team_stats(analytics: Analytics, all_trips: list[dict], period: Period) -> dict:
+    """GET /analytics/team. Показники за період — з рейсів done/in_progress; activeTrips, paidOnTime й
+    прострочені оплати — за весь час (контракт, «Кабінет власника»)."""
+    today = analytics.today
+    period_rows = analytics.select(*period_range(period, today))
+
+    def money(trips: list[dict]) -> int:
+        return round(sum(float(t.get("price") or 0) for t in trips))
+
+    states = [(t, payment_state(t, today)) for t in all_trips]
+    pending = [t for t, s in states if s == "pending"]
+    overdue = [t for t, s in states if s == "overdue"]
+
+    managers = []
+    for manager_id in sorted({t["managerId"] for t in all_trips if t.get("managerId")}):
+        mine = [t for t in all_trips if t.get("managerId") == manager_id]
+        rows = [(t, c) for t, c in period_rows if t.get("managerId") == manager_id]
+        with_due = [t for t in mine if t.get("status") == "done" and (t.get("payment") or {}).get("dueDate")]
+        on_time = sum(1 for t in with_due if t["payment"].get("paidAt") and t["payment"]["paidAt"] <= t["payment"]["dueDate"])
+        late = [t for t in mine if payment_state(t, today) == "overdue"]
+        income = money([t for t, _ in rows])
+        managers.append({
+            "managerId": manager_id,
+            "activeTrips": sum(1 for t in mine if t.get("status") in ("planned", "in_progress")),
+            "tripsCount": len(rows),
+            "income": income,
+            "profit": income - sum(sum(c[k] for k in EXPENSE_KEYS) for _, c in rows),
+            "paidOnTime": round(100 * on_time / len(with_due)) if with_due else None,
+            "overdueAmount": money(late),
+            "overdueCount": len(late),
+        })
+    return {
+        **analytics.summary(period),
+        "payments": {"pending": money(pending), "pendingCount": len(pending),
+                     "overdue": money(overdue), "overdueCount": len(overdue)},
+        "managers": managers,
+    }

@@ -3,7 +3,7 @@ from fastapi import Depends
 from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..deps import company_filter, current_user, db, require_owner
+from ..deps import company_filter, db, manager_user
 from ..errors import ApiError, not_found
 from ..schemas.entities import AssignVehicleIn, DriverIn, DriverOut, DriverUpdate
 from ..services.crud import crud_router, ensure_ref, get_company_doc
@@ -35,7 +35,6 @@ async def _after_write(database: AsyncDatabase, user: dict, doc: dict) -> None:
 
 
 async def _before_delete(database: AsyncDatabase, user: dict, doc: dict) -> None:
-    require_owner(user, "Видаляти водіїв може лише керівник")
     active = await database.trips.find_one(
         {**company_filter(user), "driverId": str(doc["_id"]), "status": "in_progress"}, {"number": 1}
     )
@@ -67,7 +66,7 @@ router = crud_router(
 
 
 @router.put("/{item_id}/vehicle", response_model=DriverOut)
-async def assign_vehicle(item_id: str, body: AssignVehicleIn, user: dict = Depends(current_user),
+async def assign_vehicle(item_id: str, body: AssignVehicleIn, user: dict = Depends(manager_user),
                          database: AsyncDatabase = Depends(db)):
     """Закріпити машину за водієм ({ vehicleId: null } — відкріпити)."""
     driver = await get_company_doc(database, user, "drivers", item_id, "Водія")

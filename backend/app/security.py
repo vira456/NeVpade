@@ -41,9 +41,13 @@ def verify_password(password: str, hashed: str | None) -> bool:
 
 
 # ---------- JWT ----------
-def create_token(user_id: str) -> str:
+OWNER_TOKEN_HOURS = 12
+
+
+def create_token(user_id: str, *, owner: bool = False) -> str:
     issued = now()
-    payload = {"sub": user_id, "typ": "access", "iat": issued, "exp": issued + timedelta(hours=settings.jwt_expire_hours)}
+    hours = min(settings.jwt_expire_hours, OWNER_TOKEN_HOURS) if owner else settings.jwt_expire_hours
+    payload = {"sub": user_id, "typ": "access", "iat": issued, "exp": issued + timedelta(hours=hours)}
     return jwt.encode(payload, _secret(), algorithm=ALGORITHM)
 
 
@@ -78,9 +82,11 @@ def decode_file_token(token: str) -> str | None:
 
 
 # ---------- Одноразові коди ----------
-def generate_code() -> str:
-    if settings.dev_fixed_code:
-        return settings.dev_fixed_code
+def generate_code(purpose: str = "verify") -> str:
+    """6 випадкових цифр. У демо-режимі — фіксований код: окремо для SMS (verify_phone) і для пошти."""
+    fixed = settings.dev_fixed_sms_code if purpose == "verify_phone" else settings.dev_fixed_email_code
+    if fixed:
+        return fixed
     return f"{secrets.randbelow(1_000_000):06d}"
 
 

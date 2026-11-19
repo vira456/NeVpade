@@ -1,7 +1,7 @@
 """Розділ 2б контракту: клієнти (замовники перевезень) /clients."""
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..deps import company_filter, require_owner
+from ..deps import company_filter
 from ..errors import ApiError
 from ..schemas.entities import ClientIn, ClientOut, ClientUpdate
 from ..services.crud import crud_router
@@ -28,7 +28,6 @@ async def _after_write(database: AsyncDatabase, user: dict, doc: dict) -> None:
 
 
 async def _before_delete(database: AsyncDatabase, user: dict, doc: dict) -> None:
-    require_owner(user, "Видаляти клієнтів може лише керівник")
     count = await database.trips.count_documents({**company_filter(user), "clientId": str(doc["_id"])})
     if count:  # історію рейсів не губимо
         raise ApiError(409, f"У клієнта є рейси ({count}) — його не можна видалити", "client_has_trips")

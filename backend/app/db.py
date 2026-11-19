@@ -61,7 +61,6 @@ async def _create_indexes(db: AsyncDatabase) -> None:
     await db.users.create_index("email", unique=True)
     await db.users.create_index("phone", unique=True, partialFilterExpression={"phone": {"$type": "string"}})
     await db.users.create_index("googleId", sparse=True)
-    await db.users.create_index("facebookId", sparse=True)
     await db.users.create_index("companyId")
 
     await db.companies.create_index("inviteCode", unique=True)
@@ -77,5 +76,6 @@ async def _create_indexes(db: AsyncDatabase) -> None:
     await db.clients.create_index("companyId")
     await db.drivers.create_index("companyId")
     await db.tasks.create_index([("ownerId", ASCENDING), ("status", ASCENDING), ("order", ASCENDING)])
+    await db.join_requests.create_index([("companyId", ASCENDING), ("status", ASCENDING)])
     await db.messages.create_index([("companyId", ASCENDING), ("_id", ASCENDING)])
     await db.documents.create_index([("companyId", ASCENDING), ("ownerType", ASCENDING), ("ownerId", ASCENDING), ("createdAt", DESCENDING)])

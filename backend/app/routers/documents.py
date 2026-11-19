@@ -13,7 +13,7 @@ from bson import Binary
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile, status
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..deps import company_filter, current_user, db
+from ..deps import company_filter, current_user, db, manager_user
 from ..errors import ApiError, invalid, not_found
 from ..schemas.common import _date
 from ..schemas.entities import DRIVER_DOC_TYPES, TRIP_DOC_TYPES, VEHICLE_DOC_TYPES, DocumentOut, DocumentsSummaryItem
@@ -80,7 +80,7 @@ def _register(owner: Owner) -> None:
         file: UploadFile = File(...),
         type: str = Form(...),
         valid_until: str | None = Form(None, alias="validUntil"),
-        user: dict = Depends(current_user),
+        user: dict = Depends(manager_user),
         database: AsyncDatabase = Depends(db),
     ):
         await get_company_doc(database, user, owner, owner_id, what)
@@ -112,7 +112,7 @@ def _register(owner: Owner) -> None:
 
     @router.delete(f"/{owner}/{{owner_id}}/documents/{{doc_id}}", status_code=status.HTTP_204_NO_CONTENT,
                    name=f"{owner}_delete_document")
-    async def delete_document(owner_id: str, doc_id: str, user: dict = Depends(current_user),
+    async def delete_document(owner_id: str, doc_id: str, user: dict = Depends(manager_user),
                               database: AsyncDatabase = Depends(db)):
         doc = await database.documents.find_one(
             {"_id": oid(doc_id, "Документ"), **company_filter(user), "ownerType": owner, "ownerId": owner_id}
