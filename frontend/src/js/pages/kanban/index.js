@@ -7,7 +7,7 @@ import { showToast } from '../../utils/toast.js';
 import { confirmDialog } from '../../utils/confirm.js';
 import { COLUMNS, PRIORITIES, isOverdue } from './config.js';
 import { renderCard } from './card.js';
-import { initModal, openModal } from './modal.js';
+import { initModal, openModal, setModalTrips } from './modal.js';
 import { debounce } from '../../utils/debounce.js';
 
 renderLayout();
@@ -209,13 +209,19 @@ async function init() {
       .join('');
 
   initDragAndDrop();
+  // кнопки «+ Нове завдання» працюють одразу; рейси для списку підставляються, коли завантажаться
+  initModal({ onSave: saveTask, onDelete: removeTask });
 
   try {
-    [tasks, trips] = await Promise.all([getTasks(), getTrips()]);
+    const [loadedTasks, loadedTrips] = await Promise.all([getTasks(), getTrips().catch(() => [])]);
+    // завдання, створені поки йшло завантаження, не губимо
+    const created = tasks.filter((t) => !loadedTasks.some((x) => x.id === t.id));
+    tasks = [...loadedTasks, ...created];
+    trips = loadedTrips ?? [];
   } catch (err) {
     showToast(`Не вдалося завантажити завдання: ${err.message}`, 'error', 0);
   }
-  initModal({ trips, onSave: saveTask, onDelete: removeTask });
+  setModalTrips(trips);
   renderBoard();
   board.classList.remove('is-loading');
 }

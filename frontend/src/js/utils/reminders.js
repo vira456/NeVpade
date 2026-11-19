@@ -90,7 +90,7 @@ export async function collectReminders() {
   docs(vDocs, vehicles, (v) => v.plate, '/pages/fleet.html');
   docs(dDocs, drivers, (d) => d.name, '/pages/fleet.html');
 
-  // Оплата: менеджер бачить свої рейси, керівник — усі
+  // Оплата: менеджер бачить свої рейси, власник — усі
   const visible = trips.filter((tr) => isOwner() || tr.managerId === myId());
   const overdue = visible.filter((tr) => paymentStatus(tr) === 'overdue').sort((a, b) => daysPastDue(b) - daysPastDue(a));
   for (const tr of overdue.slice(0, 8)) {

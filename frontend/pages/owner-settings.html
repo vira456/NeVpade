@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1280" />
+  <!-- nevpade:head -->
+  <title>Компанія · NeVpade</title>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"></aside>
+    <main class="main owner">
+      <header class="main__header">
+        <div>
+          <h1 class="main__title">Компанія і доступ</h1>
+          <p class="main__subtitle" id="ownerSubtitle">&nbsp;</p>
+        </div>
+      </header>
+
+      <div class="owner__grid">
+        <section class="card owner__company">
+          <h2 class="card__title">Компанія</h2>
+          <form class="owner__form" id="companyForm" novalidate>
+            <div class="auth__alert" hidden></div>
+            <div class="field">
+              <label class="field__label" for="coName">Назва компанії</label>
+              <input class="input" id="coName" name="name" type="text" maxlength="80" autocomplete="organization" />
+              <div class="field__error"></div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="coCity">Місто</label>
+              <input class="input" id="coCity" name="city" type="text" maxlength="60" autocomplete="address-level2" />
+              <div class="field__error"></div>
+            </div>
+            <div class="owner__form-actions">
+              <button class="btn" type="submit" id="companySave">Зберегти</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card owner__code">
+          <h2 class="card__title">Код власника</h2>
+          <p class="owner__text">Потрібен під час кожного входу в кабінет разом із паролем. Ми зберігаємо лише його захищений відбиток, тож показати поточний код не можемо — лише видати новий.</p>
+          <div class="owner-code-mask" aria-label="Код приховано"><span data-no-i18n>OWN-••••-••••</span></div>
+          <button class="btn btn--ghost" id="regenCodeBtn" type="button">Видати новий код</button>
+        </section>
+
+        <section class="card owner__account">
+          <h2 class="card__title">Мій акаунт</h2>
+          <dl class="owner-facts" id="accountFacts"></dl>
+          <a class="btn--link" href="/pages/forgot-password.html">Змінити пароль</a>
+        </section>
+
+        <section class="card owner__transfer">
+          <h2 class="card__title">Передати компанію</h2>
+          <p class="owner__text">Менеджер, якого ви оберете, стане власником і отримає свій код власника на пошту. Ви станете менеджером компанії й перейдете в робочий інтерфейс менеджера.</p>
+          <form class="owner__form" id="transferForm" novalidate>
+            <div class="auth__alert" hidden></div>
+            <div class="field">
+              <label class="field__label" for="transferTo">Новий власник</label>
+              <select class="input" id="transferTo" name="memberId"></select>
+              <div class="field__error"></div>
+            </div>
+            <div class="owner__form-actions">
+              <button class="btn btn--danger" type="submit" id="transferSubmit">Передати компанію</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog class="modal" id="regenDialog" aria-labelledby="regenTitle">
+    <form class="modal__body" id="regenForm" novalidate>
+      <h2 class="modal__title" id="regenTitle">Новий код власника</h2>
+      <p class="modal__text">Старий код одразу перестане діяти. Підтвердіть паролем, що це ви.</p>
+      <div class="auth__alert" hidden></div>
+      <div class="field">
+        <label class="field__label" for="regenPassword">Пароль</label>
+        <input class="input" id="regenPassword" name="password" type="password" autocomplete="current-password" />
+        <div class="field__error"></div>
+      </div>
+      <div class="modal__actions">
+        <span class="modal__spacer"></span>
+        <button class="btn btn--text" type="button" data-cancel>Скасувати</button>
+        <button class="btn" type="submit" id="regenSubmit">Видати код</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="/src/js/pages/owner/settings.js"></script>
+</body>
+</html>

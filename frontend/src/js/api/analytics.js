@@ -4,6 +4,7 @@ import { request } from './client.js';
 import { mockTrips, mockVehicles, mockDrivers } from './mock-store.js';
 import { tripCosts } from '../utils/economics.js';
 import { locale } from '../i18n/index.js';
+import { paymentStatus } from '../utils/format.js';
 
 // Які рейси рахуємо в доходах: виконані й ті, що зараз у дорозі (скасовані й заплановані — ні)
 const COUNTED = ['done', 'in_progress'];
@@ -112,4 +113,46 @@ export const getExpenses = (period = 'month') =>
     const out = { fuel: 0, salary: 0, repair: 0, tolls: 0, other: 0 };
     for (const { cost } of withCosts(src, from, to)) for (const k of Object.keys(out)) out[k] += cost[k];
     return out;
+  });
+
+/**
+ * Кабінет власника: підсумок компанії за період і показники кожного менеджера.
+ * Сервер: GET /analytics/team?period=month|year (лише власник). Поки ендпоінта немає — рахуємо з рейсів.
+ */
+export const getTeamStats = (period = 'month') =>
+  analytics(`/analytics/team?period=${period}`, (src) => {
+    const r = periodRange(period);
+    const rows = withCosts(src, r.from, r.to);
+    const sum = (list, f) => list.reduce((s, x) => s + (f(x) || 0), 0);
+    const unpaid = (status) => src.trips.filter((t) => paymentStatus(t) === status);
+    const ids = [...new Set(src.trips.map((t) => t.managerId).filter(Boolean))];
+    const managers = ids.map((id) => {
+      const all = src.trips.filter((t) => t.managerId === id);
+      const mine = rows.filter((x) => x.trip.managerId === id);
+      const withDue = all.filter((t) => t.status === 'done' && t.payment?.dueDate);
+      const onTime = withDue.filter((t) => t.payment.paidAt && t.payment.paidAt <= t.payment.dueDate).length;
+      const overdue = all.filter((t) => paymentStatus(t) === 'overdue');
+      const income = sum(mine, (x) => x.trip.price);
+      return {
+        managerId: id,
+        activeTrips: all.filter((t) => ['planned', 'in_progress'].includes(t.status)).length,
+        tripsCount: mine.length,
+        income,
+        profit: income - sum(mine, (x) => x.cost.total),
+        paidOnTime: withDue.length ? Math.round((onTime / withDue.length) * 100) : null,
+        overdueAmount: sum(overdue, (t) => t.price),
+        overdueCount: overdue.length,
+      };
+    });
+    return {
+      ...totals(rows),
+      previous: totals(withCosts(src, r.prevFrom, r.prevTo)),
+      payments: {
+        pending: sum(unpaid('pending'), (t) => t.price),
+        pendingCount: unpaid('pending').length,
+        overdue: sum(unpaid('overdue'), (t) => t.price),
+        overdueCount: unpaid('overdue').length,
+      },
+      managers,
+    };
   });

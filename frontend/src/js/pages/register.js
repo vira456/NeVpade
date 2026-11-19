@@ -8,6 +8,9 @@ initAuthPage();
 
 const form = document.getElementById('registerForm');
 const { name, email, phone, password, confirm, terms } = form.elements;
+// Дві окремі сторінки з одним скриптом: register.html — менеджер (код запрошення, можна через Google),
+// register-owner.html — власник (створює компанію; лише пошта й пароль)
+const isOwner = form.dataset.role === 'owner';
 const company = initCompanyField(form);
 const rules = document.getElementById('passwordRules');
 
@@ -68,7 +71,7 @@ form.addEventListener('submit', async (e) => {
         email: cleanEmail,
         phone: toE164(phoneDigits(phone.value)),
         password: password.value,
-        company: company.value(),
+        company: isOwner ? { ...company.value(), city: form.elements.companyCity.value.trim() || null } : company.value(),
       })
     );
     rememberEmail(cleanEmail);
@@ -81,4 +84,4 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-initSocialButtons({ onSuccess: (user) => location.replace(nextPageFor(user)), onError: (msg) => showAlert(form, msg), text: 'signup_with' });
+if (!isOwner) initSocialButtons({ onSuccess: (user) => location.replace(nextPageFor(user)), onError: (msg) => showAlert(form, msg), text: 'signup_with' });

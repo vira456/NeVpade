@@ -10,9 +10,13 @@ import seedClients from '../mock/clients.json';
 const KEYS = ['trips', 'vehicles', 'drivers', 'clients', 'tasks', 'chat'];
 
 // Коли змінюється структура демо-даних — старі збережені дані скидаються до нових
-const MOCK_VERSION = 4;
+// 5 — власник став окремим акаунтом (usr_00) зі своїм інтерфейсом, тож старі ролі й «свої» компанії скидаємо
+// 6 — менеджери вступають до компанії через заявку, яку підтверджує власник
+const MOCK_VERSION = 6;
 if (load('mock.version') !== MOCK_VERSION) {
-  [...KEYS, 'settings', 'anchor'].forEach((k) => localStorage.removeItem(`nevpade.mock.${k}`));
+  [...KEYS, 'settings', 'anchor', 'roles', 'removed', 'company', 'companyInfo', 'owners', 'ownerCodes', 'managers', 'joinRequests', 'joined'].forEach((k) =>
+    localStorage.removeItem(`nevpade.mock.${k}`)
+  );
   save('mock.version', MOCK_VERSION);
 }
 

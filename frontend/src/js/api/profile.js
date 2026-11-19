@@ -1,15 +1,26 @@
 // Профіль менеджера. У режимі моків дані зберігаються в localStorage,
 // тож зміни не зникають після перезавантаження сторінки.
 import { request, ApiError } from './client.js';
-import { getCurrentUser } from './auth.js';
+import { getCurrentUser, MOCK_PASSWORD } from './auth.js';
 import { load, save } from '../utils/storage.js';
 import defaults from '../mock/profile.json';
+import companySeed from '../mock/company.json';
 import { mockTrips } from './mock-store.js';
 
-// Пароль для перевірки «поточного пароля» в режимі моків
-export const MOCK_PASSWORD = 'Manager2026';
+// Пароль для перевірки «поточного пароля» в режимі моків (той самий, що для входу в демо-акаунти)
+export { MOCK_PASSWORD };
 
-const mockProfile = () => load('mock.profile') ?? { ...defaults.profile, language: load('lang', 'uk') };
+// У моках кожен демо-акаунт має свій профіль: Віра (usr_01) — mock.profile, колеги — mock.profile.<id>
+export const mockProfileKey = (id = getCurrentUser()?.id ?? 'usr_01') => (id === 'usr_01' ? 'mock.profile' : `mock.profile.${id}`);
+function mockProfile() {
+  const saved = load(mockProfileKey());
+  if (saved) return saved;
+  const me = getCurrentUser();
+  if (!me || me.id === 'usr_01') return { ...defaults.profile, language: load('lang', 'uk') };
+  // колега з демо-компанії або менеджер, який щойно зареєструвався (тоді — з даних акаунта)
+  const member = companySeed.members.find((m) => m.id === me.id) ?? { id: me.id, name: me.name, position: 'Менеджер з вантажоперевезень', email: me.email, phone: me.phone };
+  return { id: member.id, fullName: member.name, position: member.position, email: member.email, phone: member.phone, language: load('lang', 'uk'), avatarUrl: null };
+}
 
 // Оновлює ім'я/фото в боковому меню (дані про користувача в localStorage)
 function syncCurrentUser(profile) {
@@ -34,7 +45,7 @@ export async function updateProfile(data) {
     body: data,
     mock: () => {
       const updated = { ...mockProfile(), ...data };
-      save('mock.profile', updated);
+      save(mockProfileKey(), updated);
       return updated;
     },
   }).then(normalizeProfile);
@@ -49,7 +60,7 @@ export async function updateAvatar(image) {
     body: image ? { image } : undefined,
     mock: () => {
       const updated = { ...mockProfile(), avatarUrl: image };
-      if (!save('mock.profile', updated)) throw new ApiError('Не вдалося зберегти фото: замало місця в сховищі браузера', 0);
+      if (!save(mockProfileKey(), updated)) throw new ApiError('Не вдалося зберегти фото: замало місця в сховищі браузера', 0);
       return updated;
     },
   });

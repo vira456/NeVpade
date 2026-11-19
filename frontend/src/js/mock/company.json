@@ -8,13 +8,23 @@
   },
   "members": [
     {
+      "id": "usr_00",
+      "name": "Ковальчук Андрій Миколайович",
+      "position": "Власник компанії",
+      "email": "a.kovalchuk@nevpade.ua",
+      "phone": "+380503334455",
+      "online": false,
+      "lastSeen": "2026-11-10T19:20:00+02:00",
+      "role": "owner"
+    },
+    {
       "id": "usr_01",
       "name": "Федорова Віра Дмитрівна",
       "position": "Старший менеджер з вантажоперевезень",
       "email": "v.fedorova@nevpade.ua",
       "phone": "+380671234567",
       "online": true,
-      "role": "owner"
+      "role": "manager"
     },
     {
       "id": "usr_02",

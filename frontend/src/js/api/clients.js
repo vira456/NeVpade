@@ -2,7 +2,6 @@
 // а client { name, phone } у рейсі — знімок для швидкого показу.
 import { request, ApiError } from './client.js';
 import { mockClients, saveClients, mockTrips, saveTrips, newId } from './mock-store.js';
-import { isOwner } from './trips.js';
 
 const sameEdrpou = (a, b) => a && b && a.replace(/\D/g, '') === b.replace(/\D/g, '');
 
@@ -44,12 +43,11 @@ export const updateClient = (id, data) =>
     },
   });
 
-/** Видалити може лише керівник і лише клієнта без рейсів (історію рейсів не губимо) */
+/** Видалити може лише власник і лише клієнта без рейсів (історію рейсів не губимо) */
 export const deleteClient = (id) =>
   request(`/clients/${id}`, {
     method: 'DELETE',
     mock: () => {
-      if (!isOwner()) throw new ApiError('Видаляти клієнтів може лише керівник', 403, 'owner_only');
       const count = mockTrips().filter((t) => t.clientId === id).length;
       if (count) throw new ApiError(`У клієнта є рейси (${count}) — його не можна видалити`, 409, 'client_has_trips');
       saveClients(mockClients().filter((c) => c.id !== id));

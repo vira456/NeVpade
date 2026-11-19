@@ -4,7 +4,7 @@ import { locale, t } from '../i18n/index.js';
 import { renderLayout } from '../utils/layout.js';
 import { getVehicles, createVehicle, updateVehicle, setVehicleStatus, deleteVehicle } from '../api/vehicles.js';
 import { getDrivers, createDriver, updateDriver, assignVehicle, deleteDriver } from '../api/drivers.js';
-import { getTrips, isOwner } from '../api/trips.js';
+import { getTrips } from '../api/trips.js';
 import { getDocumentsSummary, VEHICLE_DOC_TYPES, DRIVER_DOC_TYPES } from '../api/documents.js';
 import { openDocuments } from './documents.js';
 import { escapeHtml, VEHICLE_STATUS, VEHICLE_BUSY, DRIVER_STATUS } from '../utils/format.js';
@@ -143,7 +143,7 @@ function renderVehicles() {
           <span class="vehicle__tools">
             ${docsButton('vehicles', v.id, v.plate)}
             <button class="icon-btn" type="button" data-edit-vehicle="${v.id}" title="Редагувати" aria-label="${escapeHtml(t('Редагувати машину {plate}', { plate: v.plate }))}">${icons.edit}</button>
-            ${isOwner() ? `<button class="icon-btn icon-btn--danger" type="button" data-delete-vehicle="${v.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити машину {plate}', { plate: v.plate }))}">${icons.trash}</button>` : ''}
+            <button class="icon-btn icon-btn--danger" type="button" data-delete-vehicle="${v.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити машину {plate}', { plate: v.plate }))}">${icons.trash}</button>
           </span>
         </footer>
       </article>`;
@@ -189,7 +189,7 @@ function renderDrivers() {
           <a class="icon-btn" href="${viber}" title="Написати у Viber" aria-label="Написати у Viber: ${escapeHtml(d.name)}">${icons.send}</a>
           ${docsButton('drivers', d.id, d.name)}
           <button class="icon-btn" type="button" data-edit-driver="${d.id}" title="Редагувати" aria-label="${escapeHtml(t('Редагувати водія {name}', { name: d.name }))}">${icons.edit}</button>
-          ${isOwner() ? `<button class="icon-btn icon-btn--danger" type="button" data-delete-driver="${d.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити водія {name}', { name: d.name }))}">${icons.trash}</button>` : ''}
+          <button class="icon-btn icon-btn--danger" type="button" data-delete-driver="${d.id}" title="Видалити" aria-label="${escapeHtml(t('Видалити водія {name}', { name: d.name }))}">${icons.trash}</button>
         </td>
       </tr>`;
         })
@@ -270,21 +270,26 @@ function normalizePlate(value) {
   return m ? `${m[1]} ${m[2]} ${m[3]}` : null;
 }
 
+function fillVehicleDriver(vehicle, keep) {
+  const holder = vehicle ? driverOfVehicle(vehicle.id) : null;
+  const selected = keep ?? holder?.id;
+  $('vfDriver').innerHTML =
+    `<option value="">Без водія</option>` +
+    drivers
+      .map((d) => {
+        const other = d.vehicleId && d.vehicleId !== vehicle?.id ? vehicles.find((v) => v.id === d.vehicleId) : null;
+        return `<option value="${d.id}" ${d.id === selected ? 'selected' : ''}>${escapeHtml(d.name + (other ? ` — ${other.plate}` : ''))}</option>`;
+      })
+      .join('');
+}
+
 function openVehicleForm(vehicle = null, focusId = '') {
   editingVehicle = vehicle;
   vForm.reset();
   clearErrors(vForm);
   $('vehicleTitle').textContent = vehicle ? t('Машина {plate}', { plate: vehicle.plate }) : 'Нова машина';
   $('vfStatus').innerHTML = statusOptions(VEHICLE_STATUS, vehicle?.status ?? 'available');
-  const holder = vehicle ? driverOfVehicle(vehicle.id) : null;
-  $('vfDriver').innerHTML =
-    `<option value="">Без водія</option>` +
-    drivers
-      .map((d) => {
-        const other = d.vehicleId && d.vehicleId !== vehicle?.id ? vehicles.find((v) => v.id === d.vehicleId) : null;
-        return `<option value="${d.id}" ${d.id === holder?.id ? 'selected' : ''}>${escapeHtml(d.name + (other ? ` — ${other.plate}` : ''))}</option>`;
-      })
-      .join('');
+  fillVehicleDriver(vehicle);
   if (vehicle) {
     $('vfPlate').value = vehicle.plate;
     $('vfModel').value = vehicle.model;
@@ -537,6 +542,12 @@ document.querySelector('.main').addEventListener('change', async (e) => {
 async function init() {
   [vehicles, drivers, trips] = await Promise.all([getVehicles(), getDrivers(), getTrips(), loadDocSummary()]);
   renderAll();
+  // форму могли відкрити ще до завантаження — доповнюємо списки водіїв і машин, не скидаючи вибір
+  if (vDialog.open) fillVehicleDriver(editingVehicle, $('vfDriver').value || undefined);
+  if (dDialog.open) {
+    const v = $('dfVehicle').value;
+    $('dfVehicle').innerHTML = vehicleOptions(v, editingDriver?.id);
+  }
   selectTab(load('fleetTab') === 'drivers' ? 'drivers' : 'vehicles');
 }
 

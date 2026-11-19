@@ -16,15 +16,12 @@ const MAX_DESC = 1000;
 let current = null; // завдання, що редагується (null — нове)
 let handlers = {};
 
-export function initModal({ trips, onSave, onDelete }) {
+// Вікно готове одразу, ще до завантаження даних; список рейсів доповнює setModalTrips
+export function initModal({ trips = [], onSave, onDelete }) {
   handlers = { onSave, onDelete };
 
   status.innerHTML = COLUMNS.map((c) => `<option value="${c.status}">${c.title}</option>`).join('');
-  tripId.innerHTML =
-    '<option value="">Без рейсу</option>' +
-    trips
-      .map((t) => `<option value="${t.id}">${escapeHtml(t.number)} · ${escapeHtml(t.from.city)} → ${escapeHtml(t.to.city)}</option>`)
-      .join('');
+  setModalTrips(trips);
   document.getElementById('taskPriority').innerHTML = Object.entries(PRIORITIES)
     .map(
       ([key, p]) => `
@@ -48,6 +45,16 @@ export function initModal({ trips, onSave, onDelete }) {
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) dialog.close();
   });
+}
+
+export function setModalTrips(trips) {
+  const keep = tripId.value || current?.tripId || '';
+  tripId.innerHTML =
+    '<option value="">Без рейсу</option>' +
+    trips
+      .map((t) => `<option value="${t.id}">${escapeHtml(t.number)} · ${escapeHtml(t.from?.city ?? '')} → ${escapeHtml(t.to?.city ?? '')}</option>`)
+      .join('');
+  tripId.value = keep;
 }
 
 function updateCounter() {

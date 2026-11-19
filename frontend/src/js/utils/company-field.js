@@ -1,8 +1,9 @@
-// Поле «Компанія» на реєстрації та на кроці «Завершіть реєстрацію» після входу через Google/Facebook:
-// створити нову компанію (стаєш керівником) або приєднатися до наявної за кодом запрошення
+// Поле «Хто ви?» / «Компанія»: власник створює нову компанію, менеджер приєднується до наявної за кодом запрошення.
+// Використовується на реєстрації, на кроці «Завершіть реєстрацію» (Google — лише менеджери)
+// і в діалозі «Змінити компанію» на сторінці «Команда» (лише приєднання)
 import { setFieldError } from './validation.js';
 
-export function initCompanyField(form) {
+export function initCompanyField(form, { onChange } = {}) {
   const { companyName, inviteCode } = form.elements;
   const field = form.querySelector('.company-field');
   const mode = () => form.elements.companyMode.value;
@@ -11,11 +12,14 @@ export function initCompanyField(form) {
     const join = mode() === 'join';
     field.querySelector('.company-field__create').hidden = join;
     field.querySelector('.company-field__join').hidden = !join;
+    field.querySelectorAll('.seg__btn, .role-card').forEach((l) => l.classList.toggle('is-checked', l.querySelector('input').checked));
     field.querySelectorAll('.seg__btn').forEach((l) => l.setAttribute('aria-pressed', String(l.querySelector('input').checked)));
+    onChange?.(mode());
     setFieldError(companyName, '');
   }
   form.querySelectorAll('[name=companyMode]').forEach((r) => r.addEventListener('change', sync));
   sync();
+  form.addEventListener('reset', () => setTimeout(sync));
 
   // Код у форматі NVP-1234: великі літери й дефіс підставляються самі
   inviteCode.addEventListener('input', () => {
