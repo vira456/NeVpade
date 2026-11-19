@@ -39,9 +39,10 @@ async def send_code_email(to: str, code: str, purpose: str) -> None:
     if provider == "console":
         log.warning("[EMAIL → %s] %s: %s", to, subject, code)
         return
+    senders = {"mailjet": _send_mailjet, "resend": _send_resend, "brevo": _send_brevo}
     try:
-        if provider == "brevo":
-            await _send_brevo(to, f"NeVpade · {subject}", text, _html(subject, code))
+        if provider in senders:
+            await senders[provider](to, f"NeVpade · {subject}", text, _html(subject, code))
         elif provider == "smtp":
             await asyncio.to_thread(_send_smtp, to, f"NeVpade · {subject}", text, _html(subject, code))
         else:
@@ -51,21 +52,54 @@ async def send_code_email(to: str, code: str, purpose: str) -> None:
         raise ApiError(502, "Не вдалося надіслати лист. Спробуйте пізніше", "email_failed") from exc
 
 
-async def _send_brevo(to: str, subject: str, text: str, html: str) -> None:
+async def _post(url: str, provider: str, **kwargs) -> httpx.Response:
     async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.post(
-            "https://api.brevo.com/v3/smtp/email",
-            headers={"api-key": settings.brevo_api_key, "accept": "application/json"},
-            json={
-                "sender": {"email": settings.email_from, "name": settings.email_from_name},
-                "to": [{"email": to}],
-                "subject": subject,
-                "textContent": text,
-                "htmlContent": html,
-            },
-        )
+        resp = await client.post(url, **kwargs)
     if resp.status_code >= 300:
-        raise RuntimeError(f"Brevo {resp.status_code}: {resp.text[:300]}")
+        raise RuntimeError(f"{provider} {resp.status_code}: {resp.text[:300]}")
+    return resp
+
+
+async def _send_mailjet(to: str, subject: str, text: str, html: str) -> None:
+    """Mailjet Send API v3.1: ключ і секретний ключ — у кабінеті Mailjet (Account settings → API keys)."""
+    resp = await _post(
+        "https://api.mailjet.com/v3.1/send", "Mailjet",
+        auth=(settings.mailjet_api_key, settings.mailjet_secret_key),
+        json={"Messages": [{
+            "From": {"Email": settings.email_from, "Name": settings.email_from_name},
+            "To": [{"Email": to}],
+            "Subject": subject,
+            "TextPart": text,
+            "HTMLPart": html,
+        }]},
+    )
+    status = ((resp.json().get("Messages") or [{}])[0]).get("Status")
+    if status != "success":
+        raise RuntimeError(f"Mailjet: {resp.text[:300]}")
+
+
+async def _send_resend(to: str, subject: str, text: str, html: str) -> None:
+    """Resend: відправник — адреса на домені, підтвердженому в Resend (без домену — лише onboarding@resend.dev)."""
+    await _post(
+        "https://api.resend.com/emails", "Resend",
+        headers={"Authorization": f"Bearer {settings.resend_api_key}"},
+        json={"from": f"{settings.email_from_name} <{settings.email_from}>", "to": [to],
+              "subject": subject, "text": text, "html": html},
+    )
+
+
+async def _send_brevo(to: str, subject: str, text: str, html: str) -> None:
+    await _post(
+        "https://api.brevo.com/v3/smtp/email", "Brevo",
+        headers={"api-key": settings.brevo_api_key, "accept": "application/json"},
+        json={
+            "sender": {"email": settings.email_from, "name": settings.email_from_name},
+            "to": [{"email": to}],
+            "subject": subject,
+            "textContent": text,
+            "htmlContent": html,
+        },
+    )
 
 
 def _send_smtp(to: str, subject: str, text: str, html: str) -> None:

@@ -53,11 +53,14 @@ class Settings:
     facebook_app_id: str = os.getenv("FACEBOOK_APP_ID", "")
     facebook_app_secret: str = os.getenv("FACEBOOK_APP_SECRET", "")
 
-    # --- Пошта: brevo (HTTP API, працює на будь-якому хостингі) | smtp | console ---
+    # --- Пошта: mailjet | resend | brevo (HTTP API, працюють і на безкоштовному Render) | smtp | console ---
     email_provider: str = os.getenv("EMAIL_PROVIDER", "console").lower()
     email_from: str = os.getenv("EMAIL_FROM", "")
     email_from_name: str = os.getenv("EMAIL_FROM_NAME", "NeVpade")
     brevo_api_key: str = os.getenv("BREVO_API_KEY", "")
+    mailjet_api_key: str = os.getenv("MAILJET_API_KEY", "")
+    mailjet_secret_key: str = os.getenv("MAILJET_SECRET_KEY", "")
+    resend_api_key: str = os.getenv("RESEND_API_KEY", "")
     smtp_host: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port: int = _num("SMTP_PORT", 587, int)
     smtp_user: str = os.getenv("SMTP_USER", "")
@@ -69,7 +72,9 @@ class Settings:
     turbosms_sender: str = os.getenv("TURBOSMS_SENDER", "")
 
     # --- Режим демонстрації: фіксований код замість випадкового (НЕ вмикати для реальних користувачів) ---
-    dev_fixed_code: str = os.getenv("DEV_FIXED_CODE", "")
+    # Окремо для пошти й SMS; DEV_FIXED_CODE — для обох одразу (якщо окремий не задано)
+    dev_fixed_email_code: str = os.getenv("DEV_FIXED_EMAIL_CODE") or os.getenv("DEV_FIXED_CODE", "")
+    dev_fixed_sms_code: str = os.getenv("DEV_FIXED_SMS_CODE") or os.getenv("DEV_FIXED_CODE", "")
 
     # --- Бізнес-налаштування за замовчуванням ---
     default_fuel_price: float = _num("DEFAULT_FUEL_PRICE", 56.0, float)  # грн/л

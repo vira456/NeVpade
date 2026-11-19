@@ -52,8 +52,9 @@ uvicorn main:app --reload
 ### Коди підтвердження без реальної пошти/SMS
 
 За замовчуванням `EMAIL_PROVIDER=console` і `SMS_PROVIDER=console`: коди не надсилаються, а пишуться в
-консоль сервера (`[EMAIL → ...] ... 123456`). Для захисту курсової можна задати `DEV_FIXED_CODE=123456` —
-тоді всі коди однакові (як у мок-режимі фронтенду). **Для реальних користувачів не вмикати.**
+консоль сервера (`[EMAIL → ...] ... 123456`). Для захисту курсової можна задати фіксовані коди:
+`DEV_FIXED_EMAIL_CODE` — для листів, `DEV_FIXED_SMS_CODE` — для SMS, `DEV_FIXED_CODE` — для обох одразу
+(напр. справжні коди на пошту + `DEV_FIXED_SMS_CODE=123456`, поки SMS не налаштовано). **Для реальних користувачів не вмикати.**
 
 ### Демо-дані
 
@@ -82,15 +83,22 @@ python -m pytest
 3. **Authorized JavaScript origins**: `http://localhost:5173` і адреса фронтенду в мережі (напр. `https://nevpade.vercel.app`).
 4. Client ID → у `GOOGLE_CLIENT_ID` (бекенд) і `VITE_GOOGLE_CLIENT_ID` (фронт). Секрет не потрібен: бекенд лише перевіряє підпис ID-токена.
 
-### 3. Пошта (Brevo, безкоштовно 300 листів/день)
-Безкоштовний Render блокує SMTP-порти, тому листи йдуть через HTTP API Brevo:
-https://www.brevo.com → *Senders* → підтвердити свій email → *SMTP & API → API keys* → ключ у `BREVO_API_KEY`,
-`EMAIL_PROVIDER=brevo`, `EMAIL_FROM=підтверджений@email`.
-Локально можна й Gmail: `EMAIL_PROVIDER=smtp`, `SMTP_USER`, `SMTP_PASSWORD` = пароль застосунку Google.
+### 3. Пошта
+Безкоштовний Render блокує SMTP-порти, тому листи йдуть через HTTP API одного з сервісів (`EMAIL_PROVIDER`).
+Для всіх: `EMAIL_FROM` — підтверджена в сервісі адреса відправника, `EMAIL_FROM_NAME=NeVpade`.
+
+| `EMAIL_PROVIDER` | Ключі | Примітка |
+|---|---|---|
+| `mailjet` | `MAILJET_API_KEY`, `MAILJET_SECRET_KEY` | достатньо підтвердити одну адресу відправника (можна Gmail) |
+| `resend` | `RESEND_API_KEY` | потрібен власний домен; без нього — листи лише на свою пошту |
+| `brevo` | `BREVO_API_KEY` | достатньо підтвердити адресу відправника |
+| `smtp` | `SMTP_USER`, `SMTP_PASSWORD` (пароль застосунку Google) | лише локально — на Render SMTP заблоковано |
+
+Листи від адреси `@gmail.com` через сторонній сервіс можуть потрапляти в «Спам» — надійніше з власного домену.
 
 ### 4. SMS (необов'язково)
 Справжні SMS платні: TurboSMS (`SMS_PROVIDER=turbosms`, `TURBOSMS_TOKEN`, `TURBOSMS_SENDER`).
-Без цього — `SMS_PROVIDER=console` + `DEV_FIXED_CODE`.
+Без цього — `SMS_PROVIDER=console` + `DEV_FIXED_SMS_CODE`.
 
 ### 5. Деплой бекенду на Render (безкоштовно)
 1. Злити гілку `backend-dev` у `main` (або змінити `branch` у `render.yaml`).

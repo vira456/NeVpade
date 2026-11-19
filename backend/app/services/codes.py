@@ -27,7 +27,7 @@ async def issue(db: AsyncDatabase, email: str, purpose: str, *, enforce_cooldown
         wait = int((RESEND_COOLDOWN - (moment - existing["createdAt"])).total_seconds()) + 1
         raise ApiError(429, f"Новий код можна запросити через {wait} с", "too_many_requests")
 
-    code = generate_code()
+    code = generate_code(purpose)
     await db.codes.update_one(
         {"email": email, "purpose": purpose},
         {"$set": {"codeHash": hash_code(code, email, purpose), "createdAt": moment,

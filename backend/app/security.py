@@ -78,9 +78,11 @@ def decode_file_token(token: str) -> str | None:
 
 
 # ---------- Одноразові коди ----------
-def generate_code() -> str:
-    if settings.dev_fixed_code:
-        return settings.dev_fixed_code
+def generate_code(purpose: str = "verify") -> str:
+    """6 випадкових цифр. У демо-режимі — фіксований код: окремо для SMS (verify_phone) і для пошти."""
+    fixed = settings.dev_fixed_sms_code if purpose == "verify_phone" else settings.dev_fixed_email_code
+    if fixed:
+        return fixed
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
