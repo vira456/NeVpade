@@ -74,7 +74,15 @@ async function doRequest(path, { method = 'GET', body, mock, auth = true } = {})
       return null;
     }
     // стандартні англійські відповіді FastAPI — перекладаємо, щоб користувач розумів, що сталося
-    const STD = { 'Not Found': 'Цей розділ ще не підключено на сервері', 'Method Not Allowed': 'Ця дія ще не підтримується сервером', 'Internal Server Error': 'Помилка на сервері. Спробуйте пізніше' };
+    const STD = {
+      'Not Found': 'Цей розділ ще не підключено на сервері',
+      'Method Not Allowed': 'Ця дія ще не підтримується сервером',
+      'Internal Server Error': 'Помилка на сервері. Спробуйте пізніше',
+      Forbidden: 'Недостатньо прав для цієї дії',
+      'Not authenticated': 'Сесія закінчилась. Увійдіть знову',
+    };
+    // 403 без пояснення — це брак прав (напр. дія лише для власника)
+    if (res.status === 403 && !detail) throw new ApiError('Недостатньо прав для цієї дії', 403, err.code ?? 'forbidden');
     throw new ApiError(STD[detail] ?? (detail || `Помилка ${res.status}`), res.status, err.code);
   }
   if (res.status === 204) return null;

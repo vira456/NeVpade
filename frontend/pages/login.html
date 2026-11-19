@@ -37,6 +37,14 @@
         <p class="auth__subtitle">Раді бачити знову! Увійдіть до свого акаунта.</p>
         <form class="auth__form" id="loginForm" novalidate>
           <div class="auth__alert" hidden></div>
+          <fieldset class="role-pick" aria-describedby="roleHint">
+            <legend class="field__label">Увійти як</legend>
+            <div class="seg seg--block" role="radiogroup" aria-label="Увійти як">
+              <label class="seg__btn"><input class="visually-hidden" type="radio" name="role" value="manager" checked />Менеджер</label>
+              <label class="seg__btn"><input class="visually-hidden" type="radio" name="role" value="owner" />Власник</label>
+            </div>
+            <p class="field__hint" id="roleHint">Рейси, клієнти, автопарк і чат компанії.</p>
+          </fieldset>
           <div class="field">
             <label class="field__label" for="email">Email</label>
             <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="name@company.com" />
@@ -50,22 +58,49 @@
             </div>
             <div class="field__error"></div>
           </div>
+          <div class="field owner-code-field" id="ownerCodeField" hidden>
+            <label class="field__label" for="ownerCode">Код власника</label>
+            <input class="input owner-code-input" id="ownerCode" name="ownerCode" type="text" inputmode="text" autocomplete="one-time-code" spellcheck="false" placeholder="OWN-XXXX-XXXX" maxlength="13" />
+            <p class="field__hint">Код ви отримали під час реєстрації компанії. Він захищає кабінет, навіть якщо хтось дізнається пароль.</p>
+            <div class="field__error"></div>
+          </div>
           <div class="auth__row">
-            <span></span>
+            <button class="btn--link" id="forgotCodeBtn" type="button" hidden>Забули код власника?</button>
+            <span id="forgotSpacer"></span>
             <a href="/pages/forgot-password.html">Забули пароль?</a>
           </div>
-          <button class="btn btn--block" type="submit">Увійти</button>
-          <div class="auth__divider">або</div>
-          <div class="auth__social">
+          <button class="btn btn--block" type="submit" id="loginSubmit">Увійти</button>
+          <div class="auth__divider" data-social>або</div>
+          <div class="auth__social" data-social>
             <div id="googleSlot"></div>
             <button class="btn btn--social" id="googleBtn" type="button">Продовжити з Google</button>
-            <button class="btn btn--social btn--facebook" id="facebookBtn" type="button">Продовжити з Facebook</button>
           </div>
         </form>
-        <p class="auth__footer">Немає акаунта? <a href="/pages/register.html">Зареєструватися</a></p>
+        <p class="auth__footer" id="registerHint">Немає акаунта? <a href="/pages/register.html">Зареєструватися як менеджер</a></p>
+        <section class="demo-accounts" id="demoAccounts" hidden aria-labelledby="demoTitle">
+          <h2 class="demo-accounts__title" id="demoTitle">Демо-акаунти</h2>
+          <p class="demo-accounts__text">Режим моків: натисніть на акаунт, щоб увійти. Пароль усіх — <b data-no-i18n id="demoPassword"></b>, код власника вказано поруч.</p>
+          <ul class="demo-accounts__list" id="demoList"></ul>
+        </section>
       </div>
     </main>
   </div>
+  <dialog class="modal modal--sm" id="forgotCodeDialog" aria-labelledby="forgotCodeTitle">
+    <form class="modal__body" id="forgotCodeForm" novalidate>
+      <h2 class="modal__title" id="forgotCodeTitle">Новий код власника</h2>
+      <p class="modal__text">Надішлемо новий код на пошту власника. Старий код одразу перестане діяти.</p>
+      <div class="auth__alert" hidden></div>
+      <div class="field">
+        <label class="field__label" for="forgotCodeEmail">Email власника</label>
+        <input class="input" id="forgotCodeEmail" name="email" type="email" autocomplete="email" />
+        <div class="field__error"></div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" type="button" data-cancel>Скасувати</button>
+        <button class="btn" type="submit" id="forgotCodeSubmit">Надіслати код</button>
+      </div>
+    </form>
+  </dialog>
   <script type="module" src="/src/js/pages/login.js"></script>
 </body>
 </html>

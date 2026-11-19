@@ -285,7 +285,7 @@ function renderFleet(vehicles) {
     .join('');
 }
 
-// Оплати: керівник бачить усю компанію, менеджер — свої рейси
+// Оплати: власник бачить усю компанію, менеджер — свої рейси
 function renderPayments(trips) {
   const mine = trips.filter((tr) => isOwner() || tr.managerId === myId());
   const sum = (st) => {

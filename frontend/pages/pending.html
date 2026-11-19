@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1280" />
+  <!-- nevpade:head -->
+  <title>Очікуємо підтвердження · NeVpade</title>
+</head>
+<body>
+  <div class="auth">
+    <aside class="auth__brand">
+      <a class="auth__logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+      <div class="auth__pitch">
+        <h2 class="auth__tagline">Рейси, машини й водії на одному екрані</h2>
+        <p class="auth__lead">Плануйте маршрути, ведіть облік автопарку й відправляйте завдання водіям у Viber.</p>
+      </div>
+      <ul class="auth__board" aria-label="Приклад рейсів">
+        <li>
+          <div class="route"><span class="route__city">Київ</span><span class="route__line"><span class="route__km">475 км</span></span><span class="route__city">Одеса</span></div>
+          <span class="badge badge--in_progress">В дорозі</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Хмельницький</span><span class="route__line"><span class="route__km">240 км</span></span><span class="route__city">Львів</span></div>
+          <span class="badge badge--planned">Заплановано</span>
+        </li>
+        <li>
+          <div class="route"><span class="route__city">Вінниця</span><span class="route__line"><span class="route__km">280 км</span></span><span class="route__city">Рівне</span></div>
+          <span class="badge badge--done">Виконано</span>
+        </li>
+      </ul>
+      <div class="auth__copy">© 2026 NeVpade</div>
+    </aside>
+    <main class="auth__panel">
+      <div class="auth__box">
+        <a class="auth__mobile-logo" href="/"><svg class="logo-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" style="fill:var(--accent)"/><circle cx="8.5" cy="19.5" r="3" style="fill:var(--on-accent)"/><circle cx="19.5" cy="8.5" r="2.6" fill="none" style="stroke:var(--on-accent)" stroke-width="2"/><path d="M11 17l5.6-5.6" style="stroke:var(--on-accent)" stroke-width="2" stroke-dasharray="2.4 2.2" stroke-linecap="round"/></svg><span>NeVpade</span></a>
+        <section class="pending" id="pendingBox" aria-live="polite">
+          <span class="pending__icon" id="pendingIcon" aria-hidden="true"></span>
+          <h1 class="auth__title" id="pendingTitle">Чекаємо підтвердження власника</h1>
+          <p class="auth__subtitle" id="pendingText">&nbsp;</p>
+
+          <div class="pending__wait" id="pendingWait">
+            <ol class="pending__steps">
+              <li class="is-done">Акаунт створено, пошту й телефон підтверджено</li>
+              <li class="is-current">Власник компанії перевіряє заявку</li>
+              <li>Відкриється робочий простір: рейси, клієнти, автопарк</li>
+            </ol>
+            <p class="field__hint" id="pendingChecked">&nbsp;</p>
+            <div class="pending__actions">
+              <button class="btn" id="pendingCheck" type="button">Перевірити зараз</button>
+              <button class="btn btn--ghost" id="pendingLogout" type="button">Вийти</button>
+            </div>
+            <p class="auth__mock-hint" data-mock-only hidden>Режим моків: вийдіть і увійдіть як власник (Ковальчук Андрій, код OWN-4821-7KQP) — заявка буде на сторінці «Менеджери».</p>
+          </div>
+
+          <form class="auth__form pending__retry" id="retryForm" hidden novalidate>
+            <div class="auth__alert" hidden></div>
+            <div class="field">
+              <label class="field__label" for="retryCode">Код запрошення компанії</label>
+              <input class="input" id="retryCode" name="code" type="text" maxlength="8" placeholder="NVP-0000" autocomplete="off" spellcheck="false" />
+              <p class="field__hint">Перевірте код у власника компанії й надішліть заявку ще раз.</p>
+              <p class="auth__mock-hint" data-mock-only hidden>Режим моків: код тестової компанії — <b>NVP-4821</b></p>
+              <div class="field__error"></div>
+            </div>
+            <button class="btn btn--block" type="submit" id="retrySubmit">Надіслати заявку</button>
+            <button class="btn btn--text btn--block" id="retryLogout" type="button">Вийти</button>
+          </form>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/src/js/pages/pending.js"></script>
+</body>
+</html>

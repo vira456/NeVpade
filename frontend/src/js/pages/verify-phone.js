@@ -1,8 +1,8 @@
 import { initAuthPage, recallEmail, initCodeInputs, startCooldown } from '../utils/auth-page.js';
-import { verifyPhone, addPhone, resendCode, getCurrentUser, logout } from '../api/auth.js';
+import { verifyPhone, addPhone, resendCode, getCurrentUser, logout, homeFor } from '../api/auth.js';
 import { phoneDigits, formatPhoneInput, phoneError, toE164, maskPhone, setFieldError, showAlert, clearErrors, withLoading } from '../utils/validation.js';
 
-// Користувач після Google/Facebook вже має токен, тож не перенаправляємо його на головну
+// Користувач після Google вже має токен, тож не перенаправляємо його на головну
 initAuthPage({ redirectIfLoggedIn: false });
 
 const params = new URLSearchParams(location.search);
@@ -73,9 +73,9 @@ codeForm.addEventListener('submit', async (e) => {
   }
 
   try {
-    await withLoading(codeForm.querySelector('[type=submit]'), () => verifyPhone(email, code.value()));
+    const user = await withLoading(codeForm.querySelector('[type=submit]'), () => verifyPhone(email, code.value()));
     ['pendingEmail', 'pendingPhone', 'mockName', 'mockPhone'].forEach((k) => sessionStorage.removeItem(k));
-    location.replace('/pages/dashboard.html');
+    location.replace(homeFor(user)); // власник — у свій кабінет, менеджер — в аналітику
   } catch (err) {
     code.setError(true);
     code.clear();
