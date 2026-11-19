@@ -7,7 +7,6 @@ from datetime import date, timedelta
 from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
-from ..config import settings
 from ..deps import company_filter
 from ..errors import ApiError, invalid
 from ..utils import iso, is_oid, now, oid
@@ -19,12 +18,6 @@ TRACKED = ("price", "loadDate", "unloadDate", "driverId", "vehicleId", "distance
 # Стани машини, коли вона зайнята рейсом (менеджер перемикає їх вручну під час рейсу)
 VEHICLE_BUSY = ("loading", "on_trip", "unloaded")
 VEHICLE_UNAVAILABLE = {"broken": "зламалась", "repair": "на ремонті"}
-
-
-def fuel_price_for(user: dict) -> float:
-    """Ціна пального з налаштувань менеджера або типова з конфігурації."""
-    price = (user.get("settings") or {}).get("fuelPrice")
-    return float(price) if price else settings.default_fuel_price
 
 
 async def next_trip_number(database: AsyncDatabase, company_id) -> str:

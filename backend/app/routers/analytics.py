@@ -4,8 +4,8 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from ..deps import company_filter, current_user, db
 from ..services.analytics import COUNTED, Analytics, Period, period_range, previous_range
+from ..services.fuel import fuel_price_for
 from ..utils import today_kyiv
-from .trips import fuel_price_for
 
 router = APIRouter(prefix="/analytics", tags=["Аналітика"])
 
@@ -27,7 +27,7 @@ async def _analytics(
     ).to_list(None)
     vehicles = {str(v["_id"]): v async for v in database.vehicles.find(flt, {"fuelConsumption": 1})}
     drivers = {str(d["_id"]): d async for d in database.drivers.find(flt, {"name": 1, "ratePerKm": 1})}
-    return Analytics(trips, vehicles, drivers, fuel_price_for(user), today), period
+    return Analytics(trips, vehicles, drivers, await fuel_price_for(database, user), today), period
 
 
 @router.get("/summary")

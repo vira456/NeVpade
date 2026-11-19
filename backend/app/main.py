@@ -1,4 +1,5 @@
 """Створення FastAPI-застосунку NeVpade."""
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -11,7 +12,8 @@ from fastapi.staticfiles import StaticFiles
 from . import db
 from .config import settings
 from .errors import not_found, register_error_handlers
-from .routers import analytics, auth, chat, clients, company, documents, drivers, imports, profile, tasks, trips, vehicles
+from .routers import analytics, auth, chat, clients, company, documents, drivers, fuel_price, imports, profile, tasks, trips, vehicles
+from .services import fuel
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("nevpade")
@@ -24,7 +26,9 @@ FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST") or Path(__file__).resolve().pare
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await db.connect()
+    warmup = asyncio.create_task(fuel.refresh(db.get_db()))
     yield
+    warmup.cancel()
     await db.close()
 
 
@@ -45,7 +49,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
 
     # documents — перед trips/vehicles/drivers, щоб …/documents/summary не сприймався як …/{id}
-    for router in (auth, profile, company, chat, documents, trips, clients, vehicles, drivers, tasks, analytics, imports):
+    for router in (auth, profile, company, chat, documents, trips, clients, vehicles, drivers, tasks, analytics, imports, fuel_price):
         app.include_router(router.router, prefix="/api")
 
     @app.get("/api", include_in_schema=False)

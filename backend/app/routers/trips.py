@@ -21,12 +21,12 @@ from ..services import trips as svc
 from ..services.calc import calculate
 from ..services.crud import ensure_ref, find_ref, get_company_doc
 from ..services.documents import delete_owner_documents
+from ..services.fuel import fuel_price_for
 from ..utils import drop_nulls, now, public, regex_escape
 
 router = APIRouter(prefix="/trips", tags=["Рейси"])
 
 _NULLABLE = frozenset({"unloadDate", "vehicleId", "driverId", "clientId"})
-fuel_price_for = svc.fuel_price_for  # використовує й аналітика
 
 
 def trip_out(doc: dict) -> dict:
@@ -164,7 +164,7 @@ async def calculate_trip(trip_id: str, user: dict = Depends(current_user), datab
     trip = await _get_trip(database, user, trip_id)
     vehicle = await find_ref(database, user, "vehicles", trip.get("vehicleId"))
     driver = await find_ref(database, user, "drivers", trip.get("driverId"))
-    return calculate(trip, vehicle, driver, fuel_price_for(user))
+    return calculate(trip, vehicle, driver, await fuel_price_for(database, user))
 
 
 @router.post("/{trip_id}/transfer", response_model=TripOut)

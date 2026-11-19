@@ -11,6 +11,7 @@ from app.schemas.entities import ClientIn, DriverIn, TaskIn, TripIn, TripOut, Ve
 from app.services.analytics import Analytics, buckets, period_range, previous_range
 from app.services.calc import calculate, expense_breakdown
 from app.services.documents import sniff_mime
+from app.services.fuel import parse_diesel
 from app.services.trips import changes_history, default_due_date
 from app.utils import drop_nulls, normalize_name, normalize_phone
 
@@ -228,3 +229,21 @@ def test_sniff_mime_by_content():
     assert sniff_mime(b"%PDF-1.7") == "application/pdf"
     assert sniff_mime(b"RIFF\x00\x00\x00\x00WEBPVP8 ") == "image/webp"
     assert sniff_mime(b"<html>") is None
+
+
+# ---------- Ринкова ціна пального (розбір сторінки Мінфіну) ----------
+_MINFIN_RU = """<h2>Средние цены на топливо в Украине на 18.11.2026</h2><table>
+<tr><td>Бензин А-95</td><td>87,90</td><td>-0.02</td></tr>
+<tr><td>Дизельное топливо</td><td>101,00</td><td>-0.42</td></tr>
+<tr><td>Газ авто&shy;мобильный</td><td>62,37</td></tr></table>"""
+
+
+def test_parse_diesel_price():
+    assert parse_diesel(_MINFIN_RU) == (101.0, "2026-11-18")
+    uk = "<p>Ціни на 01.12.2026</p><table><tr><td>Дизельне паливо</td><td>99.5</td></tr></table>"
+    assert parse_diesel(uk) == (99.5, "2026-12-01")
+
+
+def test_parse_diesel_rejects_garbage():
+    assert parse_diesel("<html>нічого немає</html>") is None
+    assert parse_diesel("<td>Дизельное топливо</td><td>5,00</td>") is None  # неправдоподібна ціна
