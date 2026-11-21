@@ -4,68 +4,58 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=1280" />
   <!-- nevpade:head -->
-  <title>Компанія · NeVpade</title>
+  <title>Мій акаунт · NeVpade</title>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar"></aside>
-    <main class="main owner">
+    <main class="main owner acct">
       <header class="main__header">
         <div>
-          <h1 class="main__title">Компанія і доступ</h1>
-          <p class="main__subtitle" id="ownerSubtitle">&nbsp;</p>
+          <h1 class="main__title">Мій акаунт</h1>
+          <p class="main__subtitle">Ваші дані й дані компанії</p>
         </div>
       </header>
 
-      <div class="owner__grid">
-        <section class="card owner__company">
+      <!-- Хто я -->
+      <section class="card acct-id">
+        <span class="acct-id__avatar" id="acctAvatar" data-no-i18n></span>
+        <div class="acct-id__who">
+          <h2 class="acct-id__name" id="acctName" data-no-i18n></h2>
+          <p class="acct-id__role"><span class="acct-id__chip">Власник компанії</span><span id="acctCompany" data-no-i18n></span></p>
+        </div>
+        <a class="btn btn--ghost acct-id__pass" href="/pages/forgot-password.html">Змінити пароль</a>
+        <dl class="acct-id__facts" id="accountFacts"></dl>
+      </section>
+
+      <!-- Компанія -->
+      <section class="card acct-co">
+        <div class="acct-co__head">
           <h2 class="card__title">Компанія</h2>
-          <form class="owner__form" id="companyForm" novalidate>
-            <div class="auth__alert" hidden></div>
-            <div class="field">
-              <label class="field__label" for="coName">Назва компанії</label>
-              <input class="input" id="coName" name="name" type="text" maxlength="80" autocomplete="organization" />
-              <div class="field__error"></div>
-            </div>
-            <div class="field">
-              <label class="field__label" for="coCity">Місто</label>
-              <input class="input" id="coCity" name="city" type="text" maxlength="60" autocomplete="address-level2" />
-              <div class="field__error"></div>
-            </div>
-            <div class="owner__form-actions">
-              <button class="btn" type="submit" id="companySave">Зберегти</button>
-            </div>
-          </form>
-        </section>
+          <p class="acct-co__hint">Назву й місто бачать менеджери у своєму кабінеті.</p>
+        </div>
+        <form class="acct-co__form" id="companyForm" novalidate>
+          <div class="auth__alert" hidden></div>
+          <div class="field">
+            <label class="field__label" for="coName">Назва компанії</label>
+            <input class="input" id="coName" name="name" type="text" maxlength="80" autocomplete="organization" />
+            <div class="field__error"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="coCity">Місто</label>
+            <input class="input" id="coCity" name="city" type="text" maxlength="60" autocomplete="address-level2" />
+            <div class="field__error"></div>
+          </div>
+          <button class="btn acct-co__save" type="submit" id="companySave" disabled>Зберегти</button>
+        </form>
 
-        <section class="card owner__account">
-          <h2 class="card__title">Мій акаунт</h2>
-          <dl class="owner-facts" id="accountFacts"></dl>
-          <a class="btn--link" href="/pages/forgot-password.html">Змінити пароль</a>
-        </section>
-
-        <section class="card owner__transfer">
-          <h2 class="card__title">Передати компанію</h2>
-          <p class="owner__text">Менеджер, якого ви оберете, стане власником і отримає цей кабінет. Ви станете менеджером компанії й перейдете в робочий інтерфейс менеджера.</p>
-          <form class="owner__form" id="transferForm" novalidate>
-            <div class="auth__alert" hidden></div>
-            <div class="field">
-              <label class="field__label" for="transferTo">Новий власник</label>
-              <select class="input" id="transferTo" name="memberId"></select>
-              <div class="field__error"></div>
-            </div>
-            <div class="field" id="tripsToField" hidden>
-              <label class="field__label" for="tripsTo">Кому передати його активні рейси</label>
-              <select class="input" id="tripsTo" name="tripsTo"></select>
-              <p class="field__hint" id="tripsToHint"></p>
-              <div class="field__error"></div>
-            </div>
-            <div class="owner__form-actions">
-              <button class="btn btn--danger" type="submit" id="transferSubmit">Передати компанію</button>
-            </div>
-          </form>
-        </section>
-      </div>
+        <dl class="acct-co__stats">
+          <div><dt>Менеджерів</dt><dd id="coManagers">—</dd></div>
+          <div><dt>Код компанії</dt><dd id="coCode" data-no-i18n>—</dd></div>
+          <div><dt>У системі з</dt><dd id="coSince">—</dd></div>
+        </dl>
+        <a class="card__link acct-co__more" href="/pages/owner-team.html">Код і менеджери — на сторінці «Менеджери»</a>
+      </section>
     </main>
   </div>
 

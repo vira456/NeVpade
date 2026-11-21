@@ -49,7 +49,6 @@ const OWNER_SECTIONS = [
       { href: OWNER_PAGES.overview, label: 'Огляд', icon: icons.analytics },
       { href: OWNER_PAGES.team, label: 'Менеджери', icon: icons.team, badge: 'requests' },
       { href: OWNER_PAGES.finance, label: 'Фінанси', icon: icons.wallet },
-      { href: OWNER_PAGES.settings, label: 'Компанія', icon: icons.settings },
     ],
   },
 ];
@@ -175,7 +174,7 @@ export function renderLayout({ access = 'manager' } = {}) {
         </div>
       </div>
       <div class="sidebar__user">
-        <a class="sidebar__profile ${current === profileHref ? 'is-active' : ''}" href="${profileHref}" title="${isOwnerUser ? 'Мій акаунт' : 'Мій профіль'}" ${current === profileHref ? 'aria-current="page"' : ''}></a>
+        <a class="sidebar__profile ${current === profileHref ? 'is-active' : ''}" href="${profileHref}" title="${isOwnerUser ? 'Мій акаунт і компанія' : 'Мій профіль'}" ${current === profileHref ? 'aria-current="page"' : ''}></a>
         <button class="sidebar__logout" id="logoutBtn" type="button" title="Вийти" aria-label="Вийти">${icons.logout}</button>
       </div>
     </div>
