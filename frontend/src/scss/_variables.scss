@@ -54,6 +54,8 @@ $shadow-card: var(--shadow-card);
 $shadow-raised: var(--shadow-raised);
 
 $bp-tablet: 900px;
+$bp-trips-cards: 1100px; // таблиця рейсів → картки
+$bp-narrow: 1199px;     // вужче — бокова панель сама згортається до іконок
 $bp-phone: 600px;
 
 // Постійна темна панель (лендинг, ліва частина сторінок входу) — однакова в обох темах

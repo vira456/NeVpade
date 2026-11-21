@@ -2,6 +2,7 @@
 // (новий рейс, водій, статус машини…) не зникали після перезавантаження сторінки.
 // З реальним бекендом цей файл не використовується.
 import { load, save } from '../utils/storage.js';
+import { isMockMode } from './client.js';
 import seedTrips from '../mock/trips.json';
 import seedVehicles from '../mock/vehicles.json';
 import seedDrivers from '../mock/drivers.json';
@@ -18,6 +19,12 @@ if (load('mock.version') !== MOCK_VERSION) {
     localStorage.removeItem(`nevpade.mock.${k}`)
   );
   save('mock.version', MOCK_VERSION);
+  // сесія зі старої версії демо могла мати вже неіснуючу роль (напр. менеджер-«власник») — просимо увійти знову
+  // (лише в режимі моків: справжню сесію з сервера це не стосується)
+  if (isMockMode && localStorage.getItem('token')) {
+    ['token', 'user', 'loginAt', 'nevpade.sidebarSnapshot'].forEach((k) => localStorage.removeItem(k));
+    if (!/\/pages\/(login|register)/.test(location.pathname)) location.replace('/pages/login.html');
+  }
 }
 
 // ---------- Демо-дані «живуть» разом із календарем ----------

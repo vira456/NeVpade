@@ -8,7 +8,7 @@ import { avatar } from '../../utils/people.js';
 import { countUpAll } from '../../utils/motion.js';
 import { showToast } from '../../utils/toast.js';
 import { t } from '../../i18n/index.js';
-import { $, delta, big, bindPeriod, renderCompanyLine, showOwnerCode } from './common.js';
+import { $, delta, big, bindPeriod, renderCompanyLine } from './common.js';
 
 let members = [];
 let trips = [];
@@ -59,7 +59,7 @@ function renderRank() {
         </li>`
         )
         .join('')
-    : `<li class="rank__empty">${t('Менеджерів ще немає — дайте їм код запрошення на сторінці «Менеджери».')}</li>`;
+    : `<li class="rank__empty">${t('Менеджерів ще немає — дайте їм код компанії на сторінці «Менеджери».')}</li>`;
 }
 
 // Прострочені оплати (за клієнтами) і менеджери без жодного активного рейсу
@@ -135,7 +135,6 @@ async function init() {
 }
 
 if (renderLayout({ access: 'owner' })) {
-  showOwnerCode(); // щойно зареєструвався чи перевипустив код — показуємо один раз
   bindPeriod('ownerPeriod', load);
   init();
 }

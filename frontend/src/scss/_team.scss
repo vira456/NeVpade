@@ -73,7 +73,7 @@
     display: grid;
     font-size: 14px;
     min-width: 0;
-    a { color: $color-text; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; &:hover { text-decoration: underline; } }
+    a { color: $color-text; text-decoration: none; overflow-wrap: anywhere; &:hover { text-decoration: underline; } }
     a + a { color: $color-muted; }
   }
 
