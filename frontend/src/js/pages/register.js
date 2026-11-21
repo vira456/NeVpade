@@ -8,7 +8,7 @@ initAuthPage();
 
 const form = document.getElementById('registerForm');
 const { name, email, phone, password, confirm, terms } = form.elements;
-// Дві окремі сторінки з одним скриптом: register.html — менеджер (код запрошення, можна через Google),
+// Дві окремі сторінки з одним скриптом: register.html — менеджер (код компанії, можна через Google),
 // register-owner.html — власник (створює компанію; лише пошта й пароль)
 const isOwner = form.dataset.role === 'owner';
 const company = initCompanyField(form);

@@ -1,4 +1,4 @@
-// Команда: менеджери компанії (з переходом на профіль кожного), код запрошення, перехід в іншу компанію
+// Команда: менеджери компанії (з переходом на профіль кожного), код компанії, перехід в іншу компанію
 import { renderLayout } from '../utils/layout.js';
 import { getCompany, getMembers, switchCompany, myActiveTrips } from '../api/company.js';
 import { isMockMode } from '../api/client.js';

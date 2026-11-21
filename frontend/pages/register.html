@@ -38,14 +38,14 @@
           <a class="auth-switch__item" href="/pages/register-owner.html">Я власник компанії</a>
         </nav>
         <h1 class="auth__title">Реєстрація менеджера</h1>
-        <p class="auth__subtitle">Приєднайтеся до своєї компанії за кодом запрошення. Ми надішлемо коди підтвердження на пошту та в SMS.</p>
+        <p class="auth__subtitle">Приєднайтеся до своєї компанії за кодом, який дає власник. Ми надішлемо коди підтвердження на пошту та в SMS.</p>
         <form class="auth__form" id="registerForm" data-role="manager" novalidate>
           <div class="auth__alert" hidden></div>
           <fieldset class="field company-field">
-            <legend class="field__label">Код запрошення компанії</legend>
+            <legend class="field__label">Код компанії</legend>
             <input type="radio" name="companyMode" value="join" checked hidden />
             <div class="company-field__join">
-              <input class="input" id="inviteCode" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код запрошення" autocomplete="off" spellcheck="false" />
+              <input class="input" id="inviteCode" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код компанії" autocomplete="off" spellcheck="false" />
               <p class="field__hint">Код дає власник компанії. Після реєстрації він підтвердить ваш вступ — тоді відкриється робочий простір.</p>
               <p class="auth__mock-hint" data-mock-only hidden>Режим моків: код тестової компанії — <b>NVP-4821</b></p>
             </div>

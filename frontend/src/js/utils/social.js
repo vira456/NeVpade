@@ -18,9 +18,10 @@ function loadScript(src) {
 }
 
 /**
- * @param {{ onSuccess: (user) => void, onError: (message: string) => void }} handlers
+ * @param {{ onSuccess: (user) => void, onError: (message: string) => void, getCompanyCode?: () => string }} handlers
+ *   getCompanyCode — код компанії з поля на сторінці входу (наявний менеджер входить лише з ним)
  */
-export async function initSocialButtons({ onSuccess, onError, text = 'continue_with' }) {
+export async function initSocialButtons({ onSuccess, onError, text = 'continue_with', getCompanyCode = () => undefined }) {
   const googleBtn = document.getElementById('googleBtn');
   const googleSlot = document.getElementById('googleSlot');
 
@@ -38,7 +39,7 @@ export async function initSocialButtons({ onSuccess, onError, text = 'continue_w
       await loadScript('https://accounts.google.com/gsi/client');
       google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: (resp) => run(() => loginWithGoogle(resp.credential)),
+        callback: (resp) => run(() => loginWithGoogle(resp.credential, { companyCode: getCompanyCode() })),
       });
       // Офіційна кнопка Google замість нашої
       googleBtn.hidden = true;
@@ -53,7 +54,7 @@ export async function initSocialButtons({ onSuccess, onError, text = 'continue_w
       onError(err.message);
     }
   } else {
-    googleBtn.addEventListener('click', () => run(() => loginWithGoogle('mock-google-credential')));
+    googleBtn.addEventListener('click', () => run(() => loginWithGoogle('mock-google-credential', { companyCode: getCompanyCode() })));
   }
 
 }

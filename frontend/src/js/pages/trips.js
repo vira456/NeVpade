@@ -349,7 +349,7 @@ async function openTrip(id) {
           <div class="crew__item">
             <span class="crew__label">Водій</span>
             <strong>${d ? escapeHtml(d.name) : '—'}</strong>
-            ${d ? `<a href="tel:${d.phone}">${d.phone}</a>` : ''}
+            ${d ? `<a href="tel:${escapeHtml(d.phone)}">${escapeHtml(d.phone)}</a>` : ''}
           </div>
           <div class="crew__item">
             <span class="crew__label">Авто</span>

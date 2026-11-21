@@ -86,7 +86,7 @@ html:has(.lp) { scroll-behavior: smooth; }
 
   &__lead { margin: 0; font-size: 17px; line-height: 1.65; color: $color-muted; max-width: 36em; }
 
-  &__cta { display: grid; justify-items: center; gap: 14px; margin-top: 34px; }
+  &__cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 14px; margin-top: 34px; }
 }
 
 // Прев'ю інтерфейсу: табло рейсів

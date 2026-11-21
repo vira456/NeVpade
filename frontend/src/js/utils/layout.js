@@ -8,7 +8,7 @@ import { escapeHtml } from './format.js';
 import { withThemeReveal } from './motion.js';
 import { icons, logoMark } from './icons.js';
 import { initReminders } from './reminders.js';
-import { getTheme, setTheme, getLang, setLang, isSidebarCollapsed, setSidebarCollapsed } from './prefs.js';
+import { getTheme, setTheme, getLang, setLang, isSidebarCollapsed, setSidebarCollapsed, syncSidebarToWidth, NARROW_QUERY } from './prefs.js';
 import { countUnread } from '../api/chat.js';
 
 export const DASHBOARD = '/pages/dashboard.html';
@@ -112,7 +112,11 @@ export function renderLayout({ access = 'manager' } = {}) {
   // звіряємось із сервером і, якщо щось змінилось, перемальовуємо сторінку з новими правами
   refreshSession().then((res) => {
     if (!res?.changed) return;
-    if (signupIncomplete(res.user)) location.replace(nextPageFor(res.user));
+    if (signupIncomplete(res.user)) return location.replace(nextPageFor(res.user));
+    // сторінка й далі доступна — просто перемальовуємо з новими правами, інакше — на свою головну
+    const nowOwner = roleOf(res.user) === 'owner';
+    const stillAllowed = access === 'any' || (access === 'owner') === nowOwner;
+    if (stillAllowed) location.reload();
     else location.replace(homeFor(res.user));
   });
 
@@ -188,6 +192,9 @@ export function renderLayout({ access = 'manager' } = {}) {
     setSidebarCollapsed(collapsed);
     toggle.setAttribute('aria-expanded', String(!collapsed));
   });
+  // ширина вікна змінилась (вужче / ширше 1200 px) — панель згортається чи розгортається сама
+  syncSidebarToWidth();
+  window.matchMedia(NARROW_QUERY).addEventListener('change', () => toggle.setAttribute('aria-expanded', String(!syncSidebarToWidth())));
 
   sidebar.querySelectorAll('[data-theme-set]').forEach((btn) =>
     btn.addEventListener('click', (e) => {

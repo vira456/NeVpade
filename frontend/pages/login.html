@@ -58,15 +58,14 @@
             </div>
             <div class="field__error"></div>
           </div>
-          <div class="field owner-code-field" id="ownerCodeField" hidden>
-            <label class="field__label" for="ownerCode">Код власника</label>
-            <input class="input owner-code-input" id="ownerCode" name="ownerCode" type="text" inputmode="text" autocomplete="one-time-code" spellcheck="false" placeholder="OWN-XXXX-XXXX" maxlength="13" />
-            <p class="field__hint">Код ви отримали під час реєстрації компанії. Він захищає кабінет, навіть якщо хтось дізнається пароль.</p>
+          <div class="field" id="companyCodeField">
+            <label class="field__label" for="companyCode">Код компанії</label>
+            <input class="input company-code-input" id="companyCode" name="companyCode" type="text" autocomplete="off" spellcheck="false" placeholder="NVP-0000" maxlength="8" />
+            <p class="field__hint">Код дає власник компанії. Без нього в робочий простір не зайти, навіть знаючи пароль.</p>
             <div class="field__error"></div>
           </div>
           <div class="auth__row">
-            <button class="btn--link" id="forgotCodeBtn" type="button" hidden>Забули код власника?</button>
-            <span id="forgotSpacer"></span>
+            <span></span>
             <a href="/pages/forgot-password.html">Забули пароль?</a>
           </div>
           <button class="btn btn--block" type="submit" id="loginSubmit">Увійти</button>
@@ -79,28 +78,12 @@
         <p class="auth__footer" id="registerHint">Немає акаунта? <a href="/pages/register.html">Зареєструватися як менеджер</a></p>
         <section class="demo-accounts" id="demoAccounts" hidden aria-labelledby="demoTitle">
           <h2 class="demo-accounts__title" id="demoTitle">Демо-акаунти</h2>
-          <p class="demo-accounts__text">Режим моків: натисніть на акаунт, щоб увійти. Пароль усіх — <b data-no-i18n id="demoPassword"></b>, код власника вказано поруч.</p>
+          <p class="demo-accounts__text">Режим моків: натисніть на акаунт, щоб увійти. Пароль усіх — <b data-no-i18n id="demoPassword"></b>, код компанії для менеджерів — <b data-no-i18n id="demoCompanyCode"></b>.</p>
           <ul class="demo-accounts__list" id="demoList"></ul>
         </section>
       </div>
     </main>
   </div>
-  <dialog class="modal modal--sm" id="forgotCodeDialog" aria-labelledby="forgotCodeTitle">
-    <form class="modal__body" id="forgotCodeForm" novalidate>
-      <h2 class="modal__title" id="forgotCodeTitle">Новий код власника</h2>
-      <p class="modal__text">Надішлемо новий код на пошту власника. Старий код одразу перестане діяти.</p>
-      <div class="auth__alert" hidden></div>
-      <div class="field">
-        <label class="field__label" for="forgotCodeEmail">Email власника</label>
-        <input class="input" id="forgotCodeEmail" name="email" type="email" autocomplete="email" />
-        <div class="field__error"></div>
-      </div>
-      <div class="modal__actions">
-        <button class="btn btn--ghost" type="button" data-cancel>Скасувати</button>
-        <button class="btn" type="submit" id="forgotCodeSubmit">Надіслати код</button>
-      </div>
-    </form>
-  </dialog>
   <script type="module" src="/src/js/pages/login.js"></script>
 </body>
 </html>

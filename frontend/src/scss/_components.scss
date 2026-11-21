@@ -210,7 +210,7 @@
 }
 
 // ---------- Таблиця ----------
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; position: relative; } // relative — щоб приховані підписи в клітинках не розтягували сторінку
 
 .table {
   width: 100%;

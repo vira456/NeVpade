@@ -61,8 +61,10 @@
       border-bottom: 1px solid rgba(#fff, .12);
     }
 
-    .route { flex: 1; --route-bg: #{$ink-panel}; }
+    .route { flex: 1; min-width: 0; --route-bg: #{$ink-panel}; }
     .route__city { color: #fff; }
+    // вузьке вікно: у прикладі рейсів лишаємо маршрут, а статус ховаємо — щоб назви міст не обрізались
+    @media (max-width: 1100px) { li > .badge { display: none; } }
     .route__km { color: rgba(#fff, .6); }
     .route__line::before { border-top-color: rgba(255, 255, 255, .3); }
     .route__line::after {
