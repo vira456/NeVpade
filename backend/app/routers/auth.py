@@ -205,6 +205,17 @@ def _needs_company_code(user: dict) -> bool:
     return user.get("role") != "owner" and user.get("companyId") is not None and bool(user.get("phoneVerified"))
 
 
+async def _check_company_code(database: AsyncDatabase, user: dict, raw_code: str | None, *, google: bool = False) -> None:
+    """Код компанії менеджера при вході. Код не надіслали (порожнє поле, кнопка Google на сторінці без поля коду) —
+    просимо ввести, і це не спроба підбору: лічильник невдалих спроб не чіпаємо. Невірний код — рахуємо."""
+    if not normalize_company_code(raw_code):
+        hint = ("Спершу введіть код компанії в поле «Код компанії» на сторінці входу, потім натисніть «Продовжити з Google»"
+                if google else "Введіть код компанії — його дає власник")
+        raise ApiError(401, hint, "invalid_company_code")
+    if not await company_code_ok(database, user, raw_code):
+        raise await _login_failed(database, user, BAD_COMPANY_CODE)
+
+
 @router.post("/login", response_model=AuthResponse)
 async def login(body: LoginIn, database: AsyncDatabase = Depends(db)):
     """Менеджер: пошта + пароль + код компанії. Власник: пошта + пароль."""
@@ -231,8 +242,8 @@ async def login(body: LoginIn, database: AsyncDatabase = Depends(db)):
         raise ApiError(403, "Це акаунт менеджера. Оберіть вгорі «Менеджер» і введіть код компанії", "wrong_role")
     if user.get("removedAt") and user.get("companyId") is None:
         raise ApiError(403, "Цей акаунт більше не має доступу до компанії. Зверніться до власника", "not_in_company")
-    if _needs_company_code(user) and not await company_code_ok(database, user, body.company_code):
-        raise await _login_failed(database, user, BAD_COMPANY_CODE)
+    if _needs_company_code(user):
+        await _check_company_code(database, user, body.company_code)
 
     await _login_ok(database, user)
     return await auth_response(database, user)
@@ -283,8 +294,8 @@ async def google_login(body: GoogleIn, database: AsyncDatabase = Depends(db)):
                 raise ApiError(403, "Це акаунт власника. Оберіть вгорі «Власник»", "wrong_role")
             if body.role == "owner" and not is_owner_account:
                 raise ApiError(403, "Це акаунт менеджера. Оберіть вгорі «Менеджер» і введіть код компанії", "wrong_role")
-            if _needs_company_code(user) and not await company_code_ok(database, user, body.company_code):
-                raise await _login_failed(database, user, BAD_COMPANY_CODE)
+            if _needs_company_code(user):
+                await _check_company_code(database, user, body.company_code, google=True)
         await _login_ok(database, user)
 
     is_new = False
