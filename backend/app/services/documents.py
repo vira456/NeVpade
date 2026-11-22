@@ -3,7 +3,12 @@
 Метадані — у колекції `documents`, самі файли — у `files` (до 10 МБ, тож вміщуються в документ MongoDB
 і не потребують окремого сховища). Тип файлу визначаємо за вмістом, а не за назвою чи заголовком.
 """
+from urllib.parse import quote
+
+from fastapi import Response
 from pymongo.asynchronous.database import AsyncDatabase
+
+from ..errors import not_found
 
 MAX_FILE_BYTES = 10 * 1024 * 1024
 EXPIRING_DAYS = 30
@@ -28,6 +33,22 @@ def clean_filename(name: str | None, mime: str) -> str:
     if base:
         return base
     return "document.pdf" if mime == "application/pdf" else "document." + mime.split("/")[-1]
+
+
+async def file_response(database: AsyncDatabase, doc: dict | None) -> Response:
+    """Сам файл документа (фото чи PDF) — відкривається в браузері, а не скачується."""
+    stored = await database.files.find_one({"_id": doc["fileId"]}) if doc and doc.get("fileId") else None
+    if stored is None:
+        raise not_found("Файл")
+    return Response(
+        content=bytes(stored["data"]),
+        media_type=doc["mime"],
+        headers={
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(doc['name'])}",
+            "Cache-Control": "private, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 async def delete_owner_documents(database: AsyncDatabase, company_id, owner_type: str, owner_id: str) -> None:

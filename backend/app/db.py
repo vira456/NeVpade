@@ -79,3 +79,6 @@ async def _create_indexes(db: AsyncDatabase) -> None:
     await db.join_requests.create_index([("companyId", ASCENDING), ("status", ASCENDING)])
     await db.messages.create_index([("companyId", ASCENDING), ("_id", ASCENDING)])
     await db.documents.create_index([("companyId", ASCENDING), ("ownerType", ASCENDING), ("ownerId", ASCENDING), ("createdAt", DESCENDING)])
+    # Посилання для замовника (документи на рейс): шукаємо за рейсом, прострочені MongoDB видаляє сама
+    await db.shares.create_index("tripId")
+    await db.shares.create_index("expiresAt", expireAfterSeconds=0)

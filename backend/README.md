@@ -122,6 +122,7 @@ python -m pytest
 | Автопарк | CRUD `/vehicles`, `PATCH /vehicles/{id}/status` |
 | Водії | CRUD `/drivers`, `PUT /drivers/{id}/vehicle` |
 | Документи | `GET/POST /vehicles/{id}/documents`, `DELETE /vehicles/{id}/documents/{docId}`, `GET /vehicles/documents/summary` (так само для `/drivers` і `/trips`); файл — `GET /files/{docId}?token=` |
+| Viber замовнику | `POST /trips/{id}/client-message` → `{ phone, text, viberUrl, forwardUrl, shareUrl, expiresAt, documents, warnings }`; сторінка для замовника — `GET /share/{code}` (без входу) |
 | Імпорт з Della | `GET /import/della?path=/search/….html` → `{ html }` |
 | Завдання | `GET/POST /tasks`, `PUT/PATCH/DELETE /tasks/{id}`, `PUT /tasks/reorder` |
 | Аналітика | `GET /analytics/summary|income|expenses|drivers?period=week|month|year`, `GET /analytics/team?period=month|year` (власник) |
@@ -161,3 +162,13 @@ python -m pytest
 - **Імпорт рейсів** — фронт розбирає сторінку Della сам і створює рейси через `POST /trips` (`source: "import"`, `importedFrom`); бекенд лише віддає HTML через `GET /import/della` (лише `/search/…`, кеш 60 с, не частіше раз на 15 с). `POST /trips/import` лишився для пакетного імпорту.
 - **Телефон** — поки він не підтверджений, усі ендпоінти даних повертають 403 `phone_not_verified` (працюють лише `/auth/*` і `/auth/me`).
 - **Документи** — файли до 10 МБ зберігаються в MongoDB (колекції `documents` і `files`); тип визначається за вмістом (JPG/PNG/WEBP/PDF), посилання на файл підписане й діє 2 години.
+- **Viber замовнику** — сервер не пише у Viber сам (бот не може першим написати тому, хто на нього не підписаний;
+  Viber Business Messages платні й потребують ФОП/юрособи). `POST /trips/{id}/client-message` готує перше повідомлення
+  (хто пише, вантаж, дата й адреса завантаження, водій з телефоном, номер і модель авто, посилання на документи, питання
+  про час завантаження) і `viberUrl` = `viber://chat?number=%2B380…&draft=<текст>`: фронт відкриває Viber одразу в чаті з
+  номером замовника (з картки клієнта або `trip.client.phone`), текст уже набрано. Номера немає → `viberUrl: null`,
+  є `forwardUrl` (`viber://forward?text=…`, вибір контакту). `shareUrl` — коротке посилання `/api/share/<код>` (колекція
+  `shares`, діє 7 днів, повторне натискання — те саме посилання): сторінка з водієм, авто, менеджером і документами.
+  Замовник бачить лише паспорт і посвідчення водія, техпаспорт, страховку, техогляд, ліцензію й договір оренди авто —
+  найсвіжіший дійсний документ кожного типу (ІПН, медична довідка, тахограф і прострочені — ні). `warnings` — що варто
+  виправити перед надсиланням (немає номера, водія/машини, документів, прострочені документи).

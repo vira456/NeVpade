@@ -373,3 +373,25 @@ class DocumentsSummaryItem(CamelModel):
     count: int = 0
     expiring: int = 0
     expired: int = 0
+
+
+# ---------- Повідомлення замовнику у Viber ----------
+class SharedDocumentOut(CamelModel):
+    owner: Literal["driver", "vehicle"]
+    type: str
+    label: str  # «Посвідчення водія», «Техпаспорт» …
+    name: str
+    valid_until: str | None = None
+
+
+class ClientMessageOut(CamelModel):
+    """POST /trips/{id}/client-message: усе, щоб відкрити Viber з готовим повідомленням замовнику."""
+
+    phone: str | None  # номер замовника +380…; null — у клієнта не вказано телефон
+    text: str  # перше повідомлення: вантаж, водій, машина, посилання на документи
+    share_url: str  # публічна сторінка з документами водія й машини (діє 7 днів)
+    expires_at: str
+    viber_url: str | None  # viber://chat?number=…&draft=… — чат із замовником з набраним текстом
+    forward_url: str  # viber://forward?text=… — якщо номера немає: Viber запропонує обрати контакт
+    documents: list[SharedDocumentOut]  # що побачить замовник
+    warnings: list[str]  # що варто виправити перед надсиланням (немає номера, прострочені документи…)

@@ -7,7 +7,6 @@
 """
 from datetime import timedelta
 from typing import Literal
-from urllib.parse import quote
 
 from bson import Binary
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile, status
@@ -19,7 +18,7 @@ from ..schemas.common import _date
 from ..schemas.entities import DRIVER_DOC_TYPES, TRIP_DOC_TYPES, VEHICLE_DOC_TYPES, DocumentOut, DocumentsSummaryItem
 from ..security import create_file_token, decode_file_token
 from ..services.crud import get_company_doc
-from ..services.documents import EXPIRING_DAYS, MAX_FILE_BYTES, clean_filename, sniff_mime
+from ..services.documents import EXPIRING_DAYS, MAX_FILE_BYTES, clean_filename, file_response, sniff_mime
 from ..utils import iso, is_oid, now, oid, today_kyiv
 
 router = APIRouter(tags=["Документи"])
@@ -134,18 +133,5 @@ async def document_file(doc_id: str, token: str = "", database: AsyncDatabase = 
     """Віддає файл документа. Доступ — лише за підписаним посиланням з відповіді API (діє 2 години)."""
     if decode_file_token(token) != doc_id or not is_oid(doc_id):
         raise ApiError(403, "Посилання на файл недійсне або застаріло. Оновіть сторінку", "file_link_expired")
-    doc = await database.documents.find_one({"_id": oid(doc_id)})
-    stored = await database.files.find_one({"_id": doc["fileId"]}) if doc and doc.get("fileId") else None
-    if stored is None:
-        raise not_found("Файл")
-    filename = quote(doc["name"])
-    return Response(
-        content=bytes(stored["data"]),
-        media_type=doc["mime"],
-        headers={
-            "Content-Disposition": f"inline; filename*=UTF-8''{filename}",
-            "Cache-Control": "private, max-age=3600",
-            "X-Content-Type-Options": "nosniff",
-        },
-    )
+    return await file_response(database, await database.documents.find_one({"_id": oid(doc_id)}))
 

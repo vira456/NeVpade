@@ -155,6 +155,7 @@ async def delete_trip(trip_id: str, user: dict = Depends(manager_user), database
     await svc.sync_resources(database, user, trip, None)
     await database.tasks.update_many({**company_filter(user), "tripId": str(trip["_id"])}, {"$set": {"tripId": None}})
     await delete_owner_documents(database, user["companyId"], "trips", str(trip["_id"]))
+    await database.shares.delete_many({"tripId": trip["_id"]})  # посилання для замовника більше не відкриваються
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

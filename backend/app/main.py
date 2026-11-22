@@ -12,7 +12,22 @@ from fastapi.staticfiles import StaticFiles
 from . import db
 from .config import settings
 from .errors import not_found, register_error_handlers
-from .routers import analytics, auth, chat, clients, company, documents, drivers, fuel_price, imports, profile, tasks, trips, vehicles
+from .routers import (
+    analytics,
+    auth,
+    chat,
+    clients,
+    company,
+    documents,
+    drivers,
+    fuel_price,
+    imports,
+    profile,
+    share,
+    tasks,
+    trips,
+    vehicles,
+)
 from .services import fuel, notify
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -50,7 +65,8 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
 
     # documents — перед trips/vehicles/drivers, щоб …/documents/summary не сприймався як …/{id}
-    for router in (auth, profile, company, chat, documents, trips, clients, vehicles, drivers, tasks, analytics, imports, fuel_price):
+    for router in (auth, profile, company, chat, documents, share, trips, clients, vehicles, drivers, tasks, analytics,
+                   imports, fuel_price):
         app.include_router(router.router, prefix="/api")
 
     @app.get("/api", include_in_schema=False)
