@@ -1,7 +1,10 @@
 // Формування структурованого повідомлення для диспетчеризації у Viber (URI Scheme)
 import { clientMessage } from '../api/trips.js';
 import { showToast } from './toast.js';
+<<<<<<< HEAD
 import { confirmDialog } from './confirm.js';
+=======
+>>>>>>> 5e65465c934406626eb48aa3032b52eb680af3aa
 
 // Текст повідомлення водію (кнопка «Viber» на сторінках рейсів і карти)
 const VIBER_TEMPLATE = [
@@ -43,6 +46,7 @@ export function sendToViber(text) {
   window.location.href = `viber://forward?text=${encodeURIComponent(text)}`;
 }
 
+<<<<<<< HEAD
 // Телефон: лише там у меню «Поділитися» є Viber (на ПК системне меню Windows/macOS Viber зазвичай не показує)
 const isPhone = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -85,6 +89,13 @@ async function shareFiles(files, text) {
  * - Комп'ютер (або телефон без «Поділитися» з файлами): viber://chat?number=<номер замовника>&draft=<текст> —
  *   Viber відкривається одразу в чаті з замовником, текст набрано; фото — за посиланням у тексті (з прев'ю).
  * Текст ще й копіюється: якщо Viber не підставить його в чат, його можна вставити.
+=======
+/**
+ * Замовнику рейсу у Viber. Бекенд готує повідомлення (хто пише, вантаж, водій, авто, посилання на документи
+ * водія й машини) і посилання viber://chat?number=<номер замовника>&draft=<текст>: Viber відкривається одразу
+ * в чаті з замовником, текст уже набрано — лишається натиснути «Надіслати».
+ * Текст ще й копіюється: якщо Viber для ПК не підставить його в чат, його можна вставити.
+>>>>>>> 5e65465c934406626eb48aa3032b52eb680af3aa
  * fallbackText — для режиму моків (сервера немає): Viber з вибором контакту, як раніше.
  */
 export async function sendToClient(tripId, fallbackText = '') {
@@ -98,6 +109,7 @@ export async function sendToClient(tripId, fallbackText = '') {
   if (!msg) return sendToViber(fallbackText);
   await copyText(msg.text).catch(() => {});
   msg.warnings.forEach((w) => showToast(w, 'info', 6000)); // немає номера замовника, прострочені документи…
+<<<<<<< HEAD
 
   if (isPhone() && msg.documents.length && navigator.canShare) {
     const files = await documentFiles(msg.documents);
@@ -106,6 +118,8 @@ export async function sendToClient(tripId, fallbackText = '') {
       if (await shareFiles(files, msg.text)) return;
     }
   }
+=======
+>>>>>>> 5e65465c934406626eb48aa3032b52eb680af3aa
   window.location.href = msg.viberUrl ?? msg.forwardUrl;
 }
 
