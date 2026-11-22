@@ -13,7 +13,7 @@ from . import db
 from .config import settings
 from .errors import not_found, register_error_handlers
 from .routers import analytics, auth, chat, clients, company, documents, drivers, fuel_price, imports, profile, tasks, trips, vehicles
-from .services import fuel
+from .services import fuel, notify
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("nevpade")
@@ -26,6 +26,7 @@ FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST") or Path(__file__).resolve().pare
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await db.connect()
+    notify.check_config()
     warmup = asyncio.create_task(fuel.refresh(db.get_db()))
     yield
     warmup.cancel()
@@ -59,7 +60,9 @@ def create_app() -> FastAPI:
     @app.get("/api/health", tags=["Службове"])
     async def health():
         await db.get_db().command("ping")
-        return {"status": "ok"}
+        # Без секретів: лише назви сервісів і чи готова пошта — щоб перевірити налаштування на Render
+        return {"status": "ok", "email": settings.email_provider, "emailReady": notify.email_config_problem() is None,
+                "sms": settings.sms_provider}
 
     # Неіснуючий ендпоінт API — JSON-помилка, а не HTML-сторінка 404 сайту
     @app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)

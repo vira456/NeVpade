@@ -22,8 +22,38 @@ _PURPOSE_TEXT = {
 
 
 _CODE_TTL_NOTE = "Код дійсний 10 хвилин. Якщо ви не робили цей запит — просто проігноруйте лист."
-_OWNER_NOTE = ("Це ваш код власника — другий фактор входу в кабінет власника. Збережіть його в надійному місці "
-               "й нікому не передавайте. Попередній код більше не діє.")
+
+# Які змінні потрібні кожному сервісу пошти (перевіряємо під час запуску, щоб помилку було видно одразу в логах)
+_EMAIL_REQUIRED = {
+    "brevo": ("BREVO_API_KEY", "EMAIL_FROM"),
+    "mailjet": ("MAILJET_API_KEY", "MAILJET_SECRET_KEY", "EMAIL_FROM"),
+    "resend": ("RESEND_API_KEY", "EMAIL_FROM"),
+    "smtp": ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"),
+}
+
+
+def email_config_problem() -> str | None:
+    """Чого бракує в налаштуваннях пошти (назви змінних, без значень) або None, якщо все задано."""
+    provider = settings.email_provider
+    if provider == "console":
+        return "EMAIL_PROVIDER=console: листи не надсилаються, коди видно лише в логах сервера"
+    if provider not in _EMAIL_REQUIRED:
+        return f"Невідомий EMAIL_PROVIDER={provider} (можна: brevo, mailjet, resend, smtp, console)"
+    missing = [name for name in _EMAIL_REQUIRED[provider] if not getattr(settings, name.lower())]
+    return f"EMAIL_PROVIDER={provider}, але не задано: {', '.join(missing)}" if missing else None
+
+
+def check_config() -> None:
+    """Під час запуску пише в лог, куди підуть коди і чого бракує в налаштуваннях."""
+    problem = email_config_problem()
+    if problem:
+        log.warning("Пошта: %s", problem)
+    else:
+        log.info("Пошта: %s, відправник %s", settings.email_provider, settings.email_from or settings.smtp_user)
+    if settings.dev_fixed_email_code:
+        log.warning("DEV_FIXED_EMAIL_CODE задано: код з пошти завжди однаковий (лише для демонстрації!)")
+    if settings.sms_provider == "console":
+        log.warning("SMS_PROVIDER=console: SMS не надсилаються, коди видно лише в логах сервера")
 
 
 def _html(title: str, code: str, note: str = _CODE_TTL_NOTE) -> str:
@@ -40,12 +70,6 @@ async def send_code_email(to: str, code: str, purpose: str) -> None:
     """Код підтвердження пошти або відновлення пароля."""
     title, lead = _PURPOSE_TEXT.get(purpose, _PURPOSE_TEXT["verify"])
     await _deliver(to, title, f"{lead}: {code}\nКод дійсний 10 хвилин.", _html(title, code), code)
-
-
-async def send_owner_code_email(to: str, code: str) -> None:
-    """Новий код власника (скидання «Забули код?» або передача компанії)."""
-    title = "Код власника"
-    await _deliver(to, title, f"Ваш код власника NeVpade: {code}\n{_OWNER_NOTE}", _html(title, code, _OWNER_NOTE), code)
 
 
 async def _deliver(to: str, title: str, text: str, html: str, code: str) -> None:

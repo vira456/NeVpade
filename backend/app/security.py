@@ -41,18 +41,14 @@ def verify_password(password: str, hashed: str | None) -> bool:
 
 
 # ---------- JWT ----------
-OWNER_TOKEN_HOURS = 12
-
-
-def create_token(user_id: str, *, owner: bool = False) -> str:
+def create_token(user_id: str) -> str:
     issued = now()
-    hours = min(settings.jwt_expire_hours, OWNER_TOKEN_HOURS) if owner else settings.jwt_expire_hours
-    payload = {"sub": user_id, "typ": "access", "iat": issued, "exp": issued + timedelta(hours=hours)}
+    payload = {"sub": user_id, "typ": "access", "iat": issued, "exp": issued + timedelta(hours=settings.jwt_expire_hours)}
     return jwt.encode(payload, _secret(), algorithm=ALGORITHM)
 
 
-def decode_token(token: str) -> str | None:
-    """Повертає id користувача або None, якщо токен недійсний/прострочений."""
+def decode_token(token: str) -> tuple[str, int] | None:
+    """(id користувача, час видачі токена в секундах) або None, якщо токен недійсний/прострочений."""
     try:
         payload = jwt.decode(token, _secret(), algorithms=[ALGORITHM])
     except jwt.PyJWTError:
@@ -60,7 +56,7 @@ def decode_token(token: str) -> str | None:
     if payload.get("typ", "access") != "access":  # посилання на файл не можна використати як вхід
         return None
     sub = payload.get("sub")
-    return sub if isinstance(sub, str) else None
+    return (sub, int(payload.get("iat") or 0)) if isinstance(sub, str) else None
 
 
 # ---------- Підписані посилання на файли ----------

@@ -1,6 +1,5 @@
-"""Компанія: дані, учасники, заявки на вступ; кабінет власника (назва, код запрошення, передача компанії,
-звільнення менеджера); перехід менеджера в іншу компанію."""
-from contextlib import suppress
+"""Компанія: дані, учасники, заявки на вступ; кабінет власника (назва, код компанії, звільнення менеджера);
+перехід менеджера в іншу компанію."""
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -13,7 +12,6 @@ from ..deps import any_user, current_user, db, owner_user, require_manager
 from ..errors import ApiError, invalid, not_found
 from ..schemas.auth import CompanyChoice, UserOut
 from ..schemas.common import CamelModel
-from ..services import notify, owner_code
 from ..services import trips as trip_svc
 from ..services.kpi import manager_kpi
 from ..services.users import attach_company, open_join_request, resolve_company_choice, unique_invite_code, user_out
@@ -76,10 +74,6 @@ class SwitchIn(CamelModel):
 class SwitchOut(CamelModel):
     user: UserOut
     company: CompanyOut
-
-
-class TransferOwnershipIn(CamelModel):
-    member_id: str
 
 
 def company_out(c: dict, user: dict) -> CompanyOut:
@@ -152,13 +146,16 @@ async def update_company_put(body: CompanyUpdate, user: dict = Depends(owner_use
 
 @router.post("/invite")
 async def regenerate_invite(user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
-    """Новий код запрошення; старий перестає діяти. Відповідь: { inviteCode }."""
+    """Новий код компанії; старий одразу перестає діяти і для реєстрації, і для входу.
+    Відкриті сесії менеджерів закриваються — далі вони входять уже з новим кодом. Відповідь: { inviteCode }."""
     for _ in range(5):
         code = await unique_invite_code(database)
         try:
             await database.companies.update_one({"_id": user["companyId"]}, {"$set": {"inviteCode": code}})
         except DuplicateKeyError:
             continue
+        await database.users.update_many({"companyId": user["companyId"], "role": "manager"},
+                                         {"$set": {"sessionsRevokedAt": now()}})
         return {"inviteCode": code}
     raise ApiError(500, "Не вдалося згенерувати код. Спробуйте ще раз")
 
@@ -186,7 +183,7 @@ async def remove_member(member_id: str, transfer_to: str | None = Query(None, al
                         user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
     """Прибрати менеджера з компанії. Його активні рейси переходять до transferTo. → { transferred }."""
     if member_id == str(user["_id"]):
-        raise ApiError(409, "Себе прибрати не можна — спершу передайте компанію колезі", "cannot_remove_self")
+        raise ApiError(409, "Себе прибрати не можна", "cannot_remove_self")
     gone = await _member(database, user, member_id, managers_only=True)
     active = await database.trips.find(
         {"companyId": user["companyId"], "managerId": member_id, "status": {"$in": ACTIVE_TRIPS}}
@@ -203,26 +200,6 @@ async def remove_member(member_id: str, transfer_to: str | None = Query(None, al
     await database.users.update_one({"_id": gone["_id"]}, {"$set": {"companyId": None, "role": None, "memberStatus": None,
                                                                    "removedAt": now()}})
     return {"transferred": len(active)}
-
-
-@router.post("/transfer-ownership")
-async def transfer_ownership(body: TransferOwnershipIn, user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
-    """Передати компанію менеджеру: він стає власником (код власника — листом), автор — менеджером. → { user }."""
-    if body.member_id == str(user["_id"]):
-        raise ApiError(409, "Ви вже власник компанії", "same_member")
-    heir = await _member(database, user, body.member_id, managers_only=True)
-    await database.users.update_one({"_id": heir["_id"]}, {"$set": {"role": "owner", "memberStatus": None}})
-    heir.update(role="owner", memberStatus=None)
-    await database.users.update_one({"_id": user["_id"]}, {"$set": {"role": "manager", "memberStatus": "active"},
-                                                          "$unset": {"ownerCodeHash": "", "ownerLoginFails": "", "ownerLockUntil": ""}})
-    user.update(role="manager", memberStatus="active")
-    user.pop("ownerCodeHash", None)
-    await database.companies.update_one({"_id": user["companyId"]}, {"$set": {"ownerId": heir["_id"]}})
-    code = await owner_code.issue(database, heir)
-    # Компанію вже передано; якщо лист не дійшов — новий власник отримає код через «Забули код власника?»
-    with suppress(ApiError):
-        await notify.send_owner_code_email(heir["email"], code)
-    return {"user": await user_out(database, user)}
 
 
 # ---------- Заявки на вступ ----------

@@ -21,7 +21,7 @@ backend/
 │   ├── utils.py            _id → id, дати, телефони
 │   ├── schemas/            Pydantic-моделі (валідація, camelCase у JSON)
 │   ├── services/           бізнес-логіка: розрахунок рейсу, аналітика, коди,
-│   │                       пошта/SMS, перевірка Google, код власника, CRUD-фабрика
+│   │                       пошта/SMS, перевірка Google, CRUD-фабрика
 │   └── routers/            ендпоінти: auth, profile, company, chat, trips,
 │                           vehicles, drivers, tasks, analytics
 └── tests/                  модульні тести логіки (pytest)
@@ -44,7 +44,7 @@ uvicorn main:app --reload
 
 - API: http://localhost:8000/api
 - Swagger (інтерактивна документація): http://localhost:8000/docs
-- Перевірка зв'язку з БД: http://localhost:8000/api/health
+- Перевірка зв'язку з БД і налаштувань пошти: http://localhost:8000/api/health → `{ status, email, emailReady, sms }`
 
 Фронтенд: у `frontend/.env` поставити `VITE_USE_MOCK=false`, `VITE_API_URL=http://localhost:8000/api`
 і той самий `VITE_GOOGLE_CLIENT_ID`, що й `GOOGLE_CLIENT_ID` бекенду.
@@ -112,9 +112,9 @@ python -m pytest
 
 | Розділ | Ендпоінти |
 |---|---|
-| Авторизація | `POST /auth/register`, `/auth/verify-email`, `/auth/phone`, `/auth/verify-phone`, `/auth/resend-code`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/google`, `/auth/complete-signup`, `/auth/join-request`, `/auth/owner-code`, `/auth/owner-code/reset`, `/auth/change-password`; `GET /auth/me` |
+| Авторизація | `POST /auth/register`, `/auth/verify-email`, `/auth/phone`, `/auth/verify-phone`, `/auth/resend-code`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/google`, `/auth/complete-signup`, `/auth/join-request`, `/auth/change-password`; `GET /auth/me` |
 | Профіль | `GET/PUT /profile`, `PUT/DELETE /profile/avatar`, `GET /profile/kpi`, `GET/PATCH /profile/settings` |
-| Компанія | `GET/PATCH /company`, `POST /company/invite`, `POST /company/switch`, `POST /company/transfer-ownership`, `GET/POST /company/chat?after=<id>` |
+| Компанія | `GET/PATCH /company`, `POST /company/invite`, `POST /company/switch`, `GET/POST /company/chat?after=<id>` |
 | Команда | `GET /company/members`, `GET /company/members/{id}`, `GET /company/members/{id}/kpi`, `DELETE /company/members/{id}?transferTo=` |
 | Заявки на вступ | `GET /company/join-requests`, `POST /company/join-requests/{id}/approve`, `…/reject` |
 | Рейси | `GET /trips?status=&search=&mine=`, `GET/PUT/DELETE /trips/{id}`, `POST /trips`, `PATCH /trips/{id}/payment`, `POST /trips/{id}/calculate`, `POST /trips/{id}/transfer`, `POST /trips/import` |
@@ -131,20 +131,23 @@ python -m pytest
 
 ### Ролі й авторизація
 Дві ролі — два інтерфейси. **Власник** (`owner`) створює компанію й лише переглядає її роботу (рейси, клієнтів,
-аналітику); у нього кабінет: огляд і `GET /analytics/team`, менеджери, заявки на вступ, назва компанії, код запрошення,
-передача компанії, звільнення менеджера. **Менеджер** (`manager`) веде рейси, клієнтів, автопарк, водіїв, завдання.
+аналітику); у нього кабінет: огляд і `GET /analytics/team`, менеджери, заявки на вступ, назва компанії, код компанії,
+звільнення менеджера. **Менеджер** (`manager`) веде рейси, клієнтів, автопарк, водіїв, завдання.
 Зміни від власника → `403 manager_only`, дії кабінету від менеджера → `403 owner_only`. Роль і статус читаються з бази
 на кожному запиті, тож зміна діє одразу.
 
-- **Власник**: `register` (`role: "owner"`, `company.mode: "create"`) → лист → `verify-email` → SMS → `verify-phone` →
-  токен + **код власника** `OWN-XXXX-XXXX` (один раз; у базі лише bcrypt-хеш). Вхід — пошта + пароль + код;
-  5 невдалих спроб поспіль → пауза 15 хв. «Забули код?» — `POST /auth/owner-code/reset` (новий код листом),
-  новий код з кабінету — `POST /auth/owner-code` з паролем. Токен власника діє 12 год.
-  Власник, зареєстрований до появи кодів, отримує код у відповіді на перший вхід.
-- **Менеджер**: `register` з кодом запрошення (`join`) → … → `verify-phone` → заявка власнику, `memberStatus: "pending"`;
+- **Власник**: `register` (`role: "owner"`, `company.mode: "create"`) → лист → `verify-email` → SMS → `verify-phone` → токен.
+  Вхід — пошта + пароль.
+- **Менеджер**: `register` з кодом компанії (`join`) → … → `verify-phone` → заявка власнику, `memberStatus: "pending"`;
   до рішення власника ендпоінти даних → `403 membership_pending`. Відхилили — `POST /auth/join-request` з іншим кодом.
+  Вхід — пошта + пароль + **код компанії** (`companyCode`; хибний → `401 invalid_company_code`).
+- **Код компанії** (`NVP-1234`) бачить і змінює лише власник (`POST /company/invite`). Після зміни старий код не діє ні для
+  реєстрації, ні для входу, а відкриті сесії менеджерів закриваються (`401 token_invalid`) — вони входять з новим кодом.
+- **Захист від підбору**: 5 невдалих спроб входу поспіль (пароль чи код компанії) → пауза 15 хв (`429 too_many_attempts`);
+  відновлення пароля знімає паузу. Токен діє 12 год (`JWT_EXPIRE_HOURS`).
 - **Google** — лише для менеджерів: новий користувач (`isNew: true`) на кроці «Завершіть реєстрацію»
-  (`/auth/complete-signup`) вказує ім'я, код запрошення й телефон. Власник через Google не входить (`403 wrong_role`).
+  (`/auth/complete-signup`) вказує ім'я, код компанії й телефон; наявний менеджер входить через Google теж лише з кодом
+  компанії. Власник через Google не входить (`403 wrong_role`). Акаунт без пароля (лише Google) при вході паролем → `401 use_google`.
 - Менеджер, якого прибрали з компанії, при вході отримує `403 not_in_company`; його активні рейси переходять іншому менеджеру.
 
 ### Рішення щодо відкритих питань контракту
@@ -152,7 +155,7 @@ python -m pytest
 - **Ціна пального** — ринкова середня ціна дизеля по АЗС України з https://index.minfin.com.ua/markets/fuel/ (дані Консалтингової групи А-95): сервер оновлює її раз на 12 год і зберігає в MongoDB (колекція `meta`). Менеджер може задати власну (`PATCH /profile/settings { "fuelPrice": 60 }`, `null` — повернутися до ринкової). Якщо сайт недоступний — остання відома ціна, а без неї — `DEFAULT_FUEL_PRICE`.
 - **Інші витрати** — ремонт і ТО 2,2 грн/км + дороги 1,1 грн/км + 350 грн на рейс (як у `frontend/src/js/utils/economics.js`; так рахується й структура витрат в аналітиці).
 - **Аналітика** — лише рейси `done` і `in_progress`; поточний період порівнюється з таким самим відрізком попереднього (1–11 листопада ↔ 1–11 жовтня).
-- **Ролі** — див. «Ролі й авторизація» вище; ролі не змінюються вручну, лише передачею компанії.
+- **Ролі** — див. «Ролі й авторизація» вище; ролі не змінюються: власник компанії один, передати компанію не можна.
 - **Імпорт рейсів** — фронт розбирає сторінку Della сам і створює рейси через `POST /trips` (`source: "import"`, `importedFrom`); бекенд лише віддає HTML через `GET /import/della` (лише `/search/…`, кеш 60 с, не частіше раз на 15 с). `POST /trips/import` лишився для пакетного імпорту.
 - **Телефон** — поки він не підтверджений, усі ендпоінти даних повертають 403 `phone_not_verified` (працюють лише `/auth/*` і `/auth/me`).
 - **Документи** — файли до 10 МБ зберігаються в MongoDB (колекції `documents` і `files`); тип визначається за вмістом (JPG/PNG/WEBP/PDF), посилання на файл підписане й діє 2 години.

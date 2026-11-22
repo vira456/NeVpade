@@ -1,7 +1,8 @@
 """Розділ 1 контракту: реєстрація, підтвердження пошти й телефону, вхід менеджера й власника, Google.
 
-Дві ролі: власник (owner) створює компанію й входить поштою + паролем + кодом власника;
-менеджер (manager) приєднується за кодом запрошення й чекає, доки власник прийме заявку.
+Дві ролі: власник (owner) створює компанію й входить поштою + паролем;
+менеджер (manager) приєднується за кодом компанії, чекає, доки власник прийме заявку,
+і входить поштою + паролем + кодом компанії (змінив власник код — старий не діє).
 """
 from contextlib import suppress
 from datetime import timedelta
@@ -10,7 +11,7 @@ from fastapi import APIRouter, Depends, status
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
-from ..deps import any_user, db, optional_user, owner_user
+from ..deps import any_user, db, optional_user
 from ..errors import ApiError
 from ..schemas.auth import (
     AuthResponse,
@@ -22,8 +23,6 @@ from ..schemas.auth import (
     GoogleIn,
     JoinRequestIn,
     LoginIn,
-    OwnerCodeIn,
-    OwnerCodeResetIn,
     PhoneIn,
     PhoneOut,
     RegisterIn,
@@ -35,12 +34,14 @@ from ..schemas.auth import (
 )
 from ..schemas.common import Message
 from ..security import hash_password, verify_password
-from ..services import codes, notify, owner_code, social
+from ..services import codes, notify, social
 from ..services.users import (
     PHONE_SETUP_WINDOW,
     attach_company,
     auth_response,
+    company_code_ok,
     member_status,
+    normalize_company_code,
     new_user_doc,
     open_join_request,
     release_phone_from_unverified,
@@ -52,9 +53,9 @@ from ..utils import now
 router = APIRouter(prefix="/auth", tags=["Авторизація"])
 
 BAD_CREDENTIALS = ApiError(401, "Невірна пошта або пароль", "invalid_credentials")
-OWNER_MAX_FAILS = 5
-OWNER_LOCK = timedelta(minutes=15)
-OWNER_CODE_RESET_COOLDOWN = timedelta(seconds=60)
+BAD_COMPANY_CODE = ApiError(401, "Невірний код компанії. Уточніть актуальний код у власника", "invalid_company_code")
+LOGIN_MAX_FAILS = 5
+LOGIN_LOCK = timedelta(minutes=15)
 
 
 async def _send_email_code(database: AsyncDatabase, email: str, purpose: str, *, cooldown: bool = True) -> None:
@@ -148,7 +149,7 @@ async def add_phone(body: PhoneIn, database: AsyncDatabase = Depends(db), token_
 @router.post("/verify-phone", response_model=AuthResponse)
 async def verify_phone(body: EmailCodeIn, database: AsyncDatabase = Depends(db),
                        token_user: dict | None = Depends(optional_user)):
-    """Крок 2: код з SMS → вхід. Менеджеру — заявка власнику; новому власнику — код власника (один раз)."""
+    """Крок 2: код з SMS → вхід. Менеджеру — заявка власнику компанії."""
     user = await _phone_setup_user(database, body.email, token_user)
     if not user.get("phone"):
         raise ApiError(400, "Спершу вкажіть номер телефону", "phone_required")
@@ -156,12 +157,9 @@ async def verify_phone(body: EmailCodeIn, database: AsyncDatabase = Depends(db),
     await database.users.update_one({"_id": user["_id"]}, {"$set": {"phoneVerified": True}, "$unset": {"phoneSetupUntil": ""}})
     user["phoneVerified"] = True
 
-    new_code = None
-    if user.get("role") == "owner" and not user.get("ownerCodeHash"):
-        new_code = await owner_code.issue(database, user)
-    elif user.get("companyId") is not None and member_status(user) == "pending":
+    if user.get("companyId") is not None and member_status(user) == "pending":
         await open_join_request(database, user)
-    return await auth_response(database, user, owner_code=new_code)
+    return await auth_response(database, user)
 
 
 @router.post("/resend-code", response_model=Message)
@@ -182,71 +180,59 @@ async def resend_code(body: ResendIn, database: AsyncDatabase = Depends(db), tok
 
 
 # ---------- Вхід ----------
-async def _owner_failed(database: AsyncDatabase, user: dict) -> None:
-    """Невдала спроба входу власника: після 5 поспіль — пауза 15 хвилин для цієї пошти."""
-    fails = int(user.get("ownerLoginFails") or 0) + 1
-    update: dict = {"ownerLoginFails": fails}
-    if fails >= OWNER_MAX_FAILS:
-        update = {"ownerLoginFails": 0, "ownerLockUntil": now() + OWNER_LOCK}
+def _check_lock(user: dict | None) -> None:
+    if user and user.get("loginLockUntil") and user["loginLockUntil"] > now():
+        raise ApiError(429, "Забагато невдалих спроб. Вхід призупинено на 15 хвилин", "too_many_attempts")
+
+
+async def _login_failed(database: AsyncDatabase, user: dict, error: ApiError) -> ApiError:
+    """Невдала спроба (пароль чи код компанії): після 5 поспіль — пауза 15 хвилин для цієї пошти."""
+    fails = int(user.get("loginFails") or 0) + 1
+    update: dict = {"loginFails": fails}
+    if fails >= LOGIN_MAX_FAILS:
+        update = {"loginFails": 0, "loginLockUntil": now() + LOGIN_LOCK}
     await database.users.update_one({"_id": user["_id"]}, {"$set": update})
+    return error
+
+
+async def _login_ok(database: AsyncDatabase, user: dict) -> None:
+    if user.get("loginFails") or user.get("loginLockUntil"):
+        await database.users.update_one({"_id": user["_id"]}, {"$unset": {"loginFails": "", "loginLockUntil": ""}})
+
+
+def _needs_company_code(user: dict) -> bool:
+    """Код компанії потрібен менеджеру, який уже завершив реєстрацію (є компанія й підтверджений телефон)."""
+    return user.get("role") != "owner" and user.get("companyId") is not None and bool(user.get("phoneVerified"))
 
 
 @router.post("/login", response_model=AuthResponse)
 async def login(body: LoginIn, database: AsyncDatabase = Depends(db)):
-    """Менеджер: пошта + пароль. Власник: пошта + пароль + код власника (другий фактор)."""
+    """Менеджер: пошта + пароль + код компанії. Власник: пошта + пароль."""
     user = await database.users.find_one({"email": body.email})
+    _check_lock(user)
     is_owner_account = bool(user) and user.get("role") == "owner"
-    if is_owner_account and user.get("ownerLockUntil") and user["ownerLockUntil"] > now():
-        raise ApiError(429, "Забагато невдалих спроб. Спробуйте за 15 хвилин", "too_many_attempts")
+    if user is not None and user.get("emailVerified") and not user.get("passwordHash") and not is_owner_account \
+            and body.role != "owner":
+        raise ApiError(401, "Цей акаунт входить через Google — введіть код компанії й натисніть «Продовжити з Google»",
+                       "use_google")
     if user is None or not verify_password(body.password, user.get("passwordHash")):
-        if is_owner_account:
-            await _owner_failed(database, user)
-        raise BAD_CREDENTIALS
+        raise await _login_failed(database, user, BAD_CREDENTIALS) if user else BAD_CREDENTIALS
     if not user.get("emailVerified"):
         with suppress(ApiError):  # заодно надсилаємо свіжий код, фронт перекине на сторінку його введення
             await _send_email_code(database, body.email, "verify")
         raise ApiError(403, "Пошту не підтверджено", "email_not_verified")
 
     if body.role == "manager" and is_owner_account:
-        raise ApiError(403, "Це акаунт власника. Оберіть вгорі «Власник» і введіть код власника", "wrong_role")
+        raise ApiError(403, "Це акаунт власника. Оберіть вгорі «Власник»", "wrong_role")
     if body.role == "owner" and not is_owner_account:
-        raise ApiError(403, "Це акаунт менеджера. Оберіть вгорі «Менеджер»", "wrong_role")
+        raise ApiError(403, "Це акаунт менеджера. Оберіть вгорі «Менеджер» і введіть код компанії", "wrong_role")
     if user.get("removedAt") and user.get("companyId") is None:
         raise ApiError(403, "Цей акаунт більше не має доступу до компанії. Зверніться до власника", "not_in_company")
+    if _needs_company_code(user) and not await company_code_ok(database, user, body.company_code):
+        raise await _login_failed(database, user, BAD_COMPANY_CODE)
 
-    new_code = None
-    if is_owner_account:
-        if user.get("ownerCodeHash"):
-            if not owner_code.matches(body.owner_code, user["ownerCodeHash"]):
-                await _owner_failed(database, user)
-                raise ApiError(401, "Невірний код власника", "invalid_owner_code")
-            if user.get("ownerLoginFails"):
-                await database.users.update_one({"_id": user["_id"]}, {"$unset": {"ownerLoginFails": ""}})
-        else:
-            # Власник, зареєстрований до появи кодів: видаємо код зараз і показуємо один раз
-            new_code = await owner_code.issue(database, user)
-    return await auth_response(database, user, owner_code=new_code)
-
-
-@router.post("/owner-code/reset", response_model=Message)
-async def reset_owner_code(body: OwnerCodeResetIn, database: AsyncDatabase = Depends(db)):
-    """«Забули код власника?» — новий код листом на пошту власника. Відповідь однакова для будь-якої пошти."""
-    user = await database.users.find_one({"email": body.email})
-    sent_at = (user or {}).get("ownerCodeSentAt")
-    if (user and user.get("role") == "owner" and user.get("emailVerified")
-            and not (sent_at and now() - sent_at < OWNER_CODE_RESET_COOLDOWN)):
-        code = await owner_code.issue(database, user)
-        await database.users.update_one({"_id": user["_id"]}, {"$set": {"ownerCodeSentAt": now()}})
-        await notify.send_owner_code_email(user["email"], code)
-    return Message(message="Якщо це акаунт власника, новий код надіслано на пошту")
-
-
-@router.post("/owner-code")
-async def new_owner_code(body: OwnerCodeIn, user: dict = Depends(owner_user), database: AsyncDatabase = Depends(db)):
-    """Новий код власника з кабінету (потрібен поточний пароль). { ownerCode } — показується один раз."""
-    if not verify_password(body.password, user.get("passwordHash")):
-        raise ApiError(400, "Невірний пароль", "wrong_password")
-    return {"ownerCode": await owner_code.issue(database, user)}
+    await _login_ok(database, user)
+    return await auth_response(database, user)
 
 
 @router.post("/forgot-password", response_model=Message)
@@ -268,7 +254,9 @@ async def reset_password(body: ResetIn, database: AsyncDatabase = Depends(db)):
     if user is None or not user.get("emailVerified"):
         raise ApiError(400, "Термін дії коду минув. Запросіть новий код", "code_expired")
     await codes.consume(database, body.email, "reset", body.code)
-    await database.users.update_one({"_id": user["_id"]}, {"$set": {"passwordHash": hash_password(body.password)}})
+    # Новий пароль знімає й блокування входу після невдалих спроб
+    await database.users.update_one({"_id": user["_id"]}, {"$set": {"passwordHash": hash_password(body.password)},
+                                                          "$unset": {"loginFails": "", "loginLockUntil": ""}})
     return Message(message="Пароль змінено")
 
 
@@ -278,7 +266,16 @@ async def google_login(body: GoogleIn, database: AsyncDatabase = Depends(db)):
     info = await social.verify_google(body.credential)
     user = await database.users.find_one({"googleId": info["sub"]}) or await database.users.find_one({"email": info["email"]})
     if user is not None and user.get("role") == "owner":
-        raise ApiError(403, "Власник входить поштою, паролем і кодом власника — оберіть вгорі «Власник»", "wrong_role")
+        raise ApiError(403, "Власник входить поштою й паролем — оберіть вгорі «Власник»", "wrong_role")
+    if user is not None and user.get("emailVerified"):
+        _check_lock(user)
+        if user.get("removedAt") and user.get("companyId") is None:
+            raise ApiError(403, "Цей акаунт більше не має доступу до компанії. Зверніться до власника", "not_in_company")
+        # Наявний менеджер — як і при вході паролем, лише з актуальним кодом компанії
+        if _needs_company_code(user):
+            if not await company_code_ok(database, user, body.company_code):
+                raise await _login_failed(database, user, BAD_COMPANY_CODE)
+            await _login_ok(database, user)
 
     is_new = False
     if user is None:
@@ -338,7 +335,7 @@ async def join_request(body: JoinRequestIn, user: dict = Depends(any_user), data
         raise ApiError(403, "Власник не подає заявок — він передає компанію", "manager_only")
     if not user.get("phoneVerified"):
         raise ApiError(403, "Спершу підтвердьте номер телефону", "signup_incomplete")
-    company = await database.companies.find_one({"inviteCode": body.code.strip().upper()}, {"_id": 1})
+    company = await database.companies.find_one({"inviteCode": normalize_company_code(body.code)}, {"_id": 1})
     if company is None:
         raise ApiError(404, "Компанію з таким кодом не знайдено. Перевірте код у власника", "company_not_found")
     if company["_id"] == user.get("companyId") and member_status(user) in ("pending", "active"):

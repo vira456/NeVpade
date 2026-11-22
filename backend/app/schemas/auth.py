@@ -61,15 +61,7 @@ class LoginIn(CamelModel):
     email: Email
     password: str = Field(min_length=1, max_length=128)
     role: Literal["owner", "manager"] | None = None  # вкладка на сторінці входу
-    owner_code: str | None = Field(default=None, max_length=40)
-
-
-class OwnerCodeResetIn(CamelModel):
-    email: Email
-
-
-class OwnerCodeIn(CamelModel):
-    password: str = Field(min_length=1, max_length=128)
+    company_code: str | None = Field(default=None, max_length=20)  # код компанії — менеджер вводить при вході
 
 
 class JoinRequestIn(CamelModel):
@@ -93,6 +85,7 @@ class PhoneIn(CamelModel):
 
 class GoogleIn(CamelModel):
     credential: str = Field(min_length=10)
+    company_code: str | None = Field(default=None, max_length=20)  # наявний менеджер входить лише з кодом компанії
 
 
 class ChangePasswordIn(CamelModel):
@@ -124,11 +117,10 @@ class AuthResponse(CamelModel):
     token: str
     user: UserOut
     is_new: bool = False  # щойно створений через Google → фронт відкриває «Завершіть реєстрацію»
-    owner_code: str | None = None  # новий код власника — віддається один раз (після реєстрації чи першого входу)
 
 
 class CompleteSignupIn(CamelModel):
-    """«Завершіть реєстрацію» після першого входу через Google (лише менеджер: join + код запрошення)."""
+    """«Завершіть реєстрацію» після першого входу через Google (лише менеджер: join + код компанії)."""
 
     name: FullName2
     phone: Phone

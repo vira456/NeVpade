@@ -8,12 +8,12 @@ from pydantic import ValidationError
 
 from app.schemas.auth import RegisterIn
 from app.schemas.entities import ClientIn, DriverIn, TaskIn, TripIn, TripOut, VehicleIn, VehicleOut
-from app.services import owner_code
 from app.services.analytics import Analytics, buckets, payment_state, period_range, previous_range
 from app.services.calc import calculate, expense_breakdown
 from app.services.documents import sniff_mime
 from app.services.fuel import parse_diesel
 from app.services.trips import changes_history, default_due_date
+from app.services.users import normalize_company_code
 from app.utils import drop_nulls, normalize_name, normalize_phone
 
 SEED = json.loads((Path(__file__).parent.parent / "app" / "seed_data.json").read_text(encoding="utf-8"))
@@ -263,16 +263,17 @@ def test_register_role_must_match_company():
         RegisterIn.model_validate({**base, "role": "owner", "company": {"mode": "join", "code": "NVP-1234"}})
 
 
-def test_owner_code_format_and_normalize():
-    code = owner_code.generate()
-    assert len(code) == 13 and code.startswith("OWN-") and code[8] == "-"
-    assert set(code.replace("OWN-", "").replace("-", "")) <= set(owner_code.ALPHABET)
-    assert owner_code.normalize("own 7k3p92qx") == "OWN-7K3P-92QX"
-    assert owner_code.normalize("7k3p-92qx") == "OWN-7K3P-92QX"
-    assert owner_code.normalize("OWN-123") is None
-    from app.security import hash_password
-    hashed = hash_password("OWN-7K3P-92QX")
-    assert owner_code.matches("own-7k3p-92qx", hashed) and not owner_code.matches("OWN-7K3P-92QA", hashed)
+def test_company_code_normalized_like_frontend():
+    assert normalize_company_code("nvp4821") == "NVP-4821"
+    assert normalize_company_code(" NVP-4821 ") == "NVP-4821"
+    assert normalize_company_code("nvp 48 21") == "NVP-4821"
+    assert normalize_company_code("") == "" and normalize_company_code(None) == ""
+
+
+def test_access_token_carries_issue_time():
+    from app.security import create_token, decode_token
+    user_id, issued = decode_token(create_token("abc"))
+    assert user_id == "abc" and issued > 0
 
 
 def test_payment_state_like_frontend():

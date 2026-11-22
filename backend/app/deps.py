@@ -25,10 +25,15 @@ async def _token_user(creds: HTTPAuthorizationCredentials | None, database: Asyn
     """Користувач за Bearer-токеном або None, якщо заголовка немає чи токен недійсний."""
     if creds is None or creds.scheme.lower() != "bearer":
         return None
-    user_id = decode_token(creds.credentials)
-    if not user_id or not is_oid(user_id):
+    decoded = decode_token(creds.credentials)
+    if decoded is None or not is_oid(decoded[0]):
         return None
-    return await database.users.find_one({"_id": oid(user_id)})
+    user = await database.users.find_one({"_id": oid(decoded[0])})
+    # Власник змінив код компанії → сесії менеджерів, відкриті до цього, закриваються (вхід — з новим кодом)
+    revoked = (user or {}).get("sessionsRevokedAt")
+    if revoked is not None and decoded[1] < int(revoked.timestamp()):
+        return None
+    return user
 
 
 async def optional_user(

@@ -1,4 +1,5 @@
 """Робота з користувачами та компаніями, спільна для всіх способів входу."""
+import re
 import secrets
 from datetime import timedelta
 
@@ -49,6 +50,24 @@ def new_user_doc(*, name: str, email: str, **extra) -> dict:
 
 
 # ---------- Компанії ----------
+def normalize_company_code(raw: str | None) -> str:
+    """«nvp4821», « NVP-4821 » → «NVP-4821» (як formatCompanyCode на фронті)."""
+    s = re.sub(r"[^A-Z0-9]", "", (raw or "").upper())[:7]
+    return f"{s[:3]}-{s[3:]}" if len(s) > 3 else s
+
+
+async def company_code_ok(db: AsyncDatabase, user: dict, raw_code: str | None) -> bool:
+    """Код компанії при вході менеджера: має збігатися з актуальним кодом його компанії.
+    Відхиленому менеджеру підходить і код іншої компанії — він увійде й подасть туди заявку."""
+    code = normalize_company_code(raw_code)
+    if not code:
+        return False
+    company = await db.companies.find_one({"_id": user.get("companyId")}, {"inviteCode": 1}) if user.get("companyId") else None
+    if company and company.get("inviteCode") == code:
+        return True
+    return member_status(user) == "rejected" and await db.companies.find_one({"inviteCode": code}, {"_id": 1}) is not None
+
+
 def _invite_code() -> str:
     return f"NVP-{secrets.randbelow(9000) + 1000}"
 
@@ -80,7 +99,7 @@ async def resolve_company_choice(db: AsyncDatabase, choice, user_name: str) -> d
     if choice is None:
         return {"mode": "create", "name": f"Компанія {user_name}"}
     if choice.mode == "join":
-        company = await db.companies.find_one({"inviteCode": choice.code}, {"_id": 1})
+        company = await db.companies.find_one({"inviteCode": normalize_company_code(choice.code)}, {"_id": 1})
         if company is None:
             raise ApiError(404, "Компанію з таким кодом не знайдено. Перевірте код у власника", "company_not_found")
         return {"mode": "join", "companyId": company["_id"]}
@@ -112,7 +131,7 @@ async def attach_company(db: AsyncDatabase, user: dict, choice: dict | None) -> 
 
 async def ensure_company(db: AsyncDatabase, user: dict) -> None:
     """Компанію обрано під час реєстрації (pendingCompany), пошту підтверджено, а компанії немає —
-    створюємо/приєднуємо. Новим користувачам Google/Facebook компанію обирає сам користувач
+    створюємо/приєднуємо. Новим користувачам Google компанію обирає сам користувач
     на кроці «Завершіть реєстрацію», тож без pendingCompany нічого не робимо."""
     if user.get("emailVerified") and user.get("companyId") is None and user.get("pendingCompany"):
         await attach_company(db, user, user["pendingCompany"])
@@ -136,15 +155,14 @@ async def user_out(db: AsyncDatabase, user: dict) -> UserOut:
     )
 
 
-async def auth_response(db: AsyncDatabase, user: dict, *, is_new: bool = False, owner_code: str | None = None) -> AuthResponse:
+async def auth_response(db: AsyncDatabase, user: dict, *, is_new: bool = False) -> AuthResponse:
     """Видає токен. Якщо телефон ще не підтверджено — відкриває «вікно» для його прив'язки."""
     await ensure_company(db, user)
     update = {"lastSeenAt": now()}
     if not user.get("phoneVerified"):
         update["phoneSetupUntil"] = now() + PHONE_SETUP_WINDOW
     await db.users.update_one({"_id": user["_id"]}, {"$set": update})
-    token = create_token(str(user["_id"]), owner=user.get("role") == "owner")
-    return AuthResponse(token=token, user=await user_out(db, user), is_new=is_new, owner_code=owner_code)
+    return AuthResponse(token=create_token(str(user["_id"])), user=await user_out(db, user), is_new=is_new)
 
 
 # ---------- Заявки на вступ ----------

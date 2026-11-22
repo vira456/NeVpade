@@ -41,7 +41,7 @@ class Settings:
 
     # --- JWT ---
     jwt_secret: str = os.getenv("JWT_SECRET", "")
-    jwt_expire_hours: int = _num("JWT_EXPIRE_HOURS", 168, int)  # 7 днів
+    jwt_expire_hours: int = _num("JWT_EXPIRE_HOURS", 12, int)  # контракт: коротка сесія, щоб зміна коду компанії швидко діяла
 
     # --- CORS: адреси фронтенду через кому ---
     cors_origins: list[str] = field(
