@@ -33,8 +33,6 @@ function syncRole() {
   // код компанії вводить лише менеджер — власник його й видає
   document.getElementById('companyCodeField').hidden = owner;
   document.getElementById('roleHint').textContent = HINTS[role()];
-  // власник входить поштою й паролем — без Google
-  form.querySelectorAll('[data-social]').forEach((el) => (el.hidden = owner));
   form.querySelectorAll('.role-pick .seg__btn').forEach((l) => l.setAttribute('aria-pressed', String(l.querySelector('input').checked)));
   // реєстрація теж окрема: менеджер — за кодом компанії, власник — створює компанію
   document.getElementById('registerHint').innerHTML = owner
@@ -87,6 +85,7 @@ initSocialButtons({
   onError: (msg) => showAlert(form, msg),
   text: 'signin_with',
   getCompanyCode: () => companyCode.value,
+  getRole: role,
 });
 
 // ---------- Демо-акаунти (лише режим моків) ----------

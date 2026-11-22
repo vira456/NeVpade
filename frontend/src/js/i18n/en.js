@@ -1167,7 +1167,9 @@ export default {
     "Назву й місто бачать менеджери у своєму кабінеті.": "Managers see the name and city in their workspace.",
     "Менеджерів": "Managers",
     "Код і менеджери — на сторінці «Менеджери»": "Company code and managers are on the “Managers” page",
-    "Мій акаунт і компанія": "My account and company"
+    "Мій акаунт і компанія": "My account and company",
+    "Компанію створює власник на сторінці «Реєстрація компанії»": "The company is created by the owner on the “Register company” page",
+    "Вкажіть код компанії": "Enter the company code"
   },
   patterns: [
     [

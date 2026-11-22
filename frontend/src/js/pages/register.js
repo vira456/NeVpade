@@ -9,7 +9,7 @@ initAuthPage();
 const form = document.getElementById('registerForm');
 const { name, email, phone, password, confirm, terms } = form.elements;
 // Дві окремі сторінки з одним скриптом: register.html — менеджер (код компанії, можна через Google),
-// register-owner.html — власник (створює компанію; лише пошта й пароль)
+// register-owner.html — власник (створює компанію; теж можна через Google)
 const isOwner = form.dataset.role === 'owner';
 const company = initCompanyField(form);
 const rules = document.getElementById('passwordRules');
@@ -84,4 +84,4 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-if (!isOwner) initSocialButtons({ onSuccess: (user) => location.replace(nextPageFor(user)), onError: (msg) => showAlert(form, msg), text: 'signup_with' });
+initSocialButtons({ onSuccess: (user) => location.replace(nextPageFor(user)), onError: (msg) => showAlert(form, msg), text: 'signup_with', getRole: () => (isOwner ? 'owner' : 'manager') });

@@ -14,6 +14,14 @@ else if (user.companyId) location.replace(nextPageFor(user));
 
 const form = document.getElementById('onboardingForm');
 const { name, phone, terms } = form.elements;
+// Власник, що зареєструвався через Google, тут створює компанію (назва й місто), менеджер — вводить код
+const isOwner = user?.role === 'owner';
+if (isOwner) {
+  form.elements.companyMode.value = 'create';
+  document.getElementById('companyLegend').textContent = 'Ваша компанія';
+  document.getElementById('ownerHint').hidden = true;
+  document.getElementById('cityField').hidden = false;
+}
 const company = initCompanyField(form);
 
 document.getElementById('obEmail').textContent = user?.email ?? '';
@@ -47,7 +55,7 @@ form.addEventListener('submit', async (e) => {
   try {
     const e164 = toE164(phoneDigits(phone.value));
     const updated = await withLoading(form.querySelector('[type=submit]'), () =>
-      completeSignup({ name: name.value.trim(), phone: e164, company: company.value() })
+      completeSignup({ name: name.value.trim(), phone: e164, company: isOwner ? { ...company.value(), city: form.elements.companyCity.value.trim() || null } : company.value() })
     );
     sessionStorage.setItem('pendingPhone', e164);
     sessionStorage.setItem('pendingEmail', updated.email);

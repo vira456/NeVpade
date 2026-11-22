@@ -100,7 +100,11 @@
             <span class="field__error"></span>
           </label>
           <button class="btn btn--block" type="submit">Зареєструвати компанію</button>
-          <p class="field__hint auth__owner-note">Власник реєструється лише поштою й паролем — так захищено вхід у кабінет.</p>
+          <div class="auth__divider" data-social>або</div>
+          <div class="auth__social" data-social>
+            <div id="googleSlot"></div>
+            <button class="btn btn--social" id="googleBtn" type="button">Продовжити з Google</button>
+          </div>
         </form>
         <p class="auth__footer">Вже є акаунт? <a href="/pages/login.html">Увійти</a></p>
       </div>
