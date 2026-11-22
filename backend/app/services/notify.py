@@ -51,7 +51,8 @@ def check_config() -> None:
     else:
         log.info("Пошта: %s, відправник %s", settings.email_provider, settings.email_from or settings.smtp_user)
     if settings.dev_fixed_email_code:
-        log.warning("DEV_FIXED_EMAIL_CODE задано: код з пошти завжди однаковий (лише для демонстрації!)")
+        log.warning("DEV_FIXED_EMAIL_CODE або DEV_FIXED_CODE задано: код з пошти завжди однаковий "
+                    "(лише для демонстрації! Щоб коди були випадкові — видаліть обидві змінні)")
     if settings.sms_provider == "console":
         log.warning("SMS_PROVIDER=console: SMS не надсилаються, коди видно лише в логах сервера")
 
