@@ -18,7 +18,7 @@ function loadScript(src) {
 }
 
 /**
- * @param {{ onSuccess: (user) => void, onError: (message: string) => void, getCompanyCode?: () => string, getRole?: () => string }} handlers
+ * @param {{ onSuccess: (user) => void, onError: (message: string, err?: Error & { code?: string }) => void, getCompanyCode?: () => string, getRole?: () => string }} handlers
  *   getCompanyCode — код компанії з поля на сторінці входу (наявний менеджер входить лише з ним);
  *   getRole — 'manager' або 'owner': хто входить чи реєструється
  */
@@ -30,7 +30,7 @@ export async function initSocialButtons({ onSuccess, onError, text = 'continue_w
     try {
       onSuccess(await fn());
     } catch (err) {
-      onError(err.message);
+      onError(err.message, err); // err.code — щоб сторінка підсвітила потрібне поле
     }
   };
 

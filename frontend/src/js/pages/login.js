@@ -82,7 +82,15 @@ form.addEventListener('submit', async (e) => {
 
 initSocialButtons({
   onSuccess: goHome,
-  onError: (msg) => showAlert(form, msg),
+  onError: (msg, err) => {
+    clearErrors(form);
+    // як і при вході паролем: невірний код — підсвічуємо поле коду
+    if (err?.code === 'invalid_company_code') {
+      companyCode.select();
+      return setFieldError(companyCode, msg);
+    }
+    showAlert(form, msg);
+  },
   text: 'signin_with',
   getCompanyCode: () => companyCode.value,
   getRole: role,
