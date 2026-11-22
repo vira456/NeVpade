@@ -16,7 +16,7 @@ import { money, escapeHtml, PAYMENT_STATUS, TRIP_STATUS, paymentStatus, daysPast
 import { routeLine, plate, statusBadge, shortDate, cargoSize } from '../utils/components.js';
 import { initTripForm, openTripForm } from './trip-form.js';
 import { initDellaImport, openDellaImport } from './della-import.js';
-import { buildTripMessage, sendToViber, copyText } from '../utils/viber.js';
+import { buildTripMessage, sendToClient, copyText } from '../utils/viber.js';
 import { driveAway, flyAway } from '../utils/motion.js';
 import { showToast } from '../utils/toast.js';
 import { confirmDialog } from '../utils/confirm.js';
@@ -487,7 +487,8 @@ async function handleAction(e) {
   const copy = e.target.closest('[data-copy]');
   if (viber) {
     flyAway(viber);
-    sendToViber(messageFor(trips.find((t) => t.id === viber.dataset.viber)));
+    // Замовнику: повідомлення про вантаж + посилання на документи водія й машини
+    sendToClient(viber.dataset.viber, messageFor(trips.find((t) => t.id === viber.dataset.viber)));
     return true;
   }
   if (copy) {

@@ -4,7 +4,7 @@ import { getTrips } from '../api/trips.js';
 import { getDrivers } from '../api/drivers.js';
 import { getVehicles } from '../api/vehicles.js';
 import { TRIP_STATUS, money, escapeHtml } from '../utils/format.js';
-import { buildTripMessage, sendToViber, copyText } from '../utils/viber.js';
+import { buildTripMessage, sendToClient, copyText } from '../utils/viber.js';
 import { flyAway } from '../utils/motion.js';
 import { showToast } from '../utils/toast.js';
 import { hasApiKey, loadGoogleMaps, onAuthFailure, directionsUrl, embedUrl, formatDuration, estimateDuration, place } from '../utils/maps.js';
@@ -214,7 +214,8 @@ els.details.addEventListener('click', async (e) => {
   }
   if (action === 'viber') {
     flyAway(e.target.closest('[data-action]'));
-    sendToViber(`${buildTripMessage(trip, driverOf(trip), vehicleOf(trip))}\n🗺 Маршрут: ${link}`);
+    // Замовнику: повідомлення про вантаж + посилання на документи водія й машини
+    sendToClient(trip.id, `${buildTripMessage(trip, driverOf(trip), vehicleOf(trip))}\n🗺 Маршрут: ${link}`);
   }
 });
 

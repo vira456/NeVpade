@@ -42,3 +42,7 @@ export const deleteTrip = (id) => request(`/trips/${id}`, { method: 'DELETE', mo
 
 // Розрахунок собівартості рейсу (на сервері — бізнес-логіка Іри; формула — utils/economics.js)
 export const calculateTrip = (id) => request(`/trips/${id}/calculate`, { method: 'POST', mock: (m) => m.trips.calculate(id) });
+
+// Повідомлення замовнику у Viber: готовий текст, номер замовника, посилання на документи водія й машини.
+// У режимі моків сервера немає — null, тоді кнопка відкриває Viber з вибором контакту (utils/viber.js).
+export const clientMessage = (id) => request(`/trips/${id}/client-message`, { method: 'POST', mock: () => null });
