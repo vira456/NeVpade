@@ -1,8 +1,8 @@
 """Розділ 1 контракту: реєстрація, підтвердження пошти й телефону, вхід менеджера й власника, Google.
 
-Дві ролі: власник (owner) створює компанію й входить поштою + паролем;
+Дві ролі: власник (owner) створює компанію й входить поштою + паролем або через Google;
 менеджер (manager) приєднується за кодом компанії, чекає, доки власник прийме заявку,
-і входить поштою + паролем + кодом компанії (змінив власник код — старий не діє).
+і входить поштою + паролем (або Google) + кодом компанії (змінив власник код — старий не діє).
 """
 from contextlib import suppress
 from datetime import timedelta
@@ -211,10 +211,13 @@ async def login(body: LoginIn, database: AsyncDatabase = Depends(db)):
     user = await database.users.find_one({"email": body.email})
     _check_lock(user)
     is_owner_account = bool(user) and user.get("role") == "owner"
-    if user is not None and user.get("emailVerified") and not user.get("passwordHash") and not is_owner_account \
-            and body.role != "owner":
-        raise ApiError(401, "Цей акаунт входить через Google — введіть код компанії й натисніть «Продовжити з Google»",
-                       "use_google")
+    if user is not None and user.get("emailVerified") and not user.get("passwordHash"):
+        # Акаунт створено через Google, пароля немає (задати його можна в профілі)
+        if is_owner_account:
+            raise ApiError(401, "Цей акаунт входить через Google — натисніть «Продовжити з Google»", "use_google")
+        if body.role != "owner":
+            raise ApiError(401, "Цей акаунт входить через Google — введіть код компанії й натисніть «Продовжити з Google»",
+                           "use_google")
     if user is None or not verify_password(body.password, user.get("passwordHash")):
         raise await _login_failed(database, user, BAD_CREDENTIALS) if user else BAD_CREDENTIALS
     if not user.get("emailVerified"):
@@ -260,29 +263,36 @@ async def reset_password(body: ResetIn, database: AsyncDatabase = Depends(db)):
     return Message(message="Пароль змінено")
 
 
-# ---------- Google (лише менеджери) ----------
+# ---------- Google (менеджер і власник) ----------
 @router.post("/google", response_model=AuthResponse)
 async def google_login(body: GoogleIn, database: AsyncDatabase = Depends(db)):
+    """Вхід і реєстрація через Google. role: owner — вкладка «Власник» / реєстрація компанії (без коду компанії),
+    manager — наявний менеджер входить лише з актуальним кодом компанії."""
     info = await social.verify_google(body.credential)
     user = await database.users.find_one({"googleId": info["sub"]}) or await database.users.find_one({"email": info["email"]})
-    if user is not None and user.get("role") == "owner":
-        raise ApiError(403, "Власник входить поштою й паролем — оберіть вгорі «Власник»", "wrong_role")
+    # Роль акаунта без компанії (новий або не завершив реєстрацію): власник створить компанію, менеджер введе код
+    wanted_role = "owner" if body.role == "owner" else None
     if user is not None and user.get("emailVerified"):
         _check_lock(user)
         if user.get("removedAt") and user.get("companyId") is None:
             raise ApiError(403, "Цей акаунт більше не має доступу до компанії. Зверніться до власника", "not_in_company")
-        # Наявний менеджер — як і при вході паролем, лише з актуальним кодом компанії
-        if _needs_company_code(user):
-            if not await company_code_ok(database, user, body.company_code):
+        if user.get("companyId") is not None:
+            # Вкладка має збігатися з роллю — як і при вході паролем
+            is_owner_account = user.get("role") == "owner"
+            if is_owner_account and body.role != "owner":
+                raise ApiError(403, "Це акаунт власника. Оберіть вгорі «Власник»", "wrong_role")
+            if body.role == "owner" and not is_owner_account:
+                raise ApiError(403, "Це акаунт менеджера. Оберіть вгорі «Менеджер» і введіть код компанії", "wrong_role")
+            if _needs_company_code(user) and not await company_code_ok(database, user, body.company_code):
                 raise await _login_failed(database, user, BAD_COMPANY_CODE)
-            await _login_ok(database, user)
+        await _login_ok(database, user)
 
     is_new = False
     if user is None:
-        # Новий: пошту підтвердив Google; ім'я, код запрошення й телефон людина вкаже на кроці
+        # Новий: пошту підтвердив Google; ім'я, компанію й телефон людина вкаже на кроці
         # «Завершіть реєстрацію» (POST /auth/complete-signup)
         doc = new_user_doc(name=info["name"], email=info["email"], emailVerified=True, avatarUrl=info.get("picture"),
-                           role=None, googleId=info["sub"])
+                           role=wanted_role, googleId=info["sub"])
         try:
             result = await database.users.insert_one(doc)
         except DuplicateKeyError:  # паралельний запит уже створив користувача
@@ -298,6 +308,8 @@ async def google_login(body: GoogleIn, database: AsyncDatabase = Depends(db)):
             update.update(emailVerified=True, passwordHash=None, phone=None, phoneVerified=False)
             user.pop("pendingCompany", None)
             await database.users.update_one({"_id": user["_id"]}, {"$unset": {"pendingCompany": ""}})
+        if user.get("companyId") is None:  # реєстрацію не завершено — роль за обраною вкладкою
+            update["role"] = wanted_role
         if info.get("picture") and not user.get("avatarUrl"):
             update["avatarUrl"] = info["picture"]
         await database.users.update_one({"_id": user["_id"]}, {"$set": update})
@@ -307,12 +319,12 @@ async def google_login(body: GoogleIn, database: AsyncDatabase = Depends(db)):
 
 @router.post("/complete-signup", response_model=CompleteSignupOut)
 async def complete_signup(body: CompleteSignupIn, user: dict = Depends(any_user), database: AsyncDatabase = Depends(db)):
-    """«Завершіть реєстрацію» після Google: ім'я, код запрошення й телефон → SMS → /auth/verify-phone → заявка власнику."""
+    """«Завершіть реєстрацію» після Google → SMS → /auth/verify-phone.
+    Менеджер: ім'я, код компанії, телефон (далі — заявка власнику). Власник: ім'я, назва й місто нової компанії, телефон."""
     if user.get("companyId") is not None:
         raise ApiError(409, "Реєстрацію вже завершено", "already_completed")
-    if body.company.mode != "join":
-        raise ApiError(400, "Власник реєструється поштою й паролем — через Google можна приєднатися лише менеджером",
-                       "owner_needs_password")
+    if body.company.mode == "create" and user.get("role") != "owner":
+        raise ApiError(400, "Компанію створює власник на сторінці «Реєстрація компанії»", "owner_only")
     if await release_phone_from_unverified(database, body.phone, except_id=user["_id"]):
         raise ApiError(409, "Цей номер уже використовується", "phone_taken")
     choice = await resolve_company_choice(database, body.company, body.name)
@@ -332,7 +344,7 @@ async def complete_signup(body: CompleteSignupIn, user: dict = Depends(any_user)
 async def join_request(body: JoinRequestIn, user: dict = Depends(any_user), database: AsyncDatabase = Depends(db)):
     """Нова заявка на вступ — для менеджера, якого відхилили або прибрали з компанії. { user } з memberStatus: pending."""
     if user.get("role") == "owner":
-        raise ApiError(403, "Власник не подає заявок — він передає компанію", "manager_only")
+        raise ApiError(403, "Власник не подає заявок на вступ до компанії", "manager_only")
     if not user.get("phoneVerified"):
         raise ApiError(403, "Спершу підтвердьте номер телефону", "signup_incomplete")
     company = await database.companies.find_one({"inviteCode": normalize_company_code(body.code)}, {"_id": 1})

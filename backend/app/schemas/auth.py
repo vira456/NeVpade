@@ -85,6 +85,7 @@ class PhoneIn(CamelModel):
 
 class GoogleIn(CamelModel):
     credential: str = Field(min_length=10)
+    role: Literal["owner", "manager"] = "manager"  # вкладка входу / сторінка реєстрації: хто входить
     company_code: str | None = Field(default=None, max_length=20)  # наявний менеджер входить лише з кодом компанії
 
 
@@ -120,7 +121,8 @@ class AuthResponse(CamelModel):
 
 
 class CompleteSignupIn(CamelModel):
-    """«Завершіть реєстрацію» після першого входу через Google (лише менеджер: join + код компанії)."""
+    """«Завершіть реєстрацію» після першого входу через Google: менеджер — join + код компанії,
+    власник — create + назва й місто компанії."""
 
     name: FullName2
     phone: Phone
