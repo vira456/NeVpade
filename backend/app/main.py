@@ -1,0 +1,85 @@
+"""Створення FastAPI-застосунку NeVpade."""
+import asyncio
+import logging
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+from . import db
+from .config import settings
+from .errors import not_found, register_error_handlers
+from .routers import analytics, auth, chat, clients, company, documents, drivers, fuel_price, imports, profile, tasks, trips, vehicles
+from .services import fuel, notify
+
+logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("nevpade")
+
+# Зібраний фронтенд (npm run build:server). Якщо він є — сайт і API працюють з однієї адреси:
+# «/» — головна сторінка з «Почати роботу», «/pages/…» — сторінки застосунку, «/api/…» — API.
+FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST") or Path(__file__).resolve().parents[2] / "frontend" / "dist")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await db.connect()
+    notify.check_config()
+    warmup = asyncio.create_task(fuel.refresh(db.get_db()))
+    yield
+    warmup.cancel()
+    await db.close()
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="NeVpade API",
+        description="Серверна частина інформаційної вебсистеми для менеджера вантажоперевезень",
+        version="1.0.0",
+        lifespan=lifespan,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    register_error_handlers(app)
+
+    # documents — перед trips/vehicles/drivers, щоб …/documents/summary не сприймався як …/{id}
+    for router in (auth, profile, company, chat, documents, trips, clients, vehicles, drivers, tasks, analytics, imports, fuel_price):
+        app.include_router(router.router, prefix="/api")
+
+    @app.get("/api", include_in_schema=False)
+    async def api_root():
+        return {"name": "NeVpade API", "docs": "/docs", "health": "/api/health"}
+
+    @app.get("/api/health", tags=["Службове"])
+    async def health():
+        await db.get_db().command("ping")
+        # Без секретів: лише назви сервісів і чи готова пошта — щоб перевірити налаштування на Render
+        return {"status": "ok", "email": settings.email_provider, "emailReady": notify.email_config_problem() is None,
+                "sms": settings.sms_provider}
+
+    # Неіснуючий ендпоінт API — JSON-помилка, а не HTML-сторінка 404 сайту
+    @app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
+    async def api_not_found(rest: str):
+        raise not_found("Ресурс")
+
+    if (FRONTEND_DIST / "index.html").is_file():
+        # Монтуємо останнім, щоб маршрути /api і /docs мали пріоритет
+        app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+        log.info("Фронтенд: віддаю сайт з %s", FRONTEND_DIST)
+    else:
+        @app.get("/", include_in_schema=False)
+        async def root():
+            return {"name": "NeVpade API", "docs": "/docs", "health": "/api/health",
+                    "hint": "Сайт не зібрано: cd frontend && npm run build:server"}
+
+    return app
+
+
+app = create_app()
