@@ -1,4 +1,6 @@
 // Формування структурованого повідомлення для диспетчеризації у Viber (URI Scheme)
+import { clientMessage } from '../api/trips.js';
+import { showToast } from './toast.js';
 
 // Текст повідомлення водію (кнопка «Viber» на сторінках рейсів і карти)
 const VIBER_TEMPLATE = [
@@ -38,6 +40,27 @@ export const buildTripMessage = (trip, driver, vehicle) =>
 export function sendToViber(text) {
   // Відкриває Viber з вибором контакту для пересилання
   window.location.href = `viber://forward?text=${encodeURIComponent(text)}`;
+}
+
+/**
+ * Замовнику рейсу у Viber. Бекенд готує повідомлення (хто пише, вантаж, водій, авто, посилання на документи
+ * водія й машини) і посилання viber://chat?number=<номер замовника>&draft=<текст>: Viber відкривається одразу
+ * в чаті з замовником, текст уже набрано — лишається натиснути «Надіслати».
+ * Текст ще й копіюється: якщо Viber для ПК не підставить його в чат, його можна вставити.
+ * fallbackText — для режиму моків (сервера немає): Viber з вибором контакту, як раніше.
+ */
+export async function sendToClient(tripId, fallbackText = '') {
+  let msg;
+  try {
+    msg = await clientMessage(tripId);
+  } catch (err) {
+    showToast(err.message, 'error'); // напр. «Спершу призначте на рейс водія й машину»
+    return;
+  }
+  if (!msg) return sendToViber(fallbackText);
+  await copyText(msg.text).catch(() => {});
+  msg.warnings.forEach((w) => showToast(w, 'info', 6000)); // немає номера замовника, прострочені документи…
+  window.location.href = msg.viberUrl ?? msg.forwardUrl;
 }
 
 export async function copyText(text) {
