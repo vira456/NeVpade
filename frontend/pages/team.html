@@ -46,14 +46,14 @@
         <div class="switch-note" id="switchNote" hidden></div>
         <div class="auth__alert" hidden></div>
           <fieldset class="field company-field">
-            <legend class="field__label">Код запрошення нової компанії</legend>
+            <legend class="field__label">Код нової компанії</legend>
             <input type="radio" name="companyMode" value="join" checked hidden />
             <div class="company-field__create" hidden>
               <input class="input" id="companyNameInput" name="companyName" type="text" maxlength="80" placeholder="Назва компанії, напр. ТОВ «Західтранс»" aria-label="Назва компанії" autocomplete="organization" />
               <p class="field__hint">Ви станете її власником, колег запросите кодом зі сторінки «Команда».</p>
             </div>
             <div class="company-field__join">
-              <input class="input" id="inviteCodeInput" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код запрошення" autocomplete="off" spellcheck="false" />
+              <input class="input" id="inviteCodeInput" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код компанії" autocomplete="off" spellcheck="false" />
               <p class="field__hint">Код дає власник нової компанії зі свого кабінету.</p>
               <p class="auth__mock-hint" id="switchMockHint" hidden>Режим моків: <b>NVP-4821</b> — повернутися в демо-компанію «Західтранс»</p>
             </div>

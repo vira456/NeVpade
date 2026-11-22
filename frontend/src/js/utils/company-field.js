@@ -1,7 +1,7 @@
-// Поле «Хто ви?» / «Компанія»: власник створює нову компанію, менеджер приєднується до наявної за кодом запрошення.
-// Використовується на реєстрації, на кроці «Завершіть реєстрацію» (Google — лише менеджери)
-// і в діалозі «Змінити компанію» на сторінці «Команда» (лише приєднання)
+// Поле «Компанія»: на register-owner.html власник вводить назву нової компанії, усюди інше
+// (register.html, «Завершіть реєстрацію», «Змінити компанію» на сторінці «Команда») менеджер вводить код компанії
 import { setFieldError } from './validation.js';
+import { formatCompanyCode, isCompanyCode } from '../api/auth.js';
 
 export function initCompanyField(form, { onChange } = {}) {
   const { companyName, inviteCode } = form.elements;
@@ -22,15 +22,12 @@ export function initCompanyField(form, { onChange } = {}) {
   form.addEventListener('reset', () => setTimeout(sync));
 
   // Код у форматі NVP-1234: великі літери й дефіс підставляються самі
-  inviteCode.addEventListener('input', () => {
-    const raw = inviteCode.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    inviteCode.value = raw.length > 3 ? `${raw.slice(0, 3)}-${raw.slice(3, 7)}` : raw;
-  });
+  inviteCode.addEventListener('input', () => (inviteCode.value = formatCompanyCode(inviteCode.value)));
 
   return {
     input: companyName, // сюди показуємо помилку
     error() {
-      if (mode() === 'join') return /^[A-Z]{3}-\d{4}$/.test(inviteCode.value) ? '' : 'Введіть код запрошення у форматі NVP-1234';
+      if (mode() === 'join') return isCompanyCode(inviteCode.value) ? '' : 'Введіть код компанії у форматі NVP-1234';
       return companyName.value.trim().length < 2 ? 'Вкажіть назву компанії (мінімум 2 символи)' : '';
     },
     value: () =>

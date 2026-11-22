@@ -1,4 +1,4 @@
-// Кабінет власника → Менеджери: показники кожного, звільнення, код запрошення
+// Кабінет власника → Менеджери: показники кожного, звільнення, код компанії
 import { renderLayout } from '../../utils/layout.js';
 import { getTeamStats } from '../../api/analytics.js';
 import { getCompany, getMembers, removeMember, regenerateInvite, getJoinRequests, approveJoinRequest, rejectJoinRequest } from '../../api/company.js';
@@ -60,7 +60,7 @@ function render() {
         </tr>`;
         })
         .join('')
-    : `<tr><td colspan="7"><div class="empty"><p class="empty__title">${t('Менеджерів ще немає')}</p><p>${t('Дайте їм код запрошення — він праворуч.')}</p></div></td></tr>`;
+    : `<tr><td colspan="7"><div class="empty"><p class="empty__title">${t('Менеджерів ще немає')}</p><p>${t('Дайте їм код компанії — він вище.')}</p></div></td></tr>`;
 }
 
 // ---------- Заявки на вступ ----------
@@ -197,7 +197,7 @@ function bindEvents() {
   $('copyInvite').addEventListener('click', async () => {
     try {
       await copyText($('inviteCode').textContent);
-      showToast('Код запрошення скопійовано');
+      showToast('Код компанії скопійовано');
     } catch {
       showToast('Не вдалося скопіювати', 'error');
     }
@@ -206,7 +206,7 @@ function bindEvents() {
   $('regenInvite').addEventListener('click', async () => {
     const ok = await confirmDialog({
       title: 'Створити новий код?',
-      text: 'Старий код перестане діяти. Менеджери, які вже в компанії, нічого не помітять.',
+      text: 'Старий код одразу перестане діяти — і для реєстрації, і для входу. Менеджерам, які вже в компанії, потрібно буде повідомити новий код.',
       confirmText: 'Створити код',
     });
     if (!ok) return;

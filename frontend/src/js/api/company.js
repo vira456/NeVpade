@@ -1,14 +1,13 @@
 // Компанія поточного менеджера та її учасники
 import { request, ApiError } from './client.js';
-import { getCurrentUser, roleOf, mockIssueOwnerCode, mockJoinRequests, saveJoinRequests, mockSetManagerStatus } from './auth.js';
+import { getCurrentUser, roleOf, mockJoinRequests, saveJoinRequests, mockSetManagerStatus, mockCompanyCode } from './auth.js';
 import { load, save } from '../utils/storage.js';
 import { freshSeed, mockTrips, saveTrips } from './mock-store.js';
 import { mockProfileKey } from './profile.js';
 import seed from '../mock/company.json';
 
-// Демо-компанія «Західтранс» з колегами й рейсами. Якщо в демо перейти в нову компанію,
-// її дані лежать у mock.company (поки що там лише ви), а рейси/машини/клієнти порожні.
-const DEMO_INVITE = 'NVP-4821';
+// Демо-компанія «Західтранс» з колегами й рейсами. mock.company — інша компанія (зі старих версій демо);
+// зараз у моках є лише демо-компанія, тож перехід в іншу закінчується «Компанію не знайдено».
 const otherCompany = () => load('mock.company');
 
 // У моках «я» — перший учасник; ім'я/фото беремо з профілю, назву — з реєстрації
@@ -30,7 +29,12 @@ function mockMembers() {
 
 export const getCompany = () =>
   request('/company', {
-    mock: () => otherCompany() ?? { ...freshSeed(seed.company), name: getCurrentUser()?.companyName || seed.company.name, ...(load('mock.companyInfo') ?? {}) },
+    mock: () => {
+      const company = otherCompany() ?? { ...freshSeed(seed.company), name: getCurrentUser()?.companyName || seed.company.name, ...(load('mock.companyInfo') ?? {}) };
+      // код компанії бачить лише власник
+      if (roleOf(getCurrentUser()) !== 'owner') delete company.inviteCode;
+      return company;
+    },
   });
 
 // Сервер на MongoDB може віддати _id замість id — вирівнюємо, щоб посилання на профілі працювали
@@ -60,9 +64,9 @@ export async function getMember(id) {
 }
 
 /**
- * Перейти в іншу компанію: { mode: 'join', code } або { mode: 'create', name }.
- * Сервер: активні рейси (заплановані й у дорозі) передаються власнику старої компанії,
- * виконані лишаються в історії старої компанії. Відповідь — оновлений користувач.
+ * Менеджер переходить в іншу компанію: { mode: 'join', code } — це заявка її власнику.
+ * Доступ до старої компанії закривається одразу, до нової — після підтвердження (memberStatus: 'pending').
+ * Виконані рейси лишаються в історії старої компанії. Відповідь — { user, company }.
  */
 export const switchCompany = (company) =>
   request('/company/switch', {
@@ -73,8 +77,8 @@ export const switchCompany = (company) =>
       if (roleOf(me) === 'owner') throw new ApiError('Власник не змінює компанію, а передає її менеджеру', 403, 'manager_only');
       const inDemo = !otherCompany();
       if (company.mode !== 'join') throw new ApiError('Нову компанію створює власник під час реєстрації', 400, 'join_only');
-      if (company.code !== DEMO_INVITE) {
-        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у колеги', 404, 'company_not_found');
+      if (company.code !== mockCompanyCode()) {
+        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
       }
       if (inDemo) throw new ApiError('Ви вже в цій компанії', 409, 'same_company');
       // повертаємось у демо-компанію: її дані знову з початкових JSON
@@ -92,13 +96,15 @@ export const switchCompany = (company) =>
 export const myActiveTrips = (trips, id = getCurrentUser()?.id) =>
   trips.filter((t) => t.managerId === id && ['planned', 'in_progress'].includes(t.status));
 
-// Новий код запрошення (старий перестає діяти)
+// Новий код компанії (старий перестає діяти)
 export const regenerateInvite = () =>
   request('/company/invite', {
     method: 'POST',
     mock: () => {
-      assertOwner(); // новий код запрошення створює лише власник (з кабінету)
-      return { inviteCode: `NVP-${Math.floor(1000 + Math.random() * 9000)}` };
+      assertOwner(); // новий код компанії створює лише власник (з кабінету)
+      const inviteCode = `NVP-${Math.floor(1000 + Math.random() * 9000)}`;
+      save('mock.companyInfo', { ...(load('mock.companyInfo') ?? {}), inviteCode }); // з цим кодом менеджери тепер і входять
+      return { inviteCode };
     },
   });
 
@@ -121,7 +127,7 @@ export const updateCompany = (data) =>
       const current = other ?? { ...freshSeed(seed.company), ...(load('mock.companyInfo') ?? {}) };
       const updated = { ...current, ...(name && { name }), ...(data.city !== undefined && { city: data.city?.trim() || null }) };
       if (other) save('mock.company', updated);
-      else save('mock.companyInfo', { name: updated.name, city: updated.city });
+      else save('mock.companyInfo', { ...(load('mock.companyInfo') ?? {}), name: updated.name, city: updated.city }); // код компанії не губимо
       const me = getCurrentUser();
       localStorage.setItem('user', JSON.stringify({ ...me, companyName: updated.name }));
       return updated;
@@ -130,29 +136,6 @@ export const updateCompany = (data) =>
     const me = getCurrentUser();
     if (me && company?.name) localStorage.setItem('user', JSON.stringify({ ...me, companyName: company.name }));
     return company;
-  });
-
-/**
- * Передати компанію менеджеру: він стає власником (сервер надсилає йому на пошту код власника),
- * а ви — менеджером і далі працюєте в інтерфейсі менеджера.
- * Відповідь: { user } — ви з новою роллю.
- */
-export const transferOwnership = (memberId) =>
-  request('/company/transfer-ownership', {
-    method: 'POST',
-    body: { memberId },
-    mock: () => {
-      const members = mockMembers();
-      assertOwner();
-      if (memberId === meId()) throw new ApiError('Ви вже власник компанії', 409, 'same_member');
-      if (!members.some((m) => m.id === memberId)) throw new ApiError('Такого колеги в компанії немає', 404, 'member_not_found');
-      save('mock.roles', { ...(load('mock.roles') ?? {}), [memberId]: 'owner', [meId()]: 'manager' });
-      const code = mockIssueOwnerCode(memberId); // у моках листа немає — код видно в демо-акаунтах на сторінці входу
-      return { user: { ...getCurrentUser(), role: 'manager' }, mockCode: code };
-    },
-  }).then((res) => {
-    if (res?.user) localStorage.setItem('user', JSON.stringify({ ...getCurrentUser(), ...res.user }));
-    return res;
   });
 
 /**
@@ -168,7 +151,7 @@ export const removeMember = (memberId, { transferTo = null } = {}) =>
       const members = mockMembers();
       assertOwner();
       if (memberId === meId()) throw new ApiError('Себе прибрати не можна — спершу передайте компанію колезі', 409, 'cannot_remove_self');
-      if (!members.some((m) => m.id === memberId)) throw new ApiError('Такого колеги в компанії немає', 404, 'member_not_found');
+      if (!members.some((m) => m.id === memberId && m.role !== 'owner')) throw new ApiError('Такого менеджера в компанії немає', 404, 'member_not_found');
       const trips = mockTrips();
       const active = trips.filter((t) => t.managerId === memberId && ['planned', 'in_progress'].includes(t.status));
       if (active.length && !transferTo) throw new ApiError('Оберіть менеджера, якому перейдуть активні рейси', 409, 'transfer_required');
@@ -189,7 +172,7 @@ export const removeMember = (memberId, { transferTo = null } = {}) =>
 
 // ---------- Заявки на вступ ----------
 /**
- * Менеджери, які зареєструвались з кодом запрошення й чекають підтвердження (лише власник).
+ * Менеджери, які зареєструвались з кодом компанії й чекають підтвердження (лише власник).
  * [{ id, userId, name, email, phone, createdAt, status: "pending" }]
  */
 export const getJoinRequests = () =>

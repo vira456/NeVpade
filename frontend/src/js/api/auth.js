@@ -6,19 +6,18 @@ import companySeed from '../mock/company.json';
 // У режимі моків правильний код підтвердження завжди такий:
 export const MOCK_CODE = '123456';
 
-// Код запрошення тестової компанії в режимі моків
+// Код демо-компанії в режимі моків (власник може створити новий — див. mockCompanyCode)
 export const MOCK_INVITE = 'NVP-4821';
 const MOCK_COMPANY = 'ТОВ «Західтранс»';
 
 // Пароль демо-акаунтів (той самий, що «поточний пароль» у профілі)
 export const MOCK_PASSWORD = 'Manager2026';
-// Код власника демо-компанії (Ковальчук Андрій)
-export const DEMO_OWNER_CODE = 'OWN-4821-7KQP';
 
 /**
  * Дві окремі ролі з різними інтерфейсами:
- *  owner   — власник компанії: кабінет власника (огляд, менеджери, фінанси, компанія); входить з кодом власника
- *  manager — менеджер: рейси, клієнти, автопарк, графік, завдання, чат
+ *  owner   — власник компанії: кабінет власника (огляд, менеджери, фінанси, компанія); входить поштою й паролем
+ *  manager — менеджер: рейси, клієнти, автопарк, графік, завдання, чат; при кожному вході вводить
+ *            код компанії, який бачить лише власник (той самий, що й при реєстрації)
  */
 export const OWNER_HOME = '/pages/owner.html';
 export const MANAGER_HOME = '/pages/dashboard.html';
@@ -35,35 +34,16 @@ export function roleOf(user) {
 }
 export const homeFor = (user) => (roleOf(user) === 'owner' ? OWNER_HOME : MANAGER_HOME);
 
-// ---------- Код власника ----------
-// Формат OWN-XXXX-XXXX: без схожих символів (0/O, 1/I/L), щоб його легко було переписати з папірця
-const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-export function formatOwnerCode(raw) {
-  const s = String(raw).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^OWN/, '').slice(0, 8);
-  return s ? `OWN-${s.slice(0, 4)}${s.length > 4 ? `-${s.slice(4)}` : ''}` : '';
+// ---------- Код компанії ----------
+// Формат NVP-1234. Його бачить лише власник (кабінет → «Менеджери»); менеджер вводить код
+// під час реєстрації і при кожному вході. Власник змінив код — менеджери входять уже з новим.
+export function formatCompanyCode(raw) {
+  const s = String(raw ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+  return s.length > 3 ? `${s.slice(0, 3)}-${s.slice(3)}` : s;
 }
-export const isOwnerCode = (code) => /^OWN-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code);
-const newOwnerCode = () => {
-  const rnd = crypto.getRandomValues(new Uint32Array(8));
-  const chars = [...rnd].map((n) => CODE_ABC[n % CODE_ABC.length]).join('');
-  return `OWN-${chars.slice(0, 4)}-${chars.slice(4)}`;
-};
-
-/** Лише моки: видати новий код власника (передача компанії) */
-export function mockIssueOwnerCode(id) {
-  const code = newOwnerCode();
-  setOwnerCode(id, code);
-  return code;
-}
-
-// Новий код показуємо власнику один раз (після реєстрації, передачі чи перевипуску)
-const ONCE_KEY = 'nevpade.ownerCodeOnce';
-export const takeOwnerCodeOnce = () => {
-  const code = sessionStorage.getItem(ONCE_KEY);
-  sessionStorage.removeItem(ONCE_KEY);
-  return code;
-};
-const rememberOwnerCodeOnce = (code) => code && sessionStorage.setItem(ONCE_KEY, code);
+export const isCompanyCode = (code) => /^[A-Z]{3}-\d{4}$/.test(code);
+/** Поточний код демо-компанії (власник міг створити новий) */
+export const mockCompanyCode = () => load('mock.companyInfo')?.inviteCode ?? MOCK_INVITE;
 
 // У моках пароль зберігаємо лише як SHA-256 — навіть демо не тримає паролі відкритим текстом
 async function sha256(text) {
@@ -78,10 +58,6 @@ async function sha256(text) {
 const seedByEmail = (email) =>
   load('mock.company') ? null : companySeed.members.find((m) => m.email.toLowerCase() === String(email).trim().toLowerCase());
 const registeredOwner = (email) => (load('mock.owners') ?? {})[String(email).trim().toLowerCase()] ?? null;
-const ownerCodeOf = (id) => (load('mock.ownerCodes') ?? {})[id] ?? (id === 'usr_00' ? DEMO_OWNER_CODE : null);
-function setOwnerCode(id, code) {
-  save('mock.ownerCodes', { ...(load('mock.ownerCodes') ?? {}), [id]: code });
-}
 
 /** Демо-акаунти для сторінки входу */
 export const demoAccounts = () =>
@@ -91,7 +67,7 @@ export const demoAccounts = () =>
         .filter((m) => !(load('mock.removed') ?? []).includes(m.id))
         .map((m) => {
           const role = mockRoleOf(m.id, m.role);
-          return { id: m.id, name: m.name, email: m.email, role, code: role === 'owner' ? ownerCodeOf(m.id) : null };
+          return { id: m.id, name: m.name, email: m.email, role };
         });
 
 const mockUser = (email, name = 'Федорова Віра Дмитрівна', phone = '+380671234567', phoneVerified = true) => ({
@@ -102,7 +78,7 @@ const mockUser = (email, name = 'Федорова Віра Дмитрівна', 
   phoneVerified,
   role: 'manager',
   companyId: 'cmp_01',
-  companyName: load('mock.company')?.name || sessionStorage.getItem('mockCompany') || getCurrentUser()?.companyName || MOCK_COMPANY,
+  companyName: load('mock.companyInfo')?.name ?? MOCK_COMPANY,
 });
 
 const userFromMember = (m) => ({
@@ -124,11 +100,11 @@ const userFromOwnerAccount = (a) => ({
   phoneVerified: true,
   role: 'owner',
   companyId: 'cmp_01',
-  companyName: a.companyName,
+  companyName: load('mock.companyInfo')?.name ?? a.companyName, // власник міг перейменувати компанію
 });
 
 // ---------- Менеджери, зареєстровані в цьому браузері, і заявки на вступ (моки) ----------
-// Менеджер реєструється з кодом запрошення → після підтвердження телефону з'являється заявка,
+// Менеджер реєструється з кодом компанії → після підтвердження телефону з'являється заявка,
 // і доки власник її не прийме, робочий простір закритий (memberStatus: 'pending').
 const cleanMail = (email) => String(email ?? '').trim().toLowerCase();
 const registeredManager = (email) => (load('mock.managers') ?? {})[cleanMail(email)] ?? null;
@@ -181,19 +157,19 @@ const userFromManagerAccount = (a) => ({
   memberStatus: a.status === 'unverified' ? 'pending' : a.status, // pending | active | rejected
 });
 
-// Захист від підбору коду власника: 5 невдалих спроб → пауза 15 хвилин (у моках — у межах вкладки)
+// Захист від підбору пароля чи коду компанії: 5 невдалих спроб → пауза 15 хвилин (у моках — у межах вкладки)
 function checkAttempts(email) {
-  const rec = JSON.parse(sessionStorage.getItem(`mockOwnerFails:${email}`) || '{"n":0,"until":0}');
+  const rec = JSON.parse(sessionStorage.getItem(`mockLoginFails:${email}`) || '{"n":0,"until":0}');
   if (rec.until > Date.now()) {
-    throw new ApiError('Забагато невдалих спроб. Вхід власника призупинено на 15 хвилин', 429, 'too_many_attempts');
+    throw new ApiError('Забагато невдалих спроб. Вхід призупинено на 15 хвилин', 429, 'too_many_attempts');
   }
   return {
     fail() {
       rec.n += 1;
       if (rec.n >= 5) Object.assign(rec, { n: 0, until: Date.now() + 15 * 60000 });
-      sessionStorage.setItem(`mockOwnerFails:${email}`, JSON.stringify(rec));
+      sessionStorage.setItem(`mockLoginFails:${email}`, JSON.stringify(rec));
     },
-    ok: () => sessionStorage.removeItem(`mockOwnerFails:${email}`),
+    ok: () => sessionStorage.removeItem(`mockLoginFails:${email}`),
   };
 }
 
@@ -231,14 +207,16 @@ export function logout() {
 // ---------- Вхід / реєстрація ----------
 /**
  * Вхід. role — вкладка, яку обрав користувач: 'manager' або 'owner'.
- * Власник додатково вводить свій код (ownerCode): без нього кабінет не відкриється, навіть якщо пароль відомий.
- * Помилки: 401 invalid_credentials, 401 invalid_owner_code, 403 wrong_role (не та вкладка), 429 too_many_attempts
+ * Менеджер додатково вводить код компанії (companyCode), який дає йому власник: без нього в робочий простір
+ * не зайти, навіть знаючи пароль, а власник може закрити доступ усім, просто змінивши код.
+ * Власник входить поштою й паролем.
+ * Помилки: 401 invalid_credentials, 401 invalid_company_code, 403 wrong_role (не та вкладка), 429 too_many_attempts
  */
-export async function login(email, password, { role = 'manager', ownerCode } = {}) {
+export async function login(email, password, { role = 'manager', companyCode } = {}) {
   const data = await request('/auth/login', {
     method: 'POST',
     auth: false,
-    body: { email, password, role, ...(role === 'owner' && { ownerCode }) },
+    body: { email, password, role, ...(role === 'manager' && { companyCode }) },
     mock: async () => {
       const clean = String(email).trim().toLowerCase();
       const member = seedByEmail(clean);
@@ -248,79 +226,44 @@ export async function login(email, password, { role = 'manager', ownerCode } = {
         throw new ApiError('Цей акаунт більше не має доступу до компанії. Зверніться до власника', 403, 'not_in_company');
       }
       const accRole = member ? mockRoleOf(member.id, member.role) : own ? mockRoleOf(own.id, 'owner') : 'manager';
-
-      if (role === 'manager') {
-        if (accRole === 'owner') throw new ApiError('Це акаунт власника. Оберіть вгорі «Власник» і введіть код власника', 403, 'wrong_role');
-        if (mgr) {
-          if (!mgr.passHash) throw new ApiError('Цей акаунт входить через Google — натисніть «Продовжити з Google»', 401, 'use_google');
-          if ((await sha256(password)) !== mgr.passHash) throw new ApiError('Невірна пошта або пароль', 401, 'invalid_credentials');
-          if (mgr.status === 'unverified') throw new ApiError('Пошту не підтверджено', 403, 'email_not_verified');
-          return { token: `mock-token-${mgr.id}`, user: userFromManagerAccount(mgr) }; // заявка ще чекає → фронт покаже «Очікуємо підтвердження»
-        }
-        if (!member) return { token: 'mock-token', user: mockUser(clean) }; // будь-яка інша пошта — демо-менеджер
-        if (password !== MOCK_PASSWORD) throw new ApiError('Невірна пошта або пароль', 401, 'invalid_credentials');
-        return { token: `mock-token-${member.id}`, user: userFromMember(member) };
-      }
-
-      // вкладка «Власник»
-      if (!member && !own) throw new ApiError('Невірна пошта або пароль', 401, 'invalid_credentials');
-      if (accRole !== 'owner') throw new ApiError('Це акаунт менеджера. Оберіть вгорі «Менеджер»', 403, 'wrong_role');
       const attempts = checkAttempts(clean);
-      const passOk = own ? (await sha256(password)) === own.passHash : password === MOCK_PASSWORD;
-      if (!passOk) {
+      const fail = (err) => {
         attempts.fail();
-        throw new ApiError('Невірна пошта або пароль', 401, 'invalid_credentials');
+        throw err;
+      };
+      const badCredentials = () => fail(new ApiError('Невірна пошта або пароль', 401, 'invalid_credentials'));
+
+      // Спершу пароль, а вже потім підказки про вкладку чи код — щоб без пароля не можна було дізнатися,
+      // чи існує акаунт і яка в нього роль
+      if (mgr && !mgr.passHash) {
+        if (role === 'owner') badCredentials();
+        throw new ApiError('Цей акаунт входить через Google — введіть код компанії й натисніть «Продовжити з Google»', 401, 'use_google');
       }
-      const id = member?.id ?? own.id;
-      if (formatOwnerCode(ownerCode) !== (ownerCodeOf(id) ?? own?.code)) {
-        attempts.fail();
-        throw new ApiError('Невірний код власника', 401, 'invalid_owner_code');
+      const hash = own || mgr ? await sha256(password) : null;
+      const passOk = own ? hash === own.passHash : mgr ? hash === mgr.passHash : member ? password === MOCK_PASSWORD : role === 'manager'; // інша пошта — демо-менеджер
+      if (!passOk) badCredentials();
+
+      if (role === 'owner') {
+        if (accRole !== 'owner') throw new ApiError('Це акаунт менеджера. Оберіть вгорі «Менеджер» і введіть код компанії', 403, 'wrong_role');
+        attempts.ok();
+        return { token: `mock-token-${member?.id ?? own.id}`, user: member ? userFromMember(member) : userFromOwnerAccount(own) };
+      }
+
+      // вкладка «Менеджер»: пошта + пароль + код компанії
+      if (accRole === 'owner') throw new ApiError('Це акаунт власника. Оберіть вгорі «Власник»', 403, 'wrong_role');
+      if (mgr?.status === 'unverified') throw new ApiError('Пошту не підтверджено', 403, 'email_not_verified');
+      if (formatCompanyCode(companyCode) !== mockCompanyCode()) {
+        fail(new ApiError('Невірний код компанії. Уточніть актуальний код у власника', 401, 'invalid_company_code'));
       }
       attempts.ok();
-      return { token: `mock-token-${id}`, user: member ? userFromMember(member) : userFromOwnerAccount(own) };
+      if (mgr) return { token: `mock-token-${mgr.id}`, user: userFromManagerAccount(mgr) }; // заявка ще чекає → «Очікуємо підтвердження»
+      if (member) return { token: `mock-token-${member.id}`, user: userFromMember(member) };
+      return { token: 'mock-token', user: mockUser(clean) }; // будь-яка інша пошта — демо-менеджер
     },
   });
   saveSession(data);
   return data.user;
 }
-
-/** «Забули код власника?» — новий код надсилають на пошту власника, старий перестає діяти */
-export const resetOwnerCode = (email) =>
-  request('/auth/owner-code/reset', {
-    method: 'POST',
-    auth: false,
-    body: { email },
-    mock: () => {
-      const clean = String(email).trim().toLowerCase();
-      const member = seedByEmail(clean);
-      const own = registeredOwner(clean);
-      const id = member && mockRoleOf(member.id, member.role) === 'owner' ? member.id : own?.id;
-      const res = { message: 'Якщо це акаунт власника, новий код надіслано на пошту' };
-      if (!id) return res; // не підказуємо, чи існує такий власник
-      const code = newOwnerCode();
-      setOwnerCode(id, code);
-      if (own) save('mock.owners', { ...load('mock.owners'), [clean]: { ...own, code } });
-      return { ...res, mockCode: code }; // лише в моках: листа немає, тож показуємо код на екрані
-    },
-  });
-
-/** Перевипустити код власника з кабінету (потрібен поточний пароль). Відповідь: { ownerCode } — показати один раз */
-export const regenerateOwnerCode = (password) =>
-  request('/auth/owner-code', {
-    method: 'POST',
-    body: { password },
-    mock: async () => {
-      const me = getCurrentUser();
-      if (roleOf(me) !== 'owner') throw new ApiError('Ця дія доступна лише власнику компанії', 403, 'owner_only');
-      const own = registeredOwner(me.email);
-      const ok = own ? (await sha256(password)) === own.passHash : password === MOCK_PASSWORD;
-      if (!ok) throw new ApiError('Невірний пароль', 400, 'wrong_password');
-      const code = newOwnerCode();
-      setOwnerCode(me.id, code);
-      if (own) save('mock.owners', { ...load('mock.owners'), [own.email]: { ...own, code } });
-      return { ownerCode: code };
-    },
-  });
 
 /**
  * Актуальні дані про себе з сервера (GET /auth/me): роль чи компанію могли змінити,
@@ -333,8 +276,11 @@ export const getMe = () =>
       if (!me) throw new ApiError('Сесія закінчилась', 401, 'unauthorized');
       if ((load('mock.removed') ?? []).includes(me.id)) return { ...me, role: null, companyId: null, companyName: null };
       const mgr = registeredManager(me.email);
-      if (mgr && mgr.id === me.id) return userFromManagerAccount(mgr);
-      return { ...me, role: mockRoleOf(me.id, me.id.startsWith('own_') ? 'owner' : me.role) };
+      // прибрали з компанії — без компанії (фронт поведе на «Завершіть реєстрацію», щоб приєднатися знову)
+      if (mgr && mgr.id === me.id) return mgr.status === 'removed' ? { ...me, companyId: null, companyName: null, memberStatus: null } : userFromManagerAccount(mgr);
+      // роль беремо з «бази» (демо-компанія + передачі компанії), а не з того, що збереглося в браузері
+      const seedRole = companySeed.members.find((m) => m.id === me.id)?.role;
+      return { ...me, role: mockRoleOf(me.id, me.id.startsWith('own_') ? 'owner' : seedRole ?? 'manager') };
     },
   });
 
@@ -356,13 +302,17 @@ export async function refreshSession() {
   localStorage.setItem('user', JSON.stringify(user));
   return {
     user,
-    changed: before.role !== user.role || before.companyId !== user.companyId || (before.memberStatus ?? 'active') !== (user.memberStatus ?? 'active'),
+    // порівнюємо те, що реально впливає на доступ (роль «не вказано» = та сама роль, що й з демо-даних)
+    changed:
+      roleOf(before) !== roleOf(user) ||
+      String(before.companyId ?? '') !== String(user.companyId ?? '') ||
+      (before.memberStatus ?? 'active') !== (user.memberStatus ?? 'active'),
   };
 }
 
 // Реєстрація НЕ видає токен: спершу треба підтвердити пошту, потім телефон.
-// Роль обирають на початку форми: власник створює компанію ({ mode: 'create', name }),
-// менеджер приєднується до наявної за кодом запрошення ({ mode: 'join', code })
+// Дві сторінки: register-owner.html — власник створює компанію ({ mode: 'create', name, city }),
+// register.html — менеджер приєднується за кодом компанії ({ mode: 'join', code }) і чекає підтвердження власника
 export const register = ({ name, email, phone, password, company }) =>
   request('/auth/register', {
     method: 'POST',
@@ -371,20 +321,19 @@ export const register = ({ name, email, phone, password, company }) =>
     mock: async () => {
       const clean = email.trim().toLowerCase();
       if (seedByEmail(clean) || registeredOwner(clean) || registeredManager(clean)) throw new ApiError('Користувач з таким email вже існує', 409, 'email_taken');
-      if (company?.mode === 'join' && company.code.toUpperCase() !== MOCK_INVITE) {
-        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у колеги', 404, 'company_not_found');
+      if (company?.mode === 'join' && company.code.toUpperCase() !== mockCompanyCode()) {
+        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
       }
       // щоб у моках показати введені дані
       sessionStorage.setItem('mockName', name);
       sessionStorage.setItem('mockPhone', phone);
-      sessionStorage.setItem('mockCompany', company?.mode === 'create' ? company.name : MOCK_COMPANY);
       if (company?.mode === 'create') {
-        // акаунт власника: код видасть сервер після підтвердження телефону
+        // акаунт власника
         const owners = load('mock.owners') ?? {};
-        owners[clean] = { id: `own_${Object.keys(owners).length + 1}`, name, email: clean, phone, passHash: await sha256(password), companyName: company.name, code: null };
+        owners[clean] = { id: `own_${Object.keys(owners).length + 1}`, name, email: clean, phone, passHash: await sha256(password), companyName: company.name };
         save('mock.owners', owners);
         // демо-дані «Західтранс» стають даними нової компанії, щоб кабінет не був порожнім
-        save('mock.companyInfo', { name: company.name, ...(company.city && { city: company.city }) });
+        save('mock.companyInfo', { name: company.name, createdAt: new Date().toISOString(), ...(company.city && { city: company.city }) });
       } else {
         // акаунт менеджера: заявка до власника з'явиться, щойно підтвердить пошту й телефон
         const n = Object.keys(load('mock.managers') ?? {}).length + 1;
@@ -407,8 +356,7 @@ export const verifyEmail = (email, code) =>
     },
   });
 
-// Крок 2: код з SMS → вхід у систему.
-// Власнику після першого підтвердження сервер один раз повертає ownerCode — показуємо його в кабінеті
+// Крок 2: код з SMS → вхід у систему (менеджеру — заявка власнику на вступ)
 export async function verifyPhone(email, code) {
   const data = await request('/auth/verify-phone', {
     method: 'POST',
@@ -417,11 +365,7 @@ export async function verifyPhone(email, code) {
     mock: () => {
       checkMockCode(code);
       const own = registeredOwner(email);
-      if (own) {
-        const ownerCode = own.code ?? newOwnerCode();
-        save('mock.owners', { ...load('mock.owners'), [own.email]: { ...own, code: ownerCode } });
-        return { token: `mock-token-${own.id}`, user: userFromOwnerAccount(own), ...(own.code ? {} : { ownerCode }) };
-      }
+      if (own) return { token: `mock-token-${own.id}`, user: userFromOwnerAccount(own) };
       let mgr = registeredManager(email);
       if (mgr) {
         mgr = saveManager({ ...mgr, phoneVerified: true, phone: sessionStorage.getItem('mockPhone') || mgr.phone });
@@ -434,7 +378,6 @@ export async function verifyPhone(email, code) {
     },
   });
   saveSession(data);
-  rememberOwnerCodeOnce(data.ownerCode);
   return data.user;
 }
 
@@ -459,7 +402,7 @@ export function nextPageFor(user) {
   if (!user.companyId) return '/pages/onboarding.html';
   // номер уже вказано (на кроці «Завершіть реєстрацію») → одразу поле для коду, інакше — спершу номер
   if (user.phoneVerified === false) return `/pages/verify-phone.html?mode=${user.phone ? 'social' : 'add'}&email=${encodeURIComponent(user.email)}`;
-  // менеджер подав заявку з кодом запрошення — доки власник не прийме, робочий простір закритий
+  // менеджер подав заявку з кодом компанії — доки власник не прийме, робочий простір закритий
   if (user.memberStatus && user.memberStatus !== 'active') return PENDING_PAGE;
   return homeFor(user);
 }
@@ -469,7 +412,7 @@ export const signupIncomplete = (user) => nextPageFor(user) !== homeFor(user);
 
 /**
  * Завершити реєстрацію після входу через Google (користувач уже має токен).
- * Через соцмережі реєструються лише менеджери (join за кодом запрошення): власник входить поштою, паролем і кодом власника.
+ * Через Google реєструються лише менеджери (join за кодом компанії); власник — на сторінці «Реєстрація компанії».
  * Сервер прив'язує компанію, зберігає телефон і шле SMS-код.
  * Відповідь: { user, message } — user уже з companyId, але phoneVerified: false
  */
@@ -478,15 +421,14 @@ export async function completeSignup({ name, phone, company }) {
     method: 'POST',
     body: { name, phone, company },
     mock: () => {
-      if (company?.mode !== 'join') throw new ApiError('Власник реєструється поштою й паролем — так він отримає код власника', 400, 'owner_needs_password');
-      if (company.code.toUpperCase() !== MOCK_INVITE) {
-        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у колеги', 404, 'company_not_found');
+      if (company?.mode !== 'join') throw new ApiError('Власник реєструється на сторінці «Реєстрація компанії» поштою й паролем', 400, 'owner_needs_password');
+      if (company.code.toUpperCase() !== mockCompanyCode()) {
+        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
       }
       const role = 'manager';
-      const companyName = MOCK_COMPANY;
+      const companyName = load('mock.companyInfo')?.name ?? MOCK_COMPANY;
       sessionStorage.setItem('mockName', name);
       sessionStorage.setItem('mockPhone', phone);
-      sessionStorage.setItem('mockCompany', companyName);
       const me = getCurrentUser();
       // Google-акаунт менеджера: без пароля; заявка до власника — після підтвердження телефону
       saveManager({ id: me.id, name, email: cleanMail(me.email), phone, passHash: null, google: true, status: 'unverified', phoneVerified: false });
@@ -516,7 +458,7 @@ export async function requestJoin(code) {
     method: 'POST',
     body: { code },
     mock: () => {
-      if (String(code).toUpperCase() !== MOCK_INVITE) throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
+      if (String(code).toUpperCase() !== mockCompanyCode()) throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
       const acc = registeredManager(getCurrentUser()?.email);
       if (!acc) throw new ApiError('Ви вже в цій компанії', 409, 'same_company');
       return { user: userFromManagerAccount(createJoinRequest(acc)) };
@@ -548,15 +490,19 @@ export const resetPassword = (email, code, password) =>
 
 // ---------- Соцмережі ----------
 // Google: credential — ID-токен від Google Identity Services, бекенд перевіряє його підпис
-export async function loginWithGoogle(credential) {
+export async function loginWithGoogle(credential, { companyCode } = {}) {
   const data = await request('/auth/google', {
     method: 'POST',
     auth: false,
-    body: { credential },
-    // У моках перший вхід — новий користувач без компанії; після реєстрації — звичайний вхід (зі статусом заявки)
+    body: { credential, ...(companyCode && { companyCode }) },
+    // Новий користувач — без компанії (код введе на «Завершіть реєстрацію»);
+    // наявний менеджер, як і при вході паролем, має ввести код компанії
     mock: () => {
       const acc = registeredManager('olena.koval@gmail.com');
       if (acc?.status === 'removed') throw new ApiError('Цей акаунт більше не має доступу до компанії. Зверніться до власника', 403, 'not_in_company');
+      if (acc?.phoneVerified && formatCompanyCode(companyCode) !== mockCompanyCode()) {
+        throw new ApiError('Невірний код компанії. Уточніть актуальний код у власника', 401, 'invalid_company_code');
+      }
       if (acc?.phoneVerified) return { token: `mock-token-${acc.id}`, user: userFromManagerAccount(acc) };
       if (acc) return { token: `mock-token-${acc.id}`, user: { ...userFromManagerAccount(acc), phoneVerified: false } };
       return { token: 'mock-token-mgr_g', isNew: true, user: { ...mockUser('olena.koval@gmail.com', 'Олена Коваль', null, false), id: 'mgr_g', role: null, companyId: null, companyName: null } };

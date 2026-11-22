@@ -1,5 +1,5 @@
 import { initAuthPage, rememberEmail } from '../utils/auth-page.js';
-import { login, nextPageFor, demoAccounts, MOCK_PASSWORD, formatOwnerCode, isOwnerCode, resetOwnerCode } from '../api/auth.js';
+import { login, nextPageFor, demoAccounts, MOCK_PASSWORD, formatCompanyCode, isCompanyCode, mockCompanyCode } from '../api/auth.js';
 import { isMockMode } from '../api/client.js';
 import { escapeHtml } from '../utils/format.js';
 import { t } from '../i18n/index.js';
@@ -22,25 +22,24 @@ if (notice) {
 const goHome = (user) => location.replace(nextPageFor(user));
 
 // ---------- Менеджер чи власник ----------
-const ownerCode = form.elements.ownerCode;
+const companyCode = form.elements.companyCode;
 const HINTS = {
-  manager: 'Рейси, клієнти, автопарк і чат компанії.',
-  owner: 'Кабінет власника: менеджери, фінанси й налаштування компанії. Потрібен код власника.',
+  manager: 'Рейси, клієнти, автопарк і чат компанії. Потрібен код компанії від власника.',
+  owner: 'Кабінет власника: менеджери, фінанси й налаштування компанії.',
 };
 const role = () => form.elements.role.value;
 function syncRole() {
   const owner = role() === 'owner';
-  document.getElementById('ownerCodeField').hidden = !owner;
-  document.getElementById('forgotCodeBtn').hidden = !owner;
-  document.getElementById('forgotSpacer').hidden = owner;
+  // код компанії вводить лише менеджер — власник його й видає
+  document.getElementById('companyCodeField').hidden = owner;
   document.getElementById('roleHint').textContent = HINTS[role()];
-  // власник входить лише поштою, паролем і кодом — без Google
+  // власник входить поштою й паролем — без Google
   form.querySelectorAll('[data-social]').forEach((el) => (el.hidden = owner));
-  // реєстрація теж окрема: менеджер — за кодом запрошення, власник — створює компанію
+  form.querySelectorAll('.role-pick .seg__btn').forEach((l) => l.setAttribute('aria-pressed', String(l.querySelector('input').checked)));
+  // реєстрація теж окрема: менеджер — за кодом компанії, власник — створює компанію
   document.getElementById('registerHint').innerHTML = owner
     ? `${t('Ще немає компанії?')} <a href="/pages/register-owner.html">${t('Зареєструвати компанію')}</a>`
     : `${t('Немає акаунта?')} <a href="/pages/register.html">${t('Зареєструватися як менеджер')}</a>`;
-  form.querySelectorAll('.role-pick .seg__btn').forEach((l) => l.setAttribute('aria-pressed', String(l.querySelector('input').checked)));
   clearErrors(form);
 }
 form.querySelectorAll('[name=role]').forEach((r) => r.addEventListener('change', syncRole));
@@ -48,10 +47,9 @@ form.querySelectorAll('[name=role]').forEach((r) => r.addEventListener('change',
 if (new URLSearchParams(location.search).get('role') === 'owner') form.elements.role.value = 'owner';
 syncRole();
 
-ownerCode.addEventListener('input', () => {
-  const pos = ownerCode.selectionStart === ownerCode.value.length;
-  ownerCode.value = formatOwnerCode(ownerCode.value);
-  if (pos) ownerCode.setSelectionRange(ownerCode.value.length, ownerCode.value.length);
+// NVP-1234: великі літери й дефіс підставляються самі
+companyCode.addEventListener('input', () => {
+  companyCode.value = formatCompanyCode(companyCode.value);
 });
 
 form.addEventListener('submit', async (e) => {
@@ -61,12 +59,12 @@ form.addEventListener('submit', async (e) => {
   let ok = true;
   if (!isEmail(email.value)) (setFieldError(email, 'Введіть коректний email'), (ok = false));
   if (!password.value) (setFieldError(password, 'Введіть пароль'), (ok = false));
-  if (role() === 'owner' && !isOwnerCode(ownerCode.value)) (setFieldError(ownerCode, 'Введіть код власника у форматі OWN-XXXX-XXXX'), (ok = false));
+  if (role() === 'manager' && !isCompanyCode(companyCode.value)) (setFieldError(companyCode, 'Введіть код компанії у форматі NVP-1234'), (ok = false));
   if (!ok) return;
 
   try {
     const user = await withLoading(document.getElementById('loginSubmit'), () =>
-      login(email.value.trim(), password.value, { role: role(), ownerCode: ownerCode.value })
+      login(email.value.trim(), password.value, { role: role(), companyCode: companyCode.value })
     );
     goHome(user);
   } catch (err) {
@@ -76,42 +74,19 @@ form.addEventListener('submit', async (e) => {
       location.href = `/pages/verify-email.html?email=${encodeURIComponent(email.value.trim())}`;
       return;
     }
-    if (err.code === 'invalid_owner_code') {
-      ownerCode.select();
-      return setFieldError(ownerCode, err.message);
+    if (err.code === 'invalid_company_code') {
+      companyCode.select();
+      return setFieldError(companyCode, err.message);
     }
     showAlert(form, err.message);
   }
 });
 
-initSocialButtons({ onSuccess: goHome, onError: (msg) => showAlert(form, msg), text: 'signin_with' });
-
-// ---------- Забули код власника ----------
-const codeDialog = document.getElementById('forgotCodeDialog');
-const codeForm = document.getElementById('forgotCodeForm');
-document.getElementById('forgotCodeBtn').addEventListener('click', () => {
-  clearErrors(codeForm);
-  codeForm.elements.email.value = email.value.trim();
-  codeDialog.showModal();
-});
-codeDialog.addEventListener('click', (e) => {
-  if (e.target === codeDialog || e.target.closest('[data-cancel]')) codeDialog.close();
-});
-codeForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  clearErrors(codeForm);
-  const mail = codeForm.elements.email;
-  if (!isEmail(mail.value)) return setFieldError(mail, 'Введіть коректний email');
-  try {
-    const res = await withLoading(document.getElementById('forgotCodeSubmit'), () => resetOwnerCode(mail.value.trim()));
-    codeDialog.close();
-    email.value = mail.value.trim();
-    // у моках листа немає — показуємо новий код одразу
-    showAlert(form, res.mockCode ? t('{msg}. Режим моків: новий код — {code}', { msg: t(res.message), code: res.mockCode }) : res.message, 'success');
-    if (res.mockCode) ownerCode.value = res.mockCode;
-  } catch (err) {
-    showAlert(codeForm, err.message);
-  }
+initSocialButtons({
+  onSuccess: goHome,
+  onError: (msg) => showAlert(form, msg),
+  text: 'signin_with',
+  getCompanyCode: () => companyCode.value,
 });
 
 // ---------- Демо-акаунти (лише режим моків) ----------
@@ -120,13 +95,13 @@ if (isMockMode) {
   if (accounts.length) {
     document.getElementById('demoAccounts').hidden = false;
     document.getElementById('demoPassword').textContent = MOCK_PASSWORD;
+    document.getElementById('demoCompanyCode').textContent = mockCompanyCode();
     document.getElementById('demoList').innerHTML = accounts
       .sort((a, b) => (a.role === 'owner' ? 0 : 1) - (b.role === 'owner' ? 0 : 1))
       .map(
-        (a) => `<li><button class="demo-accounts__btn" type="button" data-email="${escapeHtml(a.email)}" data-role="${a.role}" data-code="${escapeHtml(a.code ?? '')}">
+        (a) => `<li><button class="demo-accounts__btn" type="button" data-email="${escapeHtml(a.email)}" data-role="${a.role}">
           <span class="role-badge role-badge--${a.role}">${a.role === 'owner' ? 'Власник' : 'Менеджер'}</span>
-          <span class="demo-accounts__name" data-no-i18n>${escapeHtml(a.name)}</span>
-          ${a.code ? `<code class="demo-accounts__code" data-no-i18n>${escapeHtml(a.code)}</code>` : ''}</button></li>`
+          <span class="demo-accounts__name" data-no-i18n>${escapeHtml(a.name)}</span></button></li>`
       )
       .join('');
     document.getElementById('demoList').addEventListener('click', (e) => {
@@ -136,7 +111,7 @@ if (isMockMode) {
       syncRole();
       email.value = btn.dataset.email;
       password.value = MOCK_PASSWORD;
-      ownerCode.value = btn.dataset.code;
+      companyCode.value = btn.dataset.role === 'manager' ? mockCompanyCode() : '';
       form.requestSubmit();
     });
   }

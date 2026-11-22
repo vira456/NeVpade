@@ -13,7 +13,9 @@
       var theme = get('theme', 'system');
       var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
       root.dataset.theme = dark ? 'dark' : 'light';
-      if (get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
+      // у вузькому вікні панель згорнута, доки людина сама її не розгорне (див. utils/prefs.js)
+      var narrow = window.matchMedia && window.matchMedia('(max-width: 1199px)').matches;
+      if (narrow ? sessionStorage.getItem('nevpade.sidebarNarrowOpen') !== '1' : get('sidebarCollapsed', false) === true) root.classList.add('sidebar-collapsed');
       if (get('lang', 'uk') === 'en') {
         root.lang = 'en';
         root.classList.add('i18n-pending');

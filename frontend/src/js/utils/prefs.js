@@ -26,9 +26,22 @@ export function setLang(lang) {
   location.reload(); // текст сторінки перекладається під час завантаження
 }
 
-export const isSidebarCollapsed = () => load('sidebarCollapsed', false) === true;
+// Вузьке вікно (< 1200 px): панель за замовчуванням згорнута до іконок, щоб таблицям вистачало місця.
+// Розгорнути її там можна кнопкою — це запам'ятовується лише до закриття вкладки.
+export const NARROW_QUERY = '(max-width: 1199px)';
+const isNarrow = () => window.matchMedia(NARROW_QUERY).matches;
+export const isSidebarCollapsed = () =>
+  isNarrow() ? sessionStorage.getItem('nevpade.sidebarNarrowOpen') !== '1' : load('sidebarCollapsed', false) === true;
 
 export function setSidebarCollapsed(collapsed) {
-  save('sidebarCollapsed', collapsed);
+  if (isNarrow()) sessionStorage.setItem('nevpade.sidebarNarrowOpen', collapsed ? '0' : '1');
+  else save('sidebarCollapsed', collapsed);
   document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+}
+
+/** Вікно змінило ширину — підлаштовуємо панель */
+export function syncSidebarToWidth() {
+  const collapsed = isSidebarCollapsed();
+  document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+  return collapsed;
 }

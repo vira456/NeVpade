@@ -8,7 +8,7 @@ import { escapeHtml } from './format.js';
 import { withThemeReveal } from './motion.js';
 import { icons, logoMark } from './icons.js';
 import { initReminders } from './reminders.js';
-import { getTheme, setTheme, getLang, setLang, isSidebarCollapsed, setSidebarCollapsed } from './prefs.js';
+import { getTheme, setTheme, getLang, setLang, isSidebarCollapsed, setSidebarCollapsed, syncSidebarToWidth, NARROW_QUERY } from './prefs.js';
 import { countUnread } from '../api/chat.js';
 
 export const DASHBOARD = '/pages/dashboard.html';
@@ -49,7 +49,6 @@ const OWNER_SECTIONS = [
       { href: OWNER_PAGES.overview, label: 'Огляд', icon: icons.analytics },
       { href: OWNER_PAGES.team, label: 'Менеджери', icon: icons.team, badge: 'requests' },
       { href: OWNER_PAGES.finance, label: 'Фінанси', icon: icons.wallet },
-      { href: OWNER_PAGES.settings, label: 'Компанія', icon: icons.settings },
     ],
   },
 ];
@@ -112,7 +111,11 @@ export function renderLayout({ access = 'manager' } = {}) {
   // звіряємось із сервером і, якщо щось змінилось, перемальовуємо сторінку з новими правами
   refreshSession().then((res) => {
     if (!res?.changed) return;
-    if (signupIncomplete(res.user)) location.replace(nextPageFor(res.user));
+    if (signupIncomplete(res.user)) return location.replace(nextPageFor(res.user));
+    // сторінка й далі доступна — просто перемальовуємо з новими правами, інакше — на свою головну
+    const nowOwner = roleOf(res.user) === 'owner';
+    const stillAllowed = access === 'any' || (access === 'owner') === nowOwner;
+    if (stillAllowed) location.reload();
     else location.replace(homeFor(res.user));
   });
 
@@ -171,7 +174,7 @@ export function renderLayout({ access = 'manager' } = {}) {
         </div>
       </div>
       <div class="sidebar__user">
-        <a class="sidebar__profile ${current === profileHref ? 'is-active' : ''}" href="${profileHref}" title="${isOwnerUser ? 'Мій акаунт' : 'Мій профіль'}" ${current === profileHref ? 'aria-current="page"' : ''}></a>
+        <a class="sidebar__profile ${current === profileHref ? 'is-active' : ''}" href="${profileHref}" title="${isOwnerUser ? 'Мій акаунт і компанія' : 'Мій профіль'}" ${current === profileHref ? 'aria-current="page"' : ''}></a>
         <button class="sidebar__logout" id="logoutBtn" type="button" title="Вийти" aria-label="Вийти">${icons.logout}</button>
       </div>
     </div>
@@ -188,6 +191,9 @@ export function renderLayout({ access = 'manager' } = {}) {
     setSidebarCollapsed(collapsed);
     toggle.setAttribute('aria-expanded', String(!collapsed));
   });
+  // ширина вікна змінилась (вужче / ширше 1200 px) — панель згортається чи розгортається сама
+  syncSidebarToWidth();
+  window.matchMedia(NARROW_QUERY).addEventListener('change', () => toggle.setAttribute('aria-expanded', String(!syncSidebarToWidth())));
 
   sidebar.querySelectorAll('[data-theme-set]').forEach((btn) =>
     btn.addEventListener('click', (e) => {

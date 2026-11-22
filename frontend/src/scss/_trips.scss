@@ -30,8 +30,8 @@
   .trip-tr__price { font-family: $font-display; font-size: 17px; font-weight: 600; }
   .trip-tr__actions { white-space: nowrap; text-align: right; padding-right: 10px; }
 
-  // Планшет і телефон: рядки таблиці стають картками (7 колонок на 820px не вміщаються)
-  @media (max-width: $bp-tablet) {
+  // Вузьке вікно: рядки таблиці стають картками (7 колонок у ~850 px не вміщаються)
+  @media (max-width: $bp-trips-cards) {
     thead { display: none; }
 
     tbody, tr, td { display: block; }
@@ -162,7 +162,7 @@
 // Стовпець «Менеджер» видно лише в режимі «Уся компанія»
 .trips-table .col-manager { display: none; }
 .trips-table.show-manager .col-manager { display: table-cell; white-space: nowrap; }
-@media (max-width: $bp-tablet) { .trips-table.show-manager .col-manager { display: block; grid-column: 1 / -1; font-size: 14px; } }
+@media (max-width: $bp-trips-cards) { .trips-table.show-manager .col-manager { display: block; grid-column: 1 / -1; font-size: 14px; } }
 
 .trip-card__owner {
   display: flex;
