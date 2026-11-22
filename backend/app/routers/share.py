@@ -32,12 +32,11 @@ router = APIRouter(tags=["Viber"])
 SHARE_TTL = timedelta(days=7)  # скільки діє посилання для замовника
 SHARE_RENEW_BEFORE = timedelta(days=2)  # якщо лишилось менше — видаємо нове
 
-# Які документи бачить замовник. Лише ті, що потрібні для завантаження й пропуску на склад;
-# ІПН, медична довідка, тахограф та «інше» лишаються всередині компанії.
+# Які документи бачить замовник: водій — копія паспорта й посвідчення водія, машина — техпаспорт і страховка.
+# Решта (ІПН, медична довідка, тахограф, техогляд, ліцензія, оренда, «інше») лишається всередині компанії.
 SHARED_TYPES = {
     "drivers": {"passport": "Паспорт водія", "license": "Посвідчення водія"},
-    "vehicles": {"registration": "Техпаспорт", "insurance": "Страховий поліс", "inspection": "Техогляд",
-                 "license": "Ліцензія на перевезення", "lease": "Договір оренди авто"},
+    "vehicles": {"registration": "Техпаспорт", "insurance": "Страховий поліс"},
 }
 _OWNER = {"drivers": "driver", "vehicles": "vehicle"}
 
@@ -164,8 +163,11 @@ async def client_message(trip_id: str, request: Request, user: dict = Depends(cu
         expires_at=iso(expires_at),
         viber_url=f"viber://chat?number={quote(phone)}&draft={quote(text)}" if phone else None,
         forward_url=f"viber://forward?text={quote(text)}",
-        documents=[SharedDocumentOut(owner=_OWNER[d["owner"]], type=d["type"], label=_label(d), name=d["name"],
-                                     valid_until=d.get("validUntil")) for d in valid],
+        documents=[SharedDocumentOut(
+            owner=_OWNER[d["owner"]], type=d["type"], label=_label(d), name=d["name"], mime=d["mime"],
+            valid_until=d.get("validUntil"),
+            url=str(request.url_for("client_share_file", token=share["_id"], doc_id=str(d["_id"]))),
+        ) for d in valid],
         warnings=warnings,
     )
 
@@ -213,11 +215,13 @@ border-color:#374151}.muted,.k{color:#9ca3af}}
 """
 
 
-def _page(title: str, body: str, status_code: int = 200, description: str = "") -> HTMLResponse:
+def _page(title: str, body: str, status_code: int = 200, description: str = "", image: str | None = None) -> HTMLResponse:
+    # og:image — прев'ю посилання у Viber показує фото документа
+    og_image = f'<meta property="og:image" content="{escape(image)}">' if image else ""
     html = f"""<!doctype html><html lang="uk"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>{escape(title)}</title><meta property="og:title" content="{escape(title)}">
-<meta property="og:description" content="{escape(description)}"><style>{_PAGE_CSS}</style></head>
+<meta property="og:description" content="{escape(description)}">{og_image}<style>{_PAGE_CSS}</style></head>
 <body><main>{body}</main></body></html>"""
     return HTMLResponse(html, status_code=status_code, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 
@@ -253,8 +257,11 @@ async def client_share_page(token: str, request: Request, database: AsyncDatabas
     if manager:
         people.append(_person("Менеджер", [escape(manager.get("name", "")), _tel(manager.get("phone"))]))
 
+    def file_url(doc: dict) -> str:
+        return str(request.url_for("client_share_file", token=token, doc_id=str(doc["_id"])))
+
     def tile(doc: dict) -> str:
-        url = escape(str(request.url_for("client_share_file", token=token, doc_id=str(doc["_id"]))))
+        url = escape(file_url(doc))
         preview = (f'<img src="{url}" alt="" loading="lazy">' if doc["mime"].startswith("image/")
                    else '<div class="pdf">PDF</div>')
         valid_until = f'<br><span class="muted">дійсний до {_date(doc["validUntil"])}</span>' if doc.get("validUntil") else ""
@@ -268,7 +275,9 @@ async def client_share_page(token: str, request: Request, database: AsyncDatabas
 <div class="card"><div class="row">{"".join(people)}</div></div>
 <div class="card"><h2>Документи водія й машини</h2><div class="docs">{docs}</div></div>
 <p class="muted">Натисніть на документ, щоб відкрити його повністю.</p>"""
-    return _page(f"Документи на рейс {route}", body, description=f"Водій і машина на рейс №{trip.get('number', '')}")
+    first_photo = next((file_url(d) for d in valid if d["mime"].startswith("image/")), None)
+    return _page(f"Документи на рейс {route}", body, description=f"Водій і машина на рейс №{trip.get('number', '')}",
+                 image=first_photo)
 
 
 @router.get("/share/{token}/files/{doc_id}", name="client_share_file", include_in_schema=False)

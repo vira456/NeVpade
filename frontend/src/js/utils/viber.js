@@ -1,4 +1,7 @@
 // Формування структурованого повідомлення для диспетчеризації у Viber (URI Scheme)
+import { clientMessage } from '../api/trips.js';
+import { showToast } from './toast.js';
+import { confirmDialog } from './confirm.js';
 
 // Текст повідомлення водію (кнопка «Viber» на сторінках рейсів і карти)
 const VIBER_TEMPLATE = [
@@ -38,6 +41,72 @@ export const buildTripMessage = (trip, driver, vehicle) =>
 export function sendToViber(text) {
   // Відкриває Viber з вибором контакту для пересилання
   window.location.href = `viber://forward?text=${encodeURIComponent(text)}`;
+}
+
+// Телефон: лише там у меню «Поділитися» є Viber (на ПК системне меню Windows/macOS Viber зазвичай не показує)
+const isPhone = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+// Фото й PDF документів (паспорт і права водія, техпаспорт і страховка машини) як файли для «Поділитися»
+async function documentFiles(documents) {
+  const files = await Promise.all(
+    documents.map(async (d) => {
+      try {
+        const res = await fetch(d.url);
+        if (!res.ok) return null;
+        const ext = d.name.includes('.') ? d.name.slice(d.name.lastIndexOf('.')) : d.mime === 'application/pdf' ? '.pdf' : '.jpg';
+        return new File([await res.blob()], `${d.label}${ext}`, { type: d.mime });
+      } catch {
+        return null;
+      }
+    })
+  );
+  return files.filter(Boolean);
+}
+
+// Меню «Поділитися» з фото й текстом. true — надіслано або користувач сам закрив меню
+async function shareFiles(files, text) {
+  try {
+    await navigator.share({ files, text });
+    return true;
+  } catch (err) {
+    if (err.name === 'AbortError') return true; // закрили меню — нічого не робимо
+    if (err.name !== 'NotAllowedError') return false;
+    // Фото вантажились довго, і браузер «забув» натискання — просимо натиснути ще раз
+    const ok = await confirmDialog({ title: 'Фото документів готові', text: 'Надіслати їх замовнику у Viber?', confirmText: 'Надіслати' });
+    if (!ok) return true;
+    return navigator.share({ files, text }).then(() => true, (e) => e.name === 'AbortError');
+  }
+}
+
+/**
+ * Замовнику рейсу у Viber. Бекенд готує повідомлення (хто пише, вантаж, водій, авто, посилання на документи)
+ * і список документів: паспорт і права водія, техпаспорт і страховка машини.
+ * - Телефон: меню «Поділитися» з фото документів і текстом → Viber → контакт замовника → фото й текст приходять разом.
+ * - Комп'ютер (або телефон без «Поділитися» з файлами): viber://chat?number=<номер замовника>&draft=<текст> —
+ *   Viber відкривається одразу в чаті з замовником, текст набрано; фото — за посиланням у тексті (з прев'ю).
+ * Текст ще й копіюється: якщо Viber не підставить його в чат, його можна вставити.
+ * fallbackText — для режиму моків (сервера немає): Viber з вибором контакту, як раніше.
+ */
+export async function sendToClient(tripId, fallbackText = '') {
+  let msg;
+  try {
+    msg = await clientMessage(tripId);
+  } catch (err) {
+    showToast(err.message, 'error'); // напр. «Спершу призначте на рейс водія й машину»
+    return;
+  }
+  if (!msg) return sendToViber(fallbackText);
+  await copyText(msg.text).catch(() => {});
+  msg.warnings.forEach((w) => showToast(w, 'info', 6000)); // немає номера замовника, прострочені документи…
+
+  if (isPhone() && msg.documents.length && navigator.canShare) {
+    const files = await documentFiles(msg.documents);
+    if (files.length && navigator.canShare({ files, text: msg.text })) {
+      if (msg.phone) showToast(`У Viber оберіть замовника: ${msg.phone}`, 'info', 8000);
+      if (await shareFiles(files, msg.text)) return;
+    }
+  }
+  window.location.href = msg.viberUrl ?? msg.forwardUrl;
 }
 
 export async function copyText(text) {

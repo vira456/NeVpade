@@ -381,7 +381,9 @@ class SharedDocumentOut(CamelModel):
     type: str
     label: str  # «Посвідчення водія», «Техпаспорт» …
     name: str
+    mime: str  # image/jpeg | image/png | image/webp | application/pdf
     valid_until: str | None = None
+    url: str  # сам файл (без входу, поки діє посилання) — щоб надіслати фото у Viber з телефона
 
 
 class ClientMessageOut(CamelModel):
