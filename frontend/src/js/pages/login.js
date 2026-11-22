@@ -1,9 +1,9 @@
 import { initAuthPage, rememberEmail } from '../utils/auth-page.js';
-import { login, loginWithGoogle, nextPageFor, demoAccounts, MOCK_PASSWORD, formatCompanyCode, isCompanyCode, mockCompanyCode } from '../api/auth.js';
+import { login, nextPageFor, demoAccounts, MOCK_PASSWORD, formatCompanyCode, isCompanyCode, mockCompanyCode } from '../api/auth.js';
 import { isMockMode } from '../api/client.js';
 import { escapeHtml } from '../utils/format.js';
 import { t } from '../i18n/index.js';
-import { initGoogleButton, stashGoogleCredential } from '../utils/social.js';
+import { initSocialButtons } from '../utils/social.js';
 import { isEmail, setFieldError, clearErrors, showAlert, withLoading } from '../utils/validation.js';
 
 initAuthPage();
@@ -33,6 +33,8 @@ function syncRole() {
   // код компанії вводить лише менеджер — власник його й видає
   document.getElementById('companyCodeField').hidden = owner;
   document.getElementById('roleHint').textContent = HINTS[role()];
+  // власник входить поштою й паролем — без Google
+  form.querySelectorAll('[data-social]').forEach((el) => (el.hidden = owner));
   form.querySelectorAll('.role-pick .seg__btn').forEach((l) => l.setAttribute('aria-pressed', String(l.querySelector('input').checked)));
   // реєстрація теж окрема: менеджер — за кодом компанії, власник — створює компанію
   document.getElementById('registerHint').innerHTML = owner
@@ -57,7 +59,7 @@ form.addEventListener('submit', async (e) => {
   let ok = true;
   if (!isEmail(email.value)) (setFieldError(email, 'Введіть коректний email'), (ok = false));
   if (!password.value) (setFieldError(password, 'Введіть пароль'), (ok = false));
-  if (role() === 'manager' && !isCompanyCode(companyCode.value)) (setFieldError(companyCode, companyCode.value ? 'Код має вигляд NVP-1234' : 'Введіть код компанії'), (ok = false));
+  if (role() === 'manager' && !isCompanyCode(companyCode.value)) (setFieldError(companyCode, 'Введіть код компанії у форматі NVP-1234'), (ok = false));
   if (!ok) return;
 
   try {
@@ -72,44 +74,19 @@ form.addEventListener('submit', async (e) => {
       location.href = `/pages/verify-email.html?email=${encodeURIComponent(email.value.trim())}`;
       return;
     }
-    showLoginError(err);
+    if (err.code === 'invalid_company_code') {
+      companyCode.select();
+      return setFieldError(companyCode, err.message);
+    }
+    showAlert(form, err.message);
   }
 });
 
-// Помилки входу — біля поля, якого вони стосуються
-function showLoginError(err) {
-  if (err.code === 'company_code_required' || err.code === 'invalid_company_code') {
-    // менеджер на вкладці «Власник» — просто перемикаємо на «Менеджер» і просимо код
-    if (role() === 'owner') {
-      form.elements.role.value = 'manager';
-      syncRole();
-    }
-    companyCode.focus();
-    companyCode.select();
-    return setFieldError(companyCode, err.message);
-  }
-  showAlert(form, err.message);
-}
-
-// ---------- Google: і для менеджера, і для власника ----------
-initGoogleButton({
-  text: 'signin_with',
-  mockRole: role,
+initSocialButtons({
+  onSuccess: goHome,
   onError: (msg) => showAlert(form, msg),
-  onCredential: async (credential) => {
-    clearErrors(form);
-    try {
-      goHome(await loginWithGoogle(credential, { role: role(), companyCode: isCompanyCode(companyCode.value) ? companyCode.value : undefined }));
-    } catch (err) {
-      // акаунта ще немає — на реєстрацію, дані з Google підставляться самі
-      if (err.code === 'not_registered') {
-        stashGoogleCredential(credential);
-        location.href = role() === 'owner' ? '/pages/register-owner.html' : '/pages/register.html';
-        return;
-      }
-      showLoginError(err);
-    }
-  },
+  text: 'signin_with',
+  getCompanyCode: () => companyCode.value,
 });
 
 // ---------- Демо-акаунти (лише режим моків) ----------

@@ -10,7 +10,7 @@ export async function compressImage(file) {
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }); // враховує поворот фото з телефона
   } catch {
-    throw new Error('Не вдалося відкрити фото. Спробуйте JPG або PNG');
+    throw new Error('Не вдалося відкрити фото. Збережіть його як JPG або PNG і спробуйте ще раз.');
   }
   const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
   if (scale === 1 && file.size <= KEEP_AS_IS) {

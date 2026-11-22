@@ -18,7 +18,7 @@ const resendBtn = document.getElementById('resendBtn');
 
 if (!email) location.replace('/pages/register.html');
 if (addMode) document.getElementById('steps').hidden = true;
-if (socialMode) document.getElementById('steps').innerHTML = '<span class="steps__item is-done">1. Дані</span><span class="steps__item is-active">2. Телефон</span>';
+if (socialMode) document.getElementById('steps').innerHTML = '<span class="steps__item is-done">1. Компанія</span><span class="steps__item is-active">2. Телефон</span>';
 
 const code = initCodeInputs(document.getElementById('codeInputs'), () => codeForm.requestSubmit());
 

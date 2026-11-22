@@ -39,7 +39,7 @@ export function loadGoogleMaps() {
   loading ??= new Promise((resolve, reject) => {
     // Google викликає цю функцію, якщо ключ недійсний або API не увімкнено
     window.gm_authFailure = () => {
-      const err = new Error('Ключ Google Maps недійсний');
+      const err = new Error('Ключ Google Maps недійсний або Maps JavaScript API не увімкнено');
       reject(err);
       authFailureHandlers.forEach((h) => h(err));
     };
@@ -48,7 +48,7 @@ export function loadGoogleMaps() {
     const s = document.createElement('script');
     s.src = `https://maps.googleapis.com/maps/api/js?key=${KEY}&language=uk&region=UA&callback=__onGoogleMapsLoaded`;
     s.async = true;
-    s.onerror = () => reject(new Error('Не вдалося завантажити карту. Перевірте інтернет'));
+    s.onerror = () => reject(new Error('Не вдалося завантажити Google Maps. Перевірте інтернет'));
     document.head.appendChild(s);
   });
   return loading;

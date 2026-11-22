@@ -1167,39 +1167,7 @@ export default {
     "Назву й місто бачать менеджери у своєму кабінеті.": "Managers see the name and city in their workspace.",
     "Менеджерів": "Managers",
     "Код і менеджери — на сторінці «Менеджери»": "Company code and managers are on the “Managers” page",
-    "Мій акаунт і компанія": "My account and company",
-    "Забагато спроб. Спробуйте через 15 хвилин": "Too many attempts. Try again in 15 minutes",
-    "Доступ до компанії закрито. Зверніться до власника": "Access to the company is closed. Contact the owner",
-    "Цей акаунт входить через Google": "This account signs in with Google",
-    "Введіть код компанії": "Enter the company code",
-    "Невірний код компанії": "Wrong company code",
-    "Цей email уже зареєстровано": "This email is already registered",
-    "Компанію з таким кодом не знайдено": "No company with this code",
-    "Компанію створюють на сторінці «Реєстрація компанії»": "Companies are created on the “Register company” page",
-    "Google не передав пошту. Спробуйте ще раз": "Google didn't share the email. Try again",
-    "Цей Google-акаунт ще не зареєстровано": "This Google account isn't registered yet",
-    "Цей Google-акаунт уже зареєстровано. Увійдіть": "This Google account is already registered. Sign in",
-    "Не вдалося завантажити Google. Перевірте інтернет": "Couldn't load Google. Check your connection",
-    "Пароль не відповідає вимогам": "The password doesn't meet the requirements",
-    "Цей номер уже зареєстровано": "This number is already registered",
-    "Не вдалося отримати дані з Google. Спробуйте ще раз": "Couldn't get data from Google. Try again",
-    "Код має вигляд NVP-1234": "The code looks like NVP-1234",
-    "1. Дані": "1. Details",
-    "Зареєструватися через Google": "Sign up with Google",
-    "Інший спосіб": "Use another way",
-    "або заповніть форму": "or fill in the form",
-    "Браузер не дозволяє зберігати файли": "The browser doesn't allow saving files",
-    "Не вдалося відкрити фото. Спробуйте JPG або PNG": "Couldn't open the photo. Try JPG or PNG",
-    "Ключ Google Maps недійсний": "The Google Maps key is invalid",
-    "Не вдалося завантажити карту. Перевірте інтернет": "Couldn't load the map. Check your connection",
-    "Власник не може змінити компанію": "The owner can't change company",
-    "Себе прибрати не можна": "You can't remove yourself",
-    "Рейси можна передати лише менеджеру": "Trips can only go to a manager",
-    "Замало місця в браузері для фото": "Not enough browser storage for the photo",
-    "Della тимчасово не відповідає. Спробуйте за хвилину": "Della isn't responding right now. Try again in a minute",
-    "Вставте посилання на пошук Della": "Paste a Della search link",
-    "Della не відповідає. Спробуйте пізніше": "Della isn't responding. Try again later",
-    "Андрій Мельник": "Andrii Melnyk"
+    "Мій акаунт і компанія": "My account and company"
   },
   patterns: [
     [
@@ -1781,14 +1749,6 @@ export default {
     [
         "Усього: {#n}",
         "Total: {n}"
-    ],
-    [
-        "Машина в рейсі {n}. Спершу завершіть рейс",
-        "The vehicle is on trip {n}. Finish the trip first"
-    ],
-    [
-        "Водій у рейсі {n}. Спершу завершіть рейс",
-        "The driver is on trip {n}. Finish the trip first"
     ]
   ],
 };

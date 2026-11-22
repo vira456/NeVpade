@@ -115,12 +115,11 @@
 ```
 `role` — вкладка, яку обрала людина на сторінці входу.
 - **Менеджер** входить поштою, паролем і **кодом компанії** (`companyCode`, той самий `inviteCode`, що й при реєстрації). Код бачить лише власник у кабінеті; змінив код (`POST /company/invite`) — менеджери входять уже з новим, старий не працює ні для реєстрації, ні для входу
-- **Власник** входить поштою й паролем; `companyCode` ігнорується
-- Вкладка не та — не помилка: власник на вкладці «Менеджер» просто входить у свій кабінет, менеджеру на вкладці «Власник» бракує коду → 400 `company_code_required` (фронт сам перемкне вкладку)
+- **Власник** входить поштою й паролем
 - 200 → **AuthResponse**
 - 401 `invalid_credentials` — «Невірна пошта або пароль» (однаково для неіснуючої пошти й хибного пароля)
-- 401 `use_google` — «Цей акаунт входить через Google» (акаунт створено через Google, пароля немає)
-- 400 `company_code_required` — «Введіть код компанії»; 401 `invalid_company_code` — «Невірний код компанії» (обидва — лише після правильного пароля)
+- 401 `invalid_company_code` — «Невірний код компанії. Уточніть актуальний код у власника» (перевіряти лише після правильного пароля)
+- 403 `wrong_role` — акаунт є, але вкладка не та: «Це акаунт власника. Оберіть вгорі «Власник»» / «Це акаунт менеджера…»
 - 403 `email_not_verified` — фронт перекидає на сторінку введення коду (бекенду варто заодно надіслати новий код)
 - 403 `not_in_company` — менеджера прибрали з компанії
 - 429 `too_many_attempts` — 5 невдалих спроб поспіль (пароль чи код компанії) → пауза 15 хвилин для цієї пошти
@@ -138,62 +137,53 @@
 - 200 `{ "message": "Пароль змінено" }`
 - 400 `invalid_code` / `code_expired` — як у verify-email
 
-### Вхід і реєстрація через Google — загальна схема
+### Вхід і реєстрація менеджера через Google — загальна схема
 
-Google доступний **обом ролям** — і на вході, і на обох сторінках реєстрації. Дані з Google (ім'я, пошта, фото) фронт підставляє у форму сам, людина додає лише компанію й телефон.
+Одна кнопка «Продовжити з Google» і для входу, і для реєстрації: що саме відбулось, вирішує бекенд.
 
 ```
-Вхід:        кнопка Google ──► POST /auth/google ──┬─ акаунт є ──► AuthResponse ──► кабінет / аналітика
-                                                 └─ 404 not_registered ──► сторінка реєстрації (менеджера чи власника,
-                                                                            за вкладкою) з уже заповненими ім'ям і поштою
-Реєстрація:  кнопка Google ──► форма: ім'я й пошта з Google, без пароля
-             + компанія (власник: назва, місто; менеджер: код) + телефон
-                 ──► POST /auth/register-google ──► SMS ──► /pages/verify-phone.html?mode=social
-                 ──► POST /auth/verify-phone ──► власник: кабінет; менеджер: заявка власнику ──► /pages/pending.html
+Кнопка Google ──► POST /auth/google ──┬─ користувач уже є (за googleId або email) ──► AuthResponse ──► /pages/dashboard.html
+                                      │
+                                      └─ новий ──► створити без компанії, isNew: true ──► /pages/onboarding.html
+                                                   «Завершіть реєстрацію»: ім'я, код компанії, телефон
+                                                       │
+                                                       ▼
+                                            POST /auth/complete-signup ──► SMS ──► /pages/verify-phone.html?mode=social
+                                                       │
+                                                       ▼
+                                            POST /auth/verify-phone ──► заявка власнику ──► /pages/pending.html
 ```
 Facebook не використовуємо.
 
 Куди вести користувача, фронт вирішує лише за полями `user` (`nextPageFor` у `frontend/src/js/api/auth.js`):
-1. `companyId: null` → `/pages/onboarding.html` (наприклад, менеджера прибрали з компанії — він вводить новий код)
+1. `companyId: null` → `/pages/onboarding.html`
 2. `phoneVerified: false` → `/pages/verify-phone.html` (якщо `phone` уже є — одразу поле для коду)
 3. `memberStatus: "pending" | "rejected"` → `/pages/pending.html` (чекаємо рішення власника)
 4. інакше → кабінет власника або аналітика менеджера
 
 Те саме перевіряє кожна сторінка застосунку, тож якщо людина закрила вкладку посеред реєстрації, наступного разу вона повернеться на потрібний крок.
 
-**Перевірка credential** (для обох ендпоінтів нижче). Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`: `aud` = наш `GOOGLE_CLIENT_ID`, `iss` = `accounts.google.com`, `email_verified: true`. Беремо `sub`, `email`, `name`, `picture`. Недійсний токен → 401 `invalid_credential`.
-
 ### POST `/auth/google` — вхід через Google
 ```json
-{ "credential": "<ID-токен від Google Identity Services>", "role": "manager", "companyCode": "NVP-4821" }
+{ "credential": "<ID-токен від Google Identity Services>", "companyCode": "NVP-4821" }
 ```
-- Шукає користувача спершу за `googleId` (= `sub`), потім за `email` (знайшов за email — прив'язує `googleId`)
-- **Нового акаунта не створює**: не знайшов → 404 `not_registered` — «Цей Google-акаунт ще не зареєстровано» (фронт відкриває реєстрацію з даними з Google)
-- Власник входить без коду; менеджер — з кодом компанії: немає → 400 `company_code_required`, невірний → 401 `invalid_company_code`
-- Менеджер, який ще не підтвердив телефон, отримує токен з `phoneVerified: false` (код компанії тоді не потрібен) — фронт веде на SMS-код
-- 200 → **AuthResponse**; 403 `not_in_company` — менеджера прибрали з компанії
+`companyCode` — з поля «Код компанії» на сторінці входу. Наявний менеджер без правильного коду → 401 `invalid_company_code` (як і при вході паролем); новому користувачу код не потрібен — він введе його на «Завершіть реєстрацію».
+- Бекенд перевіряє підпис токена (Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`): `aud` = наш `GOOGLE_CLIENT_ID`, `iss` = `accounts.google.com`, `email_verified: true`. Бере `sub`, `email`, `name`, `picture`
+- Шукає користувача спершу за `googleId` (= `sub`), потім за `email`:
+  - знайшов за email (раніше реєструвався паролем) → прив'язує `googleId`, далі звичайний вхід
+  - не знайшов → створює: `emailVerified: true` (пошту підтвердив Google), `password: null`, `phone: null`, `phoneVerified: false`, `companyId: null`, `role: null`
+- 200 → **AuthResponse** + `"isNew": true` для щойно створеного; 401 — токен недійсний
+- Поки `companyId` або `phoneVerified` не заповнено, токен дає доступ лише до `/auth/me`, `/auth/complete-signup`, `/auth/phone`, `/auth/verify-phone`, `/auth/resend-code`; решта → `403 { "code": "signup_incomplete" }`
 
-### POST `/auth/register-google` — реєстрація через Google
-```json
-{ "credential": "<ID-токен>", "name": "Олена Коваль", "phone": "+380671234567", "role": "manager", "company": { "mode": "join", "code": "NVP-4821" } }
-{ "credential": "<ID-токен>", "name": "Андрій Мельник", "phone": "+380501112233", "role": "owner", "company": { "mode": "create", "name": "ТОВ «Західтранс»", "city": "Хмельницький" } }
-```
-- Пошту й фото бере з credential (не з тіла запиту); `name` — з форми (людина могла виправити ім'я з Google)
-- Створює акаунт: `googleId`, `emailVerified: true`, `password: null`, `phoneVerified: false`; власнику — компанію з новим `inviteCode`, менеджеру — заявку, яка дійде до власника після підтвердження телефону
-- Надсилає SMS з кодом; листа на пошту немає — її вже підтвердив Google
-- 201 `{ "email": "olena.koval@gmail.com", "phone": "+380671234567", "next": "verify_phone" }`
-- 409 `email_taken` — «Цей Google-акаунт уже зареєстровано. Увійдіть»; 404 `company_not_found`; 409 `phone_taken`; 422 — невалідні поля
-- Далі `POST /auth/verify-phone` з цією поштою → **AuthResponse**
-- Вхід паролем у такий акаунт → 401 `use_google`
-
-### POST `/auth/complete-signup` — приєднатися до компанії (з токеном)
+### POST `/auth/complete-signup` — «Завершіть реєстрацію» (з токеном)
 ```json
 { "name": "Олена Коваль", "phone": "+380671234567", "company": { "mode": "join", "code": "NVP-4821" } }
 ```
-Для того, хто вже має акаунт, але без компанії (`companyId: null`, наприклад, його прибрали з компанії). Лише `join` + `code`; `create` → 400 `use_register_owner`.
-- Зберігає ім'я, компанію, роль `manager` і телефон, надсилає SMS з кодом
+Через Google реєструються **лише менеджери** (`join` + `code`). Власник реєструється поштою й паролем — інакше йому нічим підтвердити видачу коду власника. `create` → 400 `owner_needs_password`.
+- Зберігає ім'я (Google може дати псевдонім — користувач його виправив), компанію, роль `manager` і телефон, надсилає SMS з кодом
 - 200 `{ "user": { ...companyId, companyName, role, phone, "phoneVerified": false }, "message": "Код надіслано в SMS" }`
 - 404 `company_not_found`, 409 `phone_taken`, 422 — ті самі правила, що в `/auth/register`
+- 409 `already_completed` — у користувача вже є компанія
 - Далі фронт відкриває введення коду → `POST /auth/verify-phone` → **AuthResponse** з `phoneVerified: true`
 
 ### GET `/auth/me`

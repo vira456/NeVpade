@@ -11,7 +11,7 @@ const cache = new Map(); // url → { at, html }
 export function dellaPath(url) {
   const m = String(url).trim().match(DELLA_URL);
   if (!m || !m[1].startsWith('/search/')) {
-    throw new ApiError('Вставте посилання на пошук Della', 400, 'bad_url');
+    throw new ApiError('Вставте посилання на сторінку пошуку Della, наприклад https://della.ua/search/….html', 400, 'bad_url');
   }
   return m[1];
 }
@@ -21,7 +21,7 @@ async function download(path) {
     window.dispatchEvent(new Event('api:start'));
     try {
       const res = await fetch(`/della${path}`, { headers: { Accept: 'text/html' } });
-      if (!res.ok) throw new ApiError(`Della не відповідає. Спробуйте пізніше`, res.status);
+      if (!res.ok) throw new ApiError(`Della не відповідає (код ${res.status}). Спробуйте пізніше.`, res.status);
       return await res.text();
     } catch (err) {
       if (err instanceof ApiError) throw err;
@@ -41,7 +41,7 @@ export async function fetchDellaPage(url, { force = false } = {}) {
   if (hit && (!force || Date.now() - hit.at < MIN_INTERVAL)) return { html: hit.html, at: hit.at };
   const html = await download(path);
   if (!/request_card|Знайдено/.test(html)) {
-    throw new ApiError('Della тимчасово не відповідає. Спробуйте за хвилину', 502, 'no_listings');
+    throw new ApiError('Della не віддала список вантажів (можливо, тимчасове обмеження). Спробуйте за хвилину.', 502, 'no_listings');
   }
   const entry = { at: Date.now(), html };
   cache.set(path, entry);
