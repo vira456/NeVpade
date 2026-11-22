@@ -139,40 +139,6 @@ export const updateCompany = (data) =>
   });
 
 /**
- * Передати компанію менеджеру: він стає власником, а ви — менеджером і далі працюєте в інтерфейсі менеджера.
- * Власник рейсів не веде, тож активні рейси нового власника переходять до tripsTo (іншого менеджера);
- * якщо вони є, а tripsTo немає → 409 transfer_required.
- * Відповідь: { user } — ви з новою роллю.
- */
-export const transferOwnership = (memberId, { tripsTo = null } = {}) =>
-  request('/company/transfer-ownership', {
-    method: 'POST',
-    body: { memberId, ...(tripsTo && { tripsTo }) },
-    mock: () => {
-      const members = mockMembers();
-      assertOwner();
-      if (memberId === meId()) throw new ApiError('Ви вже власник компанії', 409, 'same_member');
-      if (!members.some((m) => m.id === memberId && m.role !== 'owner')) throw new ApiError('Передати компанію можна лише менеджеру цієї компанії', 404, 'member_not_found');
-      const trips = mockTrips();
-      const active = trips.filter((t) => t.managerId === memberId && ['planned', 'in_progress'].includes(t.status));
-      if (active.length && !tripsTo) throw new ApiError('Оберіть, кому перейдуть активні рейси нового власника', 409, 'transfer_required');
-      if (active.length && !members.some((m) => m.id === tripsTo && m.role !== 'owner' && m.id !== memberId)) {
-        throw new ApiError('Рейси можна передати лише іншому менеджеру компанії', 422, 'invalid_transfer');
-      }
-      active.forEach((t) => {
-        (t.history ??= []).push({ at: new Date().toISOString(), by: meId(), action: 'transferred', from: memberId, to: tripsTo });
-        t.managerId = tripsTo;
-      });
-      if (active.length) saveTrips(trips);
-      save('mock.roles', { ...(load('mock.roles') ?? {}), [memberId]: 'owner', [meId()]: 'manager' });
-      return { user: { ...getCurrentUser(), role: 'manager' } };
-    },
-  }).then((res) => {
-    if (res?.user) localStorage.setItem('user', JSON.stringify({ ...getCurrentUser(), ...res.user }));
-    return res;
-  });
-
-/**
  * Прибрати менеджера з компанії (звільнення). Він втрачає доступ одразу.
  * Його активні рейси (planned / in_progress) переходять до transferTo — іншого менеджера;
  * без transferTo за наявності активних рейсів → 409 transfer_required. Виконані лишаються в історії.

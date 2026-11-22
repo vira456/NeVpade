@@ -333,7 +333,7 @@ export const register = ({ name, email, phone, password, company }) =>
         owners[clean] = { id: `own_${Object.keys(owners).length + 1}`, name, email: clean, phone, passHash: await sha256(password), companyName: company.name };
         save('mock.owners', owners);
         // демо-дані «Західтранс» стають даними нової компанії, щоб кабінет не був порожнім
-        save('mock.companyInfo', { name: company.name, ...(company.city && { city: company.city }) });
+        save('mock.companyInfo', { name: company.name, createdAt: new Date().toISOString(), ...(company.city && { city: company.city }) });
       } else {
         // акаунт менеджера: заявка до власника з'явиться, щойно підтвердить пошту й телефон
         const n = Object.keys(load('mock.managers') ?? {}).length + 1;

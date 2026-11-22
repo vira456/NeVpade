@@ -1161,7 +1161,13 @@ export default {
     "Код компанії: менеджери вводять його під час реєстрації і при кожному вході": "Company code: managers enter it when signing up and at every sign-in",
     "Я менеджер — маю код компанії": "I'm a manager — I have a company code",
     "Передати компанію можна лише менеджеру цієї компанії": "You can only hand the company over to a manager of this company",
-    "Такого менеджера в компанії немає": "There's no such manager in the company"
+    "Такого менеджера в компанії немає": "There's no such manager in the company",
+    "Мій акаунт · NeVpade": "My account · NeVpade",
+    "Ваші дані й дані компанії": "Your details and company details",
+    "Назву й місто бачать менеджери у своєму кабінеті.": "Managers see the name and city in their workspace.",
+    "Менеджерів": "Managers",
+    "Код і менеджери — на сторінці «Менеджери»": "Company code and managers are on the “Managers” page",
+    "Мій акаунт і компанія": "My account and company"
   },
   patterns: [
     [
