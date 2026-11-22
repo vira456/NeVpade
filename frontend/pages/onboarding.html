@@ -44,17 +44,25 @@
             <div class="field__error"></div>
           </div>
           <fieldset class="field company-field">
-            <legend class="field__label">Код компанії</legend>
+            <legend class="field__label" id="companyLegend">Код компанії</legend>
             <input type="radio" name="companyMode" value="join" checked hidden />
-            <div class="company-field__create" hidden><input id="companyName" name="companyName" type="hidden" /></div>
+            <input type="radio" name="companyMode" value="create" hidden />
+            <div class="company-field__create" hidden>
+              <input class="input" id="companyName" name="companyName" type="text" maxlength="80" placeholder="Назва компанії, напр. ТОВ «Західтранс»" aria-label="Назва компанії" autocomplete="organization" />
+            </div>
             <div class="company-field__join">
               <input class="input" id="inviteCode" name="inviteCode" type="text" maxlength="8" placeholder="NVP-0000" aria-label="Код компанії" autocomplete="off" spellcheck="false" />
               <p class="field__hint">Код дає власник компанії зі свого кабінету.</p>
               <p class="auth__mock-hint" data-mock-only hidden>Режим моків: код тестової компанії — <b>NVP-4821</b></p>
             </div>
-            <p class="field__hint">Власник компанії? <a href="/pages/register-owner.html">Зареєструйте компанію</a> поштою й паролем.</p>
+            <p class="field__hint" id="ownerHint">Власник компанії? <a href="/pages/register-owner.html">Зареєструйте компанію</a>.</p>
             <div class="field__error"></div>
           </fieldset>
+          <div class="field" id="cityField" hidden>
+            <label class="field__label" for="companyCity">Місто</label>
+            <input class="input" id="companyCity" name="companyCity" type="text" maxlength="60" placeholder="Хмельницький" autocomplete="address-level2" />
+            <div class="field__error"></div>
+          </div>
           <div class="field">
             <label class="field__label" for="phone">Номер телефону</label>
             <div class="phone">

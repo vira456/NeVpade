@@ -209,7 +209,7 @@ export function logout() {
  * Вхід. role — вкладка, яку обрав користувач: 'manager' або 'owner'.
  * Менеджер додатково вводить код компанії (companyCode), який дає йому власник: без нього в робочий простір
  * не зайти, навіть знаючи пароль, а власник може закрити доступ усім, просто змінивши код.
- * Власник входить поштою й паролем.
+ * Власник входить поштою й паролем або через Google.
  * Помилки: 401 invalid_credentials, 401 invalid_company_code, 403 wrong_role (не та вкладка), 429 too_many_attempts
  */
 export async function login(email, password, { role = 'manager', companyCode } = {}) {
@@ -235,6 +235,7 @@ export async function login(email, password, { role = 'manager', companyCode } =
 
       // Спершу пароль, а вже потім підказки про вкладку чи код — щоб без пароля не можна було дізнатися,
       // чи існує акаунт і яка в нього роль
+      if (own && !own.passHash) throw new ApiError('Цей акаунт входить через Google — натисніть «Продовжити з Google»', 401, 'use_google');
       if (mgr && !mgr.passHash) {
         if (role === 'owner') badCredentials();
         throw new ApiError('Цей акаунт входить через Google — введіть код компанії й натисніть «Продовжити з Google»', 401, 'use_google');
@@ -421,7 +422,20 @@ export async function completeSignup({ name, phone, company }) {
     method: 'POST',
     body: { name, phone, company },
     mock: () => {
-      if (company?.mode !== 'join') throw new ApiError('Власник реєструється на сторінці «Реєстрація компанії» поштою й паролем', 400, 'owner_needs_password');
+      const me = getCurrentUser();
+      // власник через Google: створює компанію (назва, місто) і стає її власником
+      if (company?.mode === 'create') {
+        if (me?.role !== 'owner') throw new ApiError('Компанію створює власник на сторінці «Реєстрація компанії»', 400, 'owner_only');
+        const owners = load('mock.owners') ?? {};
+        const acc = { id: me.id, name, email: cleanMail(me.email), phone, passHash: null, google: true, companyName: company.name };
+        owners[acc.email] = acc;
+        save('mock.owners', owners);
+        save('mock.companyInfo', { name: company.name, createdAt: new Date().toISOString(), ...(company.city && { city: company.city }) });
+        sessionStorage.setItem('mockName', name);
+        sessionStorage.setItem('mockPhone', phone);
+        return { user: { ...userFromOwnerAccount(acc), phoneVerified: false }, message: 'Код надіслано в SMS' };
+      }
+      if (company?.mode !== 'join') throw new ApiError('Вкажіть код компанії', 400, 'company_required');
       if (company.code.toUpperCase() !== mockCompanyCode()) {
         throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
       }
@@ -429,7 +443,6 @@ export async function completeSignup({ name, phone, company }) {
       const companyName = load('mock.companyInfo')?.name ?? MOCK_COMPANY;
       sessionStorage.setItem('mockName', name);
       sessionStorage.setItem('mockPhone', phone);
-      const me = getCurrentUser();
       // Google-акаунт менеджера: без пароля; заявка до власника — після підтвердження телефону
       saveManager({ id: me.id, name, email: cleanMail(me.email), phone, passHash: null, google: true, status: 'unverified', phoneVerified: false });
       const user = { ...me, name, phone, phoneVerified: false, role, companyId: 'cmp_01', companyName, memberStatus: 'pending' };
@@ -490,14 +503,20 @@ export const resetPassword = (email, code, password) =>
 
 // ---------- Соцмережі ----------
 // Google: credential — ID-токен від Google Identity Services, бекенд перевіряє його підпис
-export async function loginWithGoogle(credential, { companyCode } = {}) {
+export async function loginWithGoogle(credential, { companyCode, role = 'manager' } = {}) {
   const data = await request('/auth/google', {
     method: 'POST',
     auth: false,
-    body: { credential, ...(companyCode && { companyCode }) },
+    body: { credential, role, ...(role === 'manager' && companyCode && { companyCode }) },
     // Новий користувач — без компанії (код введе на «Завершіть реєстрацію»);
     // наявний менеджер, як і при вході паролем, має ввести код компанії
     mock: () => {
+      // вкладка «Власник»: наявний власник — у кабінет; новий — «Завершіть реєстрацію» (назва, місто, телефон)
+      if (role === 'owner') {
+        const own = registeredOwner('andriy.melnyk@gmail.com');
+        if (own) return { token: `mock-token-${own.id}`, user: userFromOwnerAccount(own) };
+        return { token: 'mock-token-own_g', isNew: true, user: { id: 'own_g', name: 'Андрій Мельник', email: 'andriy.melnyk@gmail.com', phone: null, phoneVerified: false, role: 'owner', companyId: null, companyName: null } };
+      }
       const acc = registeredManager('olena.koval@gmail.com');
       if (acc?.status === 'removed') throw new ApiError('Цей акаунт більше не має доступу до компанії. Зверніться до власника', 403, 'not_in_company');
       if (acc?.phoneVerified && formatCompanyCode(companyCode) !== mockCompanyCode()) {

@@ -137,9 +137,9 @@
 - 200 `{ "message": "Пароль змінено" }`
 - 400 `invalid_code` / `code_expired` — як у verify-email
 
-### Вхід і реєстрація менеджера через Google — загальна схема
+### Вхід і реєстрація через Google — загальна схема
 
-Одна кнопка «Продовжити з Google» і для входу, і для реєстрації: що саме відбулось, вирішує бекенд.
+Одна кнопка «Продовжити з Google» і для входу, і для реєстрації: що саме відбулось, вирішує бекенд. Кнопка є і в менеджера, і у власника: на вкладці «Власник» сторінки входу та на `register-owner.html` фронт шле `role: "owner"`. Новий власник на «Завершіть реєстрацію» вказує назву компанії, місто й телефон (`company.mode: "create"`).
 
 ```
 Кнопка Google ──► POST /auth/google ──┬─ користувач уже є (за googleId або email) ──► AuthResponse ──► /pages/dashboard.html
@@ -165,8 +165,10 @@ Facebook не використовуємо.
 
 ### POST `/auth/google` — вхід через Google
 ```json
-{ "credential": "<ID-токен від Google Identity Services>", "companyCode": "NVP-4821" }
+{ "credential": "<ID-токен від Google Identity Services>", "role": "manager", "companyCode": "NVP-4821" }
+{ "credential": "<ID-токен від Google Identity Services>", "role": "owner" }
 ```
+`role` — хто входить: `owner` (вкладка «Власник» або сторінка реєстрації компанії) входить без коду компанії; новий акаунт з `role: "owner"` створюється з `role: "owner"`, `companyId: null`.
 `companyCode` — з поля «Код компанії» на сторінці входу. Наявний менеджер без правильного коду → 401 `invalid_company_code` (як і при вході паролем); новому користувачу код не потрібен — він введе його на «Завершіть реєстрацію».
 - Бекенд перевіряє підпис токена (Python: `google.oauth2.id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)`): `aud` = наш `GOOGLE_CLIENT_ID`, `iss` = `accounts.google.com`, `email_verified: true`. Бере `sub`, `email`, `name`, `picture`
 - Шукає користувача спершу за `googleId` (= `sub`), потім за `email`:
@@ -179,7 +181,10 @@ Facebook не використовуємо.
 ```json
 { "name": "Олена Коваль", "phone": "+380671234567", "company": { "mode": "join", "code": "NVP-4821" } }
 ```
-Через Google реєструються **лише менеджери** (`join` + `code`). Власник реєструється поштою й паролем — інакше йому нічим підтвердити видачу коду власника. `create` → 400 `owner_needs_password`.
+```json
+{ "name": "Андрій Мельник", "phone": "+380501112233", "company": { "mode": "create", "name": "ТОВ «Західтранс»", "city": "Хмельницький" } }
+```
+Менеджер приєднується за кодом (`join` + `code`). Власник, що увійшов через Google з `role: "owner"`, створює компанію (`create` + `name`, `city`) з новим `inviteCode`. `create` від менеджера → 400 `owner_only`.
 - Зберігає ім'я (Google може дати псевдонім — користувач його виправив), компанію, роль `manager` і телефон, надсилає SMS з кодом
 - 200 `{ "user": { ...companyId, companyName, role, phone, "phoneVerified": false }, "message": "Код надіслано в SMS" }`
 - 404 `company_not_found`, 409 `phone_taken`, 422 — ті самі правила, що в `/auth/register`
