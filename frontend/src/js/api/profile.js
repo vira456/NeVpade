@@ -1,26 +1,6 @@
-// Профіль менеджера. У режимі моків дані зберігаються в localStorage,
-// тож зміни не зникають після перезавантаження сторінки.
-import { request, ApiError } from './client.js';
-import { getCurrentUser, MOCK_PASSWORD } from './auth.js';
-import { load, save } from '../utils/storage.js';
-import defaults from '../mock/profile.json';
-import companySeed from '../mock/company.json';
-import { mockTrips } from './mock-store.js';
-
-// Пароль для перевірки «поточного пароля» в режимі моків (той самий, що для входу в демо-акаунти)
-export { MOCK_PASSWORD };
-
-// У моках кожен демо-акаунт має свій профіль: Віра (usr_01) — mock.profile, колеги — mock.profile.<id>
-export const mockProfileKey = (id = getCurrentUser()?.id ?? 'usr_01') => (id === 'usr_01' ? 'mock.profile' : `mock.profile.${id}`);
-function mockProfile() {
-  const saved = load(mockProfileKey());
-  if (saved) return saved;
-  const me = getCurrentUser();
-  if (!me || me.id === 'usr_01') return { ...defaults.profile, language: load('lang', 'uk') };
-  // колега з демо-компанії або менеджер, який щойно зареєструвався (тоді — з даних акаунта)
-  const member = companySeed.members.find((m) => m.id === me.id) ?? { id: me.id, name: me.name, position: 'Менеджер з вантажоперевезень', email: me.email, phone: me.phone };
-  return { id: member.id, fullName: member.name, position: member.position, email: member.email, phone: member.phone, language: load('lang', 'uk'), avatarUrl: null };
-}
+// Профіль менеджера. Відповіді в режимі моків — mock/profile.js.
+import { request } from './client.js';
+import { getCurrentUser } from './auth.js';
 
 // Оновлює ім'я/фото в боковому меню (дані про користувача в localStorage)
 function syncCurrentUser(profile) {
@@ -34,7 +14,7 @@ function syncCurrentUser(profile) {
 const normalizeProfile = (p) => ({ ...p, fullName: p?.fullName ?? p?.name ?? '', avatarUrl: p?.avatarUrl ?? null });
 
 export async function getProfile() {
-  const profile = normalizeProfile(await request('/profile', { mock: mockProfile }));
+  const profile = normalizeProfile(await request('/profile', { mock: (m) => m.profile.get() }));
   syncCurrentUser(profile);
   return profile;
 }
@@ -43,11 +23,7 @@ export async function updateProfile(data) {
   const profile = await request('/profile', {
     method: 'PUT',
     body: data,
-    mock: () => {
-      const updated = { ...mockProfile(), ...data };
-      save(mockProfileKey(), updated);
-      return updated;
-    },
+    mock: (m) => m.profile.update(data),
   }).then(normalizeProfile);
   syncCurrentUser(profile);
   return profile;
@@ -58,11 +34,7 @@ export async function updateAvatar(image) {
   const profile = await request('/profile/avatar', {
     method: image ? 'PUT' : 'DELETE',
     body: image ? { image } : undefined,
-    mock: () => {
-      const updated = { ...mockProfile(), avatarUrl: image };
-      if (!save(mockProfileKey(), updated)) throw new ApiError('Не вдалося зберегти фото: замало місця в сховищі браузера', 0);
-      return updated;
-    },
+    mock: (m) => m.profile.setAvatar(image),
   });
   syncCurrentUser(profile);
   return profile;
@@ -93,7 +65,7 @@ const KPI_FIELDS = ['tripsCount', 'tripsThisMonth', 'paidOnTime', 'activeDrivers
 async function withFallback(path, managerId, fields = KPI_FIELDS) {
   let kpi = null;
   try {
-    kpi = await request(path, { mock: () => kpiFromTrips(mockTrips(), managerId) });
+    kpi = await request(path, { mock: (m) => kpiFromTrips(m.store.mockTrips(), managerId) });
   } catch {
     // нема ендпоінта (404) — порахуємо нижче
   }
@@ -115,11 +87,5 @@ export const changePassword = (currentPassword, newPassword) =>
   request('/auth/change-password', {
     method: 'POST',
     body: { currentPassword, newPassword },
-    mock: () => {
-      if (currentPassword !== (load('mock.password') ?? MOCK_PASSWORD)) {
-        throw new ApiError('Невірний поточний пароль', 400, 'invalid_password');
-      }
-      save('mock.password', newPassword);
-      return { message: 'Пароль змінено' };
-    },
+    mock: (m) => m.profile.changePassword(currentPassword, newPassword),
   });

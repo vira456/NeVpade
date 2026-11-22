@@ -1,12 +1,13 @@
-// Дані режиму моків (VITE_USE_MOCK=true). Зберігаються в localStorage, щоб зміни
+// Сховище демо-даних (VITE_USE_MOCK=true). Зберігаються в localStorage, щоб зміни
 // (новий рейс, водій, статус машини…) не зникали після перезавантаження сторінки.
-// З реальним бекендом цей файл не використовується.
+// Папка mock/ вантажиться лише в режимі моків (client.js → import('../mock/index.js')),
+// тож у робочу збірку з бекендом ні цей код, ні демо-JSON не потрапляють.
 import { load, save } from '../utils/storage.js';
-import { isMockMode } from './client.js';
-import seedTrips from '../mock/trips.json';
-import seedVehicles from '../mock/vehicles.json';
-import seedDrivers from '../mock/drivers.json';
-import seedClients from '../mock/clients.json';
+import { isMockMode } from '../api/client.js';
+import seedTrips from './trips.json';
+import seedVehicles from './vehicles.json';
+import seedDrivers from './drivers.json';
+import seedClients from './clients.json';
 
 const KEYS = ['trips', 'vehicles', 'drivers', 'clients', 'tasks', 'chat'];
 
@@ -82,3 +83,6 @@ export const saveDrivers = (list) => save('mock.drivers', list);
 export const saveClients = (list) => save('mock.clients', list);
 
 export const newId = (prefix) => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+
+/** Рейси, машини й водії разом — для аналітики */
+export const source = () => ({ trips: mockTrips(), vehicles: mockVehicles(), drivers: mockDrivers() });

@@ -1,5 +1,5 @@
 import { initAuthPage, rememberEmail } from '../utils/auth-page.js';
-import { login, nextPageFor, demoAccounts, MOCK_PASSWORD, formatCompanyCode, isCompanyCode, mockCompanyCode } from '../api/auth.js';
+import { login, nextPageFor, formatCompanyCode, isCompanyCode } from '../api/auth.js';
 import { isMockMode } from '../api/client.js';
 import { escapeHtml } from '../utils/format.js';
 import { t } from '../i18n/index.js';
@@ -89,7 +89,7 @@ initSocialButtons({
 });
 
 // ---------- Демо-акаунти (лише режим моків) ----------
-if (isMockMode) {
+if (isMockMode) import('../mock/auth.js').then(({ demoAccounts, MOCK_PASSWORD, companyCode: mockCompanyCode }) => {
   const accounts = demoAccounts();
   if (accounts.length) {
     document.getElementById('demoAccounts').hidden = false;
@@ -114,4 +114,4 @@ if (isMockMode) {
       form.requestSubmit();
     });
   }
-}
+});

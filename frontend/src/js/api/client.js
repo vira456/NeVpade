@@ -16,10 +16,16 @@ export class ApiError extends Error {
   }
 }
 
+// Демо-режим живе в окремій папці mock/ і вантажиться лише тоді, коли він увімкнений:
+// з бекендом (VITE_USE_MOCK=false) Vite викидає цю гілку зі збірки разом з демо-даними.
+let mockLayer;
+const loadMock = () => (mockLayer ??= import('../mock/index.js'));
+
 /**
  * @param {string} path
  * @param {{ method?: string, body?: any, mock?: any, auth?: boolean }} options
- *   mock — дані для режиму моків; може бути функцією (тоді її викликають і вона може кинути ApiError)
+ *   mock — відповідь у режимі моків: значення або функція (m) => …, де m — модулі з папки mock/
+ *          (m.trips, m.auth, …); функція може кинути ApiError, як сервер
  *   auth — false для публічних запитів (логін, реєстрація), щоб 401 не перекидав на сторінку входу
  * Події api:start / api:end потрібні індикатору завантаження (utils/loader.js).
  */
@@ -35,7 +41,7 @@ export async function request(path, options = {}) {
 async function doRequest(path, { method = 'GET', body, mock, auth = true } = {}) {
   if (USE_MOCK) {
     if (MOCK_DELAY) await new Promise((r) => setTimeout(r, MOCK_DELAY));
-    const data = typeof mock === 'function' ? await mock(body) : mock; // мок може бути async (напр. файли в IndexedDB)
+    const data = typeof mock === 'function' ? await mock(await loadMock()) : mock; // мок може бути async (напр. файли в IndexedDB)
     return data === undefined ? null : structuredClone(data);
   }
 

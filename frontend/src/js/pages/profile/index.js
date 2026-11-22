@@ -1,7 +1,7 @@
 // Сторінка «Профіль менеджера» — точка входу
 import { renderLayout, renderSidebarUser } from '../../utils/layout.js';
 import { isMockMode } from '../../api/client.js';
-import { getProfile, MOCK_PASSWORD } from '../../api/profile.js';
+import { getProfile } from '../../api/profile.js';
 import { showToast } from '../../utils/toast.js';
 import { initTabs } from './tabs.js';
 import { renderHeader, initAvatar, initOnlineStatus } from './header.js';
@@ -19,7 +19,7 @@ async function init() {
 
   if (isMockMode) {
     document.querySelectorAll('[data-mock-only]').forEach((el) => (el.hidden = false));
-    document.getElementById('mockPassword').textContent = MOCK_PASSWORD;
+    import('../../mock/auth.js').then(({ MOCK_PASSWORD }) => (document.getElementById('mockPassword').textContent = MOCK_PASSWORD));
   }
 
   // статистика вантажиться паралельно з профілем

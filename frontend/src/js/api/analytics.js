@@ -1,7 +1,6 @@
-// Аналітика. На сервері рахується з рейсів у базі; у режимі моків — так само, з рейсів у браузері,
-// тож нові, імпортовані й видалені рейси одразу змінюють цифри.
+// Аналітика. На сервері рахується з рейсів у базі; у режимі моків — тими самими функціями нижче,
+// але з рейсів у браузері (mock/store.js), тож нові, імпортовані й видалені рейси одразу змінюють цифри.
 import { request } from './client.js';
-import { mockTrips, mockVehicles, mockDrivers } from './mock-store.js';
 import { tripCosts } from '../utils/economics.js';
 import { locale } from '../i18n/index.js';
 import { paymentStatus } from '../utils/format.js';
@@ -33,8 +32,7 @@ export function periodRange(period, today = new Date()) {
   return { from: new Date(y, m, 1), to: new Date(y, m + 1, 1), prevFrom: new Date(y, m - 1, 1), prevTo: new Date(y, m - 1, Math.min(t.getDate(), prevLast) + 1) };
 }
 
-// Звідки беремо рейси для розрахунку: моки — з браузера, сервер без /analytics — з /trips, /vehicles, /drivers
-const mockSource = () => ({ trips: mockTrips(), vehicles: mockVehicles(), drivers: mockDrivers() });
+// Сервер без /analytics — рахуємо з /trips, /vehicles, /drivers
 async function serverSource() {
   const [{ getTrips }, { getVehicles }, { getDrivers }] = await Promise.all([import('./trips.js'), import('./vehicles.js'), import('./drivers.js')]);
   const [trips, vehicles, drivers] = await Promise.all([getTrips(), getVehicles().catch(() => []), getDrivers().catch(() => [])]);
@@ -44,7 +42,7 @@ async function serverSource() {
 /** Запит до /analytics/...; якщо на сервері його ще немає (404/405/501) — рахуємо на фронті з рейсів */
 async function analytics(path, compute) {
   try {
-    return await request(path, { mock: () => compute(mockSource()) });
+    return await request(path, { mock: (m) => compute(m.store.source()) });
   } catch (err) {
     if (![404, 405, 501].includes(err.status)) throw err;
     return compute(await serverSource());
