@@ -60,7 +60,7 @@ export async function updateAvatar(image) {
     body: image ? { image } : undefined,
     mock: () => {
       const updated = { ...mockProfile(), avatarUrl: image };
-      if (!save(mockProfileKey(), updated)) throw new ApiError('Не вдалося зберегти фото: замало місця в сховищі браузера', 0);
+      if (!save(mockProfileKey(), updated)) throw new ApiError('Замало місця в браузері для фото', 0);
       return updated;
     },
   });

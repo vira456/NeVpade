@@ -46,7 +46,7 @@ function db() {
       store.createIndex('owner', 'owner');
     };
     open.onsuccess = () => resolve(open.result);
-    open.onerror = () => reject(new ApiError('Браузер не дозволяє зберігати файли (приватний режим?)', 0));
+    open.onerror = () => reject(new ApiError('Браузер не дозволяє зберігати файли', 0));
   });
   return dbPromise;
 }

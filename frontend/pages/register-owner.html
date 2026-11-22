@@ -41,6 +41,16 @@
         <p class="auth__subtitle">Створіть компанію й акаунт власника. Після підтвердження пошти й телефону відкриється кабінет власника з кодом компанії — його вводитимуть ваші менеджери.</p>
         <form class="auth__form" id="registerForm" data-role="owner" novalidate>
           <div class="auth__alert" hidden></div>
+          <div class="auth__social" data-social>
+            <div id="googleSlot"></div>
+            <button class="btn btn--social" id="googleBtn" type="button">Зареєструватися через Google</button>
+          </div>
+          <div class="google-chip" id="googleChip" hidden>
+            <span class="google-chip__avatar" id="googleAvatar" aria-hidden="true"></span>
+            <span class="google-chip__who"><strong id="googleName" data-no-i18n></strong><span id="googleEmail" data-no-i18n></span></span>
+            <button class="google-chip__reset" type="button" id="googleReset">Інший спосіб</button>
+          </div>
+          <div class="auth__divider" data-social>або заповніть форму</div>
           <fieldset class="field company-field">
             <legend class="field__label">Ваша компанія</legend>
             <input type="radio" name="companyMode" value="create" checked hidden />
@@ -73,6 +83,7 @@
             </div>
             <div class="field__error"></div>
           </div>
+          <div class="password-block" id="passwordBlock">
           <div class="field">
             <label class="field__label" for="password">Пароль</label>
             <div class="field__wrap">
@@ -94,13 +105,13 @@
             </div>
             <div class="field__error"></div>
           </div>
+          </div>
           <label class="field field--check">
             <input type="checkbox" name="terms" />
             <span>Погоджуюсь на обробку персональних даних</span>
             <span class="field__error"></span>
           </label>
           <button class="btn btn--block" type="submit">Зареєструвати компанію</button>
-          <p class="field__hint auth__owner-note">Власник реєструється лише поштою й паролем — так захищено вхід у кабінет.</p>
         </form>
         <p class="auth__footer">Вже є акаунт? <a href="/pages/login.html">Увійти</a></p>
       </div>

@@ -74,11 +74,11 @@ export const switchCompany = (company) =>
     body: { company },
     mock: () => {
       const me = getCurrentUser();
-      if (roleOf(me) === 'owner') throw new ApiError('Власник не змінює компанію, а передає її менеджеру', 403, 'manager_only');
+      if (roleOf(me) === 'owner') throw new ApiError('Власник не може змінити компанію', 403, 'manager_only');
       const inDemo = !otherCompany();
       if (company.mode !== 'join') throw new ApiError('Нову компанію створює власник під час реєстрації', 400, 'join_only');
       if (company.code !== mockCompanyCode()) {
-        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
+        throw new ApiError('Компанію з таким кодом не знайдено', 404, 'company_not_found');
       }
       if (inDemo) throw new ApiError('Ви вже в цій компанії', 409, 'same_company');
       // повертаємось у демо-компанію: її дані знову з початкових JSON
@@ -150,13 +150,13 @@ export const removeMember = (memberId, { transferTo = null } = {}) =>
     mock: () => {
       const members = mockMembers();
       assertOwner();
-      if (memberId === meId()) throw new ApiError('Себе прибрати не можна — спершу передайте компанію колезі', 409, 'cannot_remove_self');
+      if (memberId === meId()) throw new ApiError('Себе прибрати не можна', 409, 'cannot_remove_self');
       if (!members.some((m) => m.id === memberId && m.role !== 'owner')) throw new ApiError('Такого менеджера в компанії немає', 404, 'member_not_found');
       const trips = mockTrips();
       const active = trips.filter((t) => t.managerId === memberId && ['planned', 'in_progress'].includes(t.status));
       if (active.length && !transferTo) throw new ApiError('Оберіть менеджера, якому перейдуть активні рейси', 409, 'transfer_required');
       if (transferTo && !members.some((m) => m.id === transferTo && m.role !== 'owner' && m.id !== memberId)) {
-        throw new ApiError('Рейси можна передати лише іншому менеджеру компанії', 422, 'invalid_transfer');
+        throw new ApiError('Рейси можна передати лише менеджеру', 422, 'invalid_transfer');
       }
       active.forEach((t) => {
         (t.history ??= []).push({ at: new Date().toISOString(), by: meId(), action: 'transferred', from: memberId, to: transferTo });

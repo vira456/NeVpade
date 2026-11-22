@@ -2,6 +2,7 @@ import { request, ApiError } from './client.js';
 import { load, save } from '../utils/storage.js';
 import './mock-store.js'; // скидання застарілих демо-даних (MOCK_VERSION) — ще до першого входу
 import companySeed from '../mock/company.json';
+import { googleProfile } from '../utils/social.js';
 
 // У режимі моків правильний код підтвердження завжди такий:
 export const MOCK_CODE = '123456';
@@ -99,6 +100,7 @@ const userFromOwnerAccount = (a) => ({
   phone: a.phone,
   phoneVerified: true,
   role: 'owner',
+  ...(a.picture && { avatarUrl: a.picture }),
   companyId: 'cmp_01',
   companyName: load('mock.companyInfo')?.name ?? a.companyName, // власник міг перейменувати компанію
 });
@@ -152,6 +154,7 @@ const userFromManagerAccount = (a) => ({
   phone: a.phone,
   phoneVerified: a.phoneVerified !== false,
   role: 'manager',
+  ...(a.picture && { avatarUrl: a.picture }),
   companyId: 'cmp_01',
   companyName: load('mock.companyInfo')?.name ?? MOCK_COMPANY,
   memberStatus: a.status === 'unverified' ? 'pending' : a.status, // pending | active | rejected
@@ -161,7 +164,7 @@ const userFromManagerAccount = (a) => ({
 function checkAttempts(email) {
   const rec = JSON.parse(sessionStorage.getItem(`mockLoginFails:${email}`) || '{"n":0,"until":0}');
   if (rec.until > Date.now()) {
-    throw new ApiError('Забагато невдалих спроб. Вхід призупинено на 15 хвилин', 429, 'too_many_attempts');
+    throw new ApiError('Забагато спроб. Спробуйте через 15 хвилин', 429, 'too_many_attempts');
   }
   return {
     fail() {
@@ -209,21 +212,23 @@ export function logout() {
  * Вхід. role — вкладка, яку обрав користувач: 'manager' або 'owner'.
  * Менеджер додатково вводить код компанії (companyCode), який дає йому власник: без нього в робочий простір
  * не зайти, навіть знаючи пароль, а власник може закрити доступ усім, просто змінивши код.
- * Власник входить поштою й паролем.
- * Помилки: 401 invalid_credentials, 401 invalid_company_code, 403 wrong_role (не та вкладка), 429 too_many_attempts
+ * Власник входить поштою й паролем (або через Google). Вкладку сервер не карає: власник, що ввійшов
+ * на вкладці «Менеджер», просто потрапляє у свій кабінет; менеджеру на вкладці «Власник» бракує коду компанії.
+ * Помилки: 401 invalid_credentials, 401 use_google, 400 company_code_required, 401 invalid_company_code,
+ * 403 not_in_company, 429 too_many_attempts
  */
 export async function login(email, password, { role = 'manager', companyCode } = {}) {
   const data = await request('/auth/login', {
     method: 'POST',
     auth: false,
-    body: { email, password, role, ...(role === 'manager' && { companyCode }) },
+    body: { email, password, role, ...(companyCode && { companyCode }) },
     mock: async () => {
       const clean = String(email).trim().toLowerCase();
       const member = seedByEmail(clean);
       const own = registeredOwner(clean);
       const mgr = registeredManager(clean);
       if ((member && (load('mock.removed') ?? []).includes(member.id)) || mgr?.status === 'removed') {
-        throw new ApiError('Цей акаунт більше не має доступу до компанії. Зверніться до власника', 403, 'not_in_company');
+        throw new ApiError('Доступ до компанії закрито. Зверніться до власника', 403, 'not_in_company');
       }
       const accRole = member ? mockRoleOf(member.id, member.role) : own ? mockRoleOf(own.id, 'owner') : 'manager';
       const attempts = checkAttempts(clean);
@@ -231,30 +236,21 @@ export async function login(email, password, { role = 'manager', companyCode } =
         attempts.fail();
         throw err;
       };
-      const badCredentials = () => fail(new ApiError('Невірна пошта або пароль', 401, 'invalid_credentials'));
 
-      // Спершу пароль, а вже потім підказки про вкладку чи код — щоб без пароля не можна було дізнатися,
+      // Спершу пароль, а вже потім підказки про роль чи код — щоб без пароля не можна було дізнатися,
       // чи існує акаунт і яка в нього роль
-      if (mgr && !mgr.passHash) {
-        if (role === 'owner') badCredentials();
-        throw new ApiError('Цей акаунт входить через Google — введіть код компанії й натисніть «Продовжити з Google»', 401, 'use_google');
-      }
+      if ((own && !own.passHash) || (mgr && !mgr.passHash)) throw new ApiError('Цей акаунт входить через Google', 401, 'use_google');
       const hash = own || mgr ? await sha256(password) : null;
       const passOk = own ? hash === own.passHash : mgr ? hash === mgr.passHash : member ? password === MOCK_PASSWORD : role === 'manager'; // інша пошта — демо-менеджер
-      if (!passOk) badCredentials();
+      if (!passOk) fail(new ApiError('Невірна пошта або пароль', 401, 'invalid_credentials'));
 
-      if (role === 'owner') {
-        if (accRole !== 'owner') throw new ApiError('Це акаунт менеджера. Оберіть вгорі «Менеджер» і введіть код компанії', 403, 'wrong_role');
+      if (accRole === 'owner') {
         attempts.ok();
         return { token: `mock-token-${member?.id ?? own.id}`, user: member ? userFromMember(member) : userFromOwnerAccount(own) };
       }
-
-      // вкладка «Менеджер»: пошта + пароль + код компанії
-      if (accRole === 'owner') throw new ApiError('Це акаунт власника. Оберіть вгорі «Власник»', 403, 'wrong_role');
-      if (mgr?.status === 'unverified') throw new ApiError('Пошту не підтверджено', 403, 'email_not_verified');
-      if (formatCompanyCode(companyCode) !== mockCompanyCode()) {
-        fail(new ApiError('Невірний код компанії. Уточніть актуальний код у власника', 401, 'invalid_company_code'));
-      }
+      // менеджер: пошта + пароль + код компанії
+      if (mgr?.status === 'unverified' && !mgr.phoneVerified && !mgr.emailVerified) throw new ApiError('Пошту не підтверджено', 403, 'email_not_verified');
+      checkCompanyCode(companyCode, fail);
       attempts.ok();
       if (mgr) return { token: `mock-token-${mgr.id}`, user: userFromManagerAccount(mgr) }; // заявка ще чекає → «Очікуємо підтвердження»
       if (member) return { token: `mock-token-${member.id}`, user: userFromMember(member) };
@@ -263,6 +259,12 @@ export async function login(email, password, { role = 'manager', companyCode } =
   });
   saveSession(data);
   return data.user;
+}
+
+// Код компанії для входу менеджера: порожній — 400, невірний — 401 (рахується як невдала спроба)
+function checkCompanyCode(companyCode, fail = (err) => { throw err; }) {
+  if (!companyCode) throw new ApiError('Введіть код компанії', 400, 'company_code_required');
+  if (formatCompanyCode(companyCode) !== mockCompanyCode()) fail(new ApiError('Невірний код компанії', 401, 'invalid_company_code'));
 }
 
 /**
@@ -320,9 +322,9 @@ export const register = ({ name, email, phone, password, company }) =>
     body: { name, email, phone, password, company, role: company?.mode === 'create' ? 'owner' : 'manager' },
     mock: async () => {
       const clean = email.trim().toLowerCase();
-      if (seedByEmail(clean) || registeredOwner(clean) || registeredManager(clean)) throw new ApiError('Користувач з таким email вже існує', 409, 'email_taken');
+      if (seedByEmail(clean) || registeredOwner(clean) || registeredManager(clean)) throw new ApiError('Цей email уже зареєстровано', 409, 'email_taken');
       if (company?.mode === 'join' && company.code.toUpperCase() !== mockCompanyCode()) {
-        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
+        throw new ApiError('Компанію з таким кодом не знайдено', 404, 'company_not_found');
       }
       // щоб у моках показати введені дані
       sessionStorage.setItem('mockName', name);
@@ -421,9 +423,9 @@ export async function completeSignup({ name, phone, company }) {
     method: 'POST',
     body: { name, phone, company },
     mock: () => {
-      if (company?.mode !== 'join') throw new ApiError('Власник реєструється на сторінці «Реєстрація компанії» поштою й паролем', 400, 'owner_needs_password');
+      if (company?.mode !== 'join') throw new ApiError('Компанію створюють на сторінці «Реєстрація компанії»', 400, 'use_register_owner');
       if (company.code.toUpperCase() !== mockCompanyCode()) {
-        throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
+        throw new ApiError('Компанію з таким кодом не знайдено', 404, 'company_not_found');
       }
       const role = 'manager';
       const companyName = load('mock.companyInfo')?.name ?? MOCK_COMPANY;
@@ -458,7 +460,7 @@ export async function requestJoin(code) {
     method: 'POST',
     body: { code },
     mock: () => {
-      if (String(code).toUpperCase() !== mockCompanyCode()) throw new ApiError('Компанію з таким кодом не знайдено. Перевірте код у власника', 404, 'company_not_found');
+      if (String(code).toUpperCase() !== mockCompanyCode()) throw new ApiError('Компанію з таким кодом не знайдено', 404, 'company_not_found');
       const acc = registeredManager(getCurrentUser()?.email);
       if (!acc) throw new ApiError('Ви вже в цій компанії', 409, 'same_company');
       return { user: userFromManagerAccount(createJoinRequest(acc)) };
@@ -488,26 +490,65 @@ export const resetPassword = (email, code, password) =>
     },
   });
 
-// ---------- Соцмережі ----------
-// Google: credential — ID-токен від Google Identity Services, бекенд перевіряє його підпис
-export async function loginWithGoogle(credential, { companyCode } = {}) {
+/**
+ * Вхід через Google (обидві ролі). Сервер перевіряє credential і шукає акаунт за поштою з нього.
+ * Менеджер, як і при вході паролем, додає код компанії (companyCode).
+ * Помилки: 404 not_registered (такого акаунта ще немає → сторінка відкриває реєстрацію з даними з Google),
+ * 400 company_code_required, 401 invalid_company_code, 403 not_in_company
+ */
+export async function loginWithGoogle(credential, { role = 'manager', companyCode } = {}) {
   const data = await request('/auth/google', {
     method: 'POST',
     auth: false,
-    body: { credential, ...(companyCode && { companyCode }) },
-    // Новий користувач — без компанії (код введе на «Завершіть реєстрацію»);
-    // наявний менеджер, як і при вході паролем, має ввести код компанії
+    body: { credential, role, ...(companyCode && { companyCode }) },
     mock: () => {
-      const acc = registeredManager('olena.koval@gmail.com');
-      if (acc?.status === 'removed') throw new ApiError('Цей акаунт більше не має доступу до компанії. Зверніться до власника', 403, 'not_in_company');
-      if (acc?.phoneVerified && formatCompanyCode(companyCode) !== mockCompanyCode()) {
-        throw new ApiError('Невірний код компанії. Уточніть актуальний код у власника', 401, 'invalid_company_code');
-      }
-      if (acc?.phoneVerified) return { token: `mock-token-${acc.id}`, user: userFromManagerAccount(acc) };
-      if (acc) return { token: `mock-token-${acc.id}`, user: { ...userFromManagerAccount(acc), phoneVerified: false } };
-      return { token: 'mock-token-mgr_g', isNew: true, user: { ...mockUser('olena.koval@gmail.com', 'Олена Коваль', null, false), id: 'mgr_g', role: null, companyId: null, companyName: null } };
+      const profile = googleProfile(credential);
+      if (!profile?.email) throw new ApiError('Google не передав пошту. Спробуйте ще раз', 400, 'invalid_credential');
+      const own = registeredOwner(profile.email);
+      const mgr = registeredManager(profile.email);
+      if (own) return { token: `mock-token-${own.id}`, user: userFromOwnerAccount(own) };
+      if (!mgr) throw new ApiError('Цей Google-акаунт ще не зареєстровано', 404, 'not_registered');
+      if (mgr.status === 'removed') throw new ApiError('Доступ до компанії закрито. Зверніться до власника', 403, 'not_in_company');
+      // реєстрацію не завершено (телефон) — далі SMS-код, код компанії ще не питаємо
+      if (!mgr.phoneVerified) return { token: `mock-token-${mgr.id}`, user: { ...userFromManagerAccount(mgr), phoneVerified: false } };
+      checkCompanyCode(companyCode);
+      return { token: `mock-token-${mgr.id}`, user: userFromManagerAccount(mgr) };
     },
   });
   saveSession(data);
   return data.user;
 }
+
+/**
+ * Реєстрація через Google: ім'я, пошту й фото сервер бере з credential (пошту Google уже підтвердив —
+ * коду на пошту немає), з форми — телефон і компанію. Пароль не потрібен: далі людина входить через Google.
+ * Власник: company = { mode: 'create', name, city }; менеджер: company = { mode: 'join', code }.
+ * Відповідь: { email, phone, next: "verify_phone" } — далі SMS-код, як і при звичайній реєстрації.
+ * Помилки: 409 email_taken, 404 company_not_found
+ */
+export const registerWithGoogle = ({ credential, name, phone, company }) =>
+  request('/auth/register-google', {
+    method: 'POST',
+    auth: false,
+    body: { credential, name, phone, company, role: company?.mode === 'create' ? 'owner' : 'manager' },
+    mock: () => {
+      const profile = googleProfile(credential);
+      if (!profile?.email) throw new ApiError('Google не передав пошту. Спробуйте ще раз', 400, 'invalid_credential');
+      const clean = profile.email;
+      if (seedByEmail(clean) || registeredOwner(clean) || registeredManager(clean)) throw new ApiError('Цей Google-акаунт уже зареєстровано. Увійдіть', 409, 'email_taken');
+      if (company?.mode === 'join' && formatCompanyCode(company.code) !== mockCompanyCode()) throw new ApiError('Компанію з таким кодом не знайдено', 404, 'company_not_found');
+      sessionStorage.setItem('mockName', name);
+      sessionStorage.setItem('mockPhone', phone);
+      const base = { name, email: clean, phone, passHash: null, google: true, picture: profile.picture };
+      if (company?.mode === 'create') {
+        const owners = load('mock.owners') ?? {};
+        owners[clean] = { id: `own_${Object.keys(owners).length + 1}`, ...base, companyName: company.name };
+        save('mock.owners', owners);
+        save('mock.companyInfo', { name: company.name, createdAt: new Date().toISOString(), ...(company.city && { city: company.city }) });
+      } else {
+        const n = Object.keys(load('mock.managers') ?? {}).length + 1;
+        saveManager({ id: `mgr_${n}`, ...base, status: 'unverified', emailVerified: true, phoneVerified: false });
+      }
+      return { email: clean, phone, next: 'verify_phone' };
+    },
+  });

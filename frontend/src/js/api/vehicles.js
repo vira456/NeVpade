@@ -64,7 +64,7 @@ export const deleteVehicle = (id) =>
     mock: async () => {
       const trips = mockTrips();
       const active = trips.find((t) => t.vehicleId === id && t.status === 'in_progress');
-      if (active) throw new ApiError(`Машина зараз у рейсі ${active.number}. Спершу завершіть або змініть рейс.`, 409, 'vehicle_busy');
+      if (active) throw new ApiError(`Машина в рейсі ${active.number}. Спершу завершіть рейс`, 409, 'vehicle_busy');
       trips.forEach((t) => t.vehicleId === id && t.status === 'planned' && (t.vehicleId = null));
       saveTrips(trips);
       saveDrivers(mockDrivers().map((d) => (d.vehicleId === id ? { ...d, vehicleId: null } : d)));
