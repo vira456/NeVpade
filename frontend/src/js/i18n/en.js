@@ -763,6 +763,8 @@ export default {
     "Дохід, грн": "Income, UAH",
     "Зведення": "Summary",
     "Звіт завантажено, але за цей період рейсів немає": "Report downloaded, but there are no trips in this period",
+    "Аналітика рахує рейси в дорозі й виконані. Заплановані ({trips} на {sum}) з’являться тут, щойно вирушать у дорогу.": "Analytics counts trips on the road and completed ones. Planned trips ({trips} worth {sum}) will appear here once they set off.",
+    "За цей період ще немає рейсів у дорозі чи виконаних": "No trips on the road or completed in this period yet",
     "Звіт завантажено: {trips}, дохід {sum}": "Report downloaded: {trips}, income {sum}",
     "Машини": "Vehicles",
     "Не вдалося сформувати звіт": "Couldn't build the report",

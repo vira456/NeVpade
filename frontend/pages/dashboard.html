@@ -27,6 +27,7 @@
 
       <!-- Ключові показники за період -->
       <section class="ledger card" id="ledger" aria-label="Ключові показники"></section>
+      <p class="dash__hint" id="plannedNote" hidden></p>
 
       <div class="dash__grid">
         <section class="card dash__chart">
@@ -38,7 +39,7 @@
             <li><span class="legend__swatch legend__swatch--income"></span>Дохід</li>
             <li><span class="legend__swatch legend__swatch--expense"></span>Витрати</li>
           </ul>
-          <div class="chart-box"><canvas id="incomeChart" role="img" aria-label="Графік доходів і витрат за період"></canvas></div>
+          <div class="chart-box"><canvas id="incomeChart" role="img" aria-label="Графік доходів і витрат за період"></canvas><p class="chart-empty" id="chartEmpty" hidden>За цей період ще немає рейсів у дорозі чи виконаних</p></div>
           <button class="btn--link dash__table-toggle" id="chartTableToggle" type="button" aria-expanded="false" aria-controls="chartTable">Показати таблицею</button>
           <div class="table-wrap" id="chartTable" hidden></div>
         </section>

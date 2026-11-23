@@ -75,6 +75,11 @@ async function doRequest(path, { method = 'GET', body, mock, auth = true } = {})
     const detail = Array.isArray(d) ? d[0]?.msg : d && typeof d === 'object' ? d.message ?? d.msg : d;
     if (d && typeof d === 'object' && !Array.isArray(d) && d.code && !err.code) err.code = d.code;
     // Вхід через Google є, але реєстрацію не завершено (немає компанії чи телефону) → повертаємо на потрібний крок
+    // Заявку на вступ ще не прийняли (або відхилили) — сторінка очікування сама покаже статус
+    if (res.status === 403 && err.code === 'membership_pending' && !location.pathname.includes('/pending')) {
+      location.replace('/pages/pending.html');
+      return null;
+    }
     if (res.status === 403 && err.code === 'signup_incomplete' && !location.pathname.includes('/onboarding') && !location.pathname.includes('/verify-phone')) {
       location.replace('/pages/onboarding.html'); // сторінка сама переведе далі, якщо компанія вже є
       return null;

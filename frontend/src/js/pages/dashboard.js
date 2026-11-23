@@ -84,6 +84,8 @@ function renderLedger(s) {
 const endLabels = {
   id: 'endLabels',
   afterDatasetsDraw(c) {
+    // усі значення нульові — підписи злилися б в одну купу на нулі
+    if (!c.data.datasets.some((ds) => ds.data.some((v) => v))) return;
     const { ctx } = c;
     ctx.save();
     ctx.font = "600 13px 'Manrope', 'Segoe UI', sans-serif";
@@ -142,6 +144,7 @@ function renderChart(data) {
   }));
 
   const labels = data.labels.map((l) => t(l));
+  document.getElementById('chartEmpty').hidden = [...data.income, ...data.expenses].some((v) => v);
   if (chart) {
     chart.data.labels = labels;
     chart.data.datasets = datasets;
@@ -314,6 +317,28 @@ async function loadPeriod(p) {
   renderLedger(summary);
   renderChart(income);
   renderExpenses(expenses);
+  lastSummary = summary;
+  renderPlannedNote();
+}
+
+// Аналітика рахує лише рейси в дорозі й виконані. Якщо поки є тільки заплановані,
+// пояснюємо, чому скрізь нулі, — інакше здається, що аналітика зламалась
+let allTrips = null;
+let lastSummary = null;
+function renderPlannedNote() {
+  const note = document.getElementById('plannedNote');
+  if (!allTrips || !lastSummary) return;
+  const planned = allTrips.filter((tr) => tr.status === 'planned');
+  if (lastSummary.tripsCount || !planned.length) {
+    note.hidden = true;
+    return;
+  }
+  const sum = planned.reduce((s, tr) => s + (Number(tr.price) || 0), 0);
+  note.textContent = t('Аналітика рахує рейси в дорозі й виконані. Заплановані ({trips} на {sum}) з’являться тут, щойно вирушать у дорогу.', {
+    trips: t(plural(planned.length, ['{n} рейс', '{n} рейси', '{n} рейсів']), { n: planned.length }),
+    sum: money(sum),
+  });
+  note.hidden = false;
 }
 
 document.getElementById('periodSwitch').addEventListener('click', (e) => {
@@ -382,6 +407,8 @@ async function init() {
     renderTasks(tasks);
     renderFleet(vehicles);
     renderPayments(trips);
+    allTrips = trips;
+    renderPlannedNote();
   });
   await Promise.all([operational, i18nReady.then(() => loadPeriod(period))]);
 }
