@@ -4,8 +4,7 @@ import { getTrips } from '../api/trips.js';
 import { getDrivers } from '../api/drivers.js';
 import { getVehicles } from '../api/vehicles.js';
 import { TRIP_STATUS, money, escapeHtml } from '../utils/format.js';
-import { buildTripMessage, sendToViber, copyText } from '../utils/viber.js';
-import { flyAway } from '../utils/motion.js';
+import { copyText } from '../utils/viber.js';
 import { showToast } from '../utils/toast.js';
 import { hasApiKey, loadGoogleMaps, onAuthFailure, directionsUrl, embedUrl, formatDuration, estimateDuration, place } from '../utils/maps.js';
 import { debounce } from '../utils/debounce.js';
@@ -110,7 +109,6 @@ function renderDetails(trip, route) {
     ${route ? '' : '<p class="route-card__note">Час у дорозі орієнтовний (≈ 65 км/год). Точний розрахунок — з ключем Google Maps API.</p>'}
     <div class="route-card__actions">
       <a class="btn" href="${directionsUrl(trip.from, trip.to)}" target="_blank" rel="noopener">Відкрити в Google Maps</a>
-      <button class="btn btn--ghost" type="button" data-action="viber">Надіслати водію у Viber</button>
       <button class="btn btn--text" type="button" data-action="copy">Скопіювати посилання</button>
     </div>
   `;
@@ -211,10 +209,6 @@ els.details.addEventListener('click', async (e) => {
     } catch {
       showToast('Не вдалося скопіювати', 'error');
     }
-  }
-  if (action === 'viber') {
-    flyAway(e.target.closest('[data-action]'));
-    sendToViber(`${buildTripMessage(trip, driverOf(trip), vehicleOf(trip))}\n🗺 Маршрут: ${link}`);
   }
 });
 

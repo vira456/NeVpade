@@ -16,7 +16,7 @@ import { money, escapeHtml, PAYMENT_STATUS, TRIP_STATUS, paymentStatus, daysPast
 import { routeLine, plate, statusBadge, shortDate, cargoSize } from '../utils/components.js';
 import { initTripForm, openTripForm } from './trip-form.js';
 import { initDellaImport, openDellaImport } from './della-import.js';
-import { buildTripMessage, sendToViber, copyText } from '../utils/viber.js';
+import { buildClientMessage, sendToViber, copyText } from '../utils/viber.js';
 import { driveAway, flyAway } from '../utils/motion.js';
 import { showToast } from '../utils/toast.js';
 import { confirmDialog } from '../utils/confirm.js';
@@ -72,7 +72,7 @@ const sourceLabel = (t) => {
 
 const driverOf = (t) => drivers.find((d) => d.id === t.driverId);
 const vehicleOf = (t) => vehicles.find((v) => v.id === t.vehicleId);
-const messageFor = (t) => buildTripMessage(t, driverOf(t), vehicleOf(t));
+const clientMessageFor = (t) => buildClientMessage(t, driverOf(t), vehicleOf(t));
 
 // ---------- Список ----------
 const dateFrom = document.getElementById('dateFrom');
@@ -211,7 +211,7 @@ function render() {
           <td data-label="Статус" class="trip-tr__state">${statusBadge(t.status)}${paymentLine(t)}</td>
           <td class="trip-tr__actions">
             <a class="icon-btn" href="/pages/map.html?trip=${t.id}" title="На карті" aria-label="Рейс ${escapeHtml(t.number)} на карті">${icons.map}</a>
-            <button class="icon-btn" type="button" data-viber="${t.id}" title="Надіслати водію у Viber" aria-label="Надіслати рейс ${escapeHtml(t.number)} у Viber">${icons.send}</button>
+            <button class="icon-btn" type="button" data-client-msg="${t.id}" title="Надіслати замовнику у Viber" aria-label="Надіслати рейс ${escapeHtml(t.number)} замовнику у Viber">${icons.send}</button>
           </td>
         </tr>`;
         })
@@ -401,7 +401,7 @@ async function openTrip(id) {
       <button class="btn btn--ghost" type="button" data-print="${t.id}">${icons.print ?? ''}Заявка (друк)</button>
       <button class="btn btn--ghost" type="button" data-copy="${t.id}">${icons.copy}Копіювати</button>
       ${editable ? `<button class="btn btn--ghost" type="button" data-transfer="${t.id}">${icons.transfer}Передати колезі</button>` : ''}
-      <button class="btn" type="button" data-viber="${t.id}">${icons.send}Надіслати водію</button>
+      <button class="btn" type="button" data-client-msg="${t.id}">${icons.send}Надіслати замовнику</button>
     </footer>`;
 
   if (!drawer.open) drawer.showModal();
@@ -483,16 +483,16 @@ async function handleAction(e) {
     openTransfer(trips.find((t) => t.id === transfer.dataset.transfer));
     return true;
   }
-  const viber = e.target.closest('[data-viber]');
+  const clientMsg = e.target.closest('[data-client-msg]');
   const copy = e.target.closest('[data-copy]');
-  if (viber) {
-    flyAway(viber);
-    sendToViber(messageFor(trips.find((t) => t.id === viber.dataset.viber)));
+  if (clientMsg) {
+    flyAway(clientMsg);
+    sendToViber(clientMessageFor(trips.find((t) => t.id === clientMsg.dataset.clientMsg)));
     return true;
   }
   if (copy) {
     try {
-      await copyText(messageFor(trips.find((t) => t.id === copy.dataset.copy)));
+      await copyText(clientMessageFor(trips.find((t) => t.id === copy.dataset.copy)));
       showToast('Текст рейсу скопійовано');
     } catch {
       showToast('Не вдалося скопіювати', 'error');

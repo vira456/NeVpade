@@ -1,16 +1,19 @@
 // Формування структурованого повідомлення для диспетчеризації у Viber (URI Scheme)
 
-// Текст повідомлення водію (кнопка «Viber» на сторінках рейсів і карти)
-const VIBER_TEMPLATE = [
-  '🚚 Рейс №{ID}: {ROUTE}',
-  '📅 Завантаження: {DATE}',
-  '📍 Адреса: {ADDRESS}',
-  '📦 {CARGO}, {WEIGHT}',
-  '🚛 Авто: {VEHICLE}',
-  '🏢 Клієнт: {CLIENT}, {PHONE}',
-].join('\n');
-
 const date = (iso) => (iso ? new Date(iso).toLocaleDateString('uk-UA') : '');
+
+// Текст повідомлення замовнику (кнопка з літачком у списку рейсів, «Надіслати замовнику» й «Копіювати» в картці рейсу):
+// коли й що везуть, яка машина й водій приїдуть, скільки й до коли сплатити
+const CLIENT_TEMPLATE = [
+  '📦 Рейс №{ID}: {ROUTE}',
+  '📅 Завантаження: {DATE}',
+  '🏁 Розвантаження: {UNLOAD}',
+  '📦 Вантаж: {CARGO}, {WEIGHT}',
+  '🚛 Авто: {VEHICLE}',
+  '👤 Водій: {DRIVER}',
+  '💰 Вартість: {PRICE}',
+  '🗓 Оплата до: {DUE}',
+].join('\n');
 
 // Значення змінних для конкретного рейсу
 function tripVariables(trip, driver, vehicle) {
@@ -25,6 +28,9 @@ function tripVariables(trip, driver, vehicle) {
     VEHICLE: vehicle ? `${vehicle.plate} (${vehicle.model})` : '—',
     CLIENT: trip.client?.name || '—',
     PHONE: trip.client?.phone || '—',
+    UNLOAD: [date(trip.unloadDate), trip.to.city, trip.to.address].filter(Boolean).join(', '),
+    PRICE: trip.price ? `${Number(trip.price).toLocaleString('uk-UA')} грн` : '—',
+    DUE: date(trip.payment?.dueDate) || '—',
   };
 }
 
@@ -32,8 +38,8 @@ function tripVariables(trip, driver, vehicle) {
 const fillTemplate = (template, vars) =>
   template.replace(/\{([A-Z_]+)\}/g, (match, key) => (key in vars ? vars[key] : match));
 
-export const buildTripMessage = (trip, driver, vehicle) =>
-  fillTemplate(VIBER_TEMPLATE, tripVariables(trip, driver, vehicle));
+export const buildClientMessage = (trip, driver, vehicle) =>
+  fillTemplate(CLIENT_TEMPLATE, tripVariables(trip, driver, vehicle));
 
 export function sendToViber(text) {
   // Відкриває Viber з вибором контакту для пересилання
